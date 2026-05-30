@@ -1,107 +1,152 @@
-# Structura — Database Documentation
+# Database Documentation — Structura
 
-This document outlines the complete database architecture for **Structura**, a modern Field Service Management (FSM) and Property Maintenance platform. The architecture is designed for a **PostgreSQL** backend (e.g., Neon or Supabase) integrated with a **FastAPI** backend and a **React** frontend.
+This document outlines the complete relational database schema for **Structura**, a modern Field Service Management (FSM) and Property Maintenance platform. 
 
----
-
-## Architectural Principles
-
-1. **Unified Registries Over Silos:** Instead of creating separate task tables per contractor, all tasks reside within a single, highly indexed table. Contractors are isolated cleanly via software logic (FastAPI endpoint filtering using JWT scope checks).
-2. **Normalized Geolocation:** Spatial properties are split into distinct relational attributes (`city`, `district`, `street_address`) to permit clean reporting, filtering, and regional tracking.
-3. **Immutability of History:** System activity is tracked via a dedicated append-only log table to ensure the global administrator has complete operational transparency over task lifecycles.
+The schema is built for a **PostgreSQL** instance (e.g., Neon, Supabase) and integrates directly with a **FastAPI** backend using an ORM like SQLAlchemy or SQLModel.
 
 ---
 
-## Entity-Relationship Diagram (Conceptual Layout)
+## 🏗️ Architectural Core Principles
+
+1. **Role-Based Security & Data Isolation:** System access is restricted via database-level `ENUM` scopes (`admin`, `manager`, `contractor`). Data separation is handled through relational mapping rather than table duplication.
+2. **Unified Task Registry:** All work orders live inside a single, highly indexed `tasks` table. This provides the global Admin with a complete bird's-eye view while keeping contractor queries efficient.
+3. **Many-to-Many Manager Mapping:** Managers (Building Administrators) are linked to physical locations via a junction table (`building_managers`). This allows a single manager to oversee multiple properties dynamically while restricting their read/write permissions strictly to those locations.
+4. **Normalized Geography:** Physical locations are explicitly broken into `city`, `district`, and `street_address` columns to ensure rapid, index-driven regional filtering and administrative reporting.
+
+---
+
+## 🗺️ Entity-Relationship Diagram (ERD)
 
 ```
-  ┌────────────────┐               ┌────────────────┐
-  │   BUILDINGS    │               │  ACTIVITY_LOGS │
-  ├────────────────┤               ├────────────────┤
-  │ id (PK)        │◄──────┐       │ id (PK)        │
-  │ name           │       │       │ task_id (FK)   │◄────┐
-  │ city           │       │       │ user_id (FK)   │     │
-  │ district       │       │       │ action         │     │
-  │ street_address │       │       │ timestamp      │     │
-  └────────────────┘       │       └────────────────┘     │
-                           │                              │
-                           │ links via                    │ tracks
-                           │ building_id                  │ changes
-                           │                              │
-  ┌────────────────┐       │       ┌────────────────┐     │
-  │     USERS      │       └───────┤     TASKS      │     │
-  ├────────────────┤               ├────────────────┤     │
-  │ id (PK)        │◄─────────────►│ id (PK)        │─────┘
-  │ email          │   links via   │ title          │
-  │ password_hash  │  created_by / │ description    │
-  │ first_name     │  assigned_to  │ status         │
-  │ last_name      │               │ building_id    │
-  │ role (ENUM)    │               │ created_by     │
-  └────────────────┘               │ assigned_to    │
-                                   │ created_at     │
-                                   │ updated_at     │
-                                   └────────────────┘
+                       ┌───────────────────────┐
+                       │   building_managers   │
+                       ├───────────────────────┤
+                       │ user_id (PK, FK)      │
+                       │ building_id (PK, FK)  │
+                       └───────────┬───────────┘
+                                   │
+             ┌─────────────────────┴─────────────────────┐
+             │                                           │
+             ▼                                           ▼
+┌───────────────────────┐                   ┌───────────────────────┐
+│         users         │                   │       buildings       │
+├───────────────────────┤                   ├───────────────────────┤
+│ id (PK)               │                   │ id (PK)               │
+│ email (Unique)        │                   │ name                  │
+│ password_hash         │◄────────┐         │ city                  │
+│ first_name            │         │         │ district              │
+│ last_name             │         │         │ street_address        │
+│ role (ENUM)           │         │         │ created_at            │
+│ created_at            │         │         └───────────▲───────────┘
+└──────────▲────────────┘         │                     │
+           │                      │                     │
+           │ links via            │ links via           │ links via
+           │ created_by /         │ user_id             │ building_id
+           │ assigned_to          │                     │
+           │                      │                     │
+┌──────────┴────────────┐         │         ┌───────────┴───────────┐
+│         tasks         │         └─────────┤     activity_logs     │
+├───────────────────────┤                   ├───────────────────────┤
+│ id (PK)               │                   │ id (PK)               │
+│ title                 │◄──────────────────┤ task_id (FK)          │
+│ description           │    tracks state   │ user_id (FK)          │
+│ status (ENUM)         │    changes        │ action                │
+│ building_id (FK)      │                   │ timestamp             │
+│ created_by (FK)       │                   └───────────────────────┘
+│ assigned_to (FK)      │
+│ created_at            │
+│ updated_at (Trigger)  │
+└───────────────────────┘
 ```
 
 ---
 
-## Table Schemas & Definitions
+## 🗂️ Data Types & Custom Types
+
+### Custom Enums
+```sql
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'contractor');
+CREATE TYPE task_status AS ENUM ('pending', 'completed');
+```
+
+---
+
+## 📊 Table Schemas & Fields
 
 ### 1. `users`
-Tracks system actors, credentials, and access roles.
+Maintains records for credentials, profile data, and administrative clear levels.
 
-| Column Name | Data Type | Constraints | Example / Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | `INTEGER` | Primary Key, Auto-Increment | `101` |
-| `email` | `VARCHAR(255)` | Unique, Not Null | `oleg@example.com` |
-| `password_hash` | `VARCHAR(255)` | Not Null | *Bcrypt / Argon2 Hash* |
-| `first_name` | `VARCHAR(100)` | Not Null | `Aleksander` |
-| `last_name` | `VARCHAR(100)` | Not Null | `Widman` |
-| `role` | `VARCHAR(50)` | Not Null | `admin`, `manager`, `contractor` |
+| Column Name | Data Type | Constraints | Default | Notes / Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | *Auto-Increment* | Unique global user ID |
+| `email` | `VARCHAR(255)` | `UNIQUE`, `NOT NULL` | | Used for logging in |
+| `password_hash` | `VARCHAR(255)` | `NOT NULL` | | Hashed credential string |
+| `first_name` | `VARCHAR(100)` | `NOT NULL` | | `Aleksander` |
+| `last_name` | `VARCHAR(100)` | `NOT NULL` | | `Widman` |
+| `role` | `user_role` | `NOT NULL` | | `admin`, `manager`, `contractor` |
+| `created_at` | `TIMESTAMP TZ` | `NOT NULL` | `NOW()` | Timestamp with time zone |
 
 ### 2. `buildings`
-Defines the physical structures where maintenance tasks take place.
+Stores details about properties monitored by the system.
 
-| Column Name | Data Type | Constraints | Example / Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | `INTEGER` | Primary Key, Auto-Increment | `1` |
-| `name` | `VARCHAR(255)` | Not Null | `Kamienica - Centrum` |
-| `city` | `VARCHAR(100)` | Not Null | `Poznań` |
-| `district` | `VARCHAR(100)` | Nullable | `Wilda` / `Jeżyce` |
-| `street_address` | `VARCHAR(255)` | Not Null | `ul. Półwiejska 42` (Street & building/flat number only) |
+| Column Name | Data Type | Constraints | Default | Notes / Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | *Auto-Increment* | Unique building ID |
+| `name` | `VARCHAR(255)` | `NOT NULL` | | Friendly name (e.g., `Blok A`) |
+| `city` | `VARCHAR(100)` | `NOT NULL` | | `Poznań` |
+| `district` | `VARCHAR(100)` | `NULLABLE` | | `Wilda` |
+| `street_address` | `VARCHAR(255)` | `NOT NULL` | | Street & building number only |
+| `created_at` | `TIMESTAMP TZ` | `NOT NULL` | `NOW()` | Structural tracking creation date |
 
 ### 3. `tasks`
-The operational engine of the app mapping what work is requested, where, and who is executing it.
+The operational registry holding work orders generated by managers and updated by contractors.
 
-| Column Name | Data Type | Constraints | Example / Notes |
-| :--- | :--- | :--- | :--- |
-| `id` | `INTEGER` | Primary Key, Auto-Increment | `5001` |
-| `title` | `VARCHAR(255)` | Not Null | `Naprawa bramy wjazdowej` |
-| `description` | `TEXT` | Nullable | `Brama nie domyka się automatycznie, fotokomórka zablokowana.` |
-| `status` | `VARCHAR(50)` | Not Null, Default: `'pending'` | `pending`, `in_progress`, `completed` |
-| `building_id` | `INTEGER` | Foreign Key (`buildings.id`), Not Null | Links to specific property |
-| `created_by` | `INTEGER` | Foreign Key (`users.id`), Not Null | ID of the Building Administrator (manager) |
-| `assigned_to` | `INTEGER` | Foreign Key (`users.id`), Nullable | ID of the assigned Contractor |
-| `created_at` | `TIMESTAMP` | Not Null, Default: `NOW()` | Audit creation time |
-| `updated_at` | `TIMESTAMP` | Not Null, Default: `NOW()` | Last state change timestamp |
+| Column Name | Data Type | Constraints | Default | Notes / Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | *Auto-Increment* | Unique task ticket ID |
+| `title` | `VARCHAR(255)` | `NOT NULL` | | Short summary of issue |
+| `description` | `TEXT` | `NULLABLE` | | Expanded context / details |
+| `status` | `task_status` | `NOT NULL` | `'pending'` | `pending`, `completed` |
+| `building_id` | `INTEGER` | `NOT NULL`, `REFERENCES buildings(id)` | | **ON DELETE CASCADE** |
+| `created_by` | `INTEGER` | `NOT NULL`, `REFERENCES users(id)` | | ID of manager who issued task |
+| `assigned_to` | `INTEGER` | `REFERENCES users(id)` | | **ON DELETE SET NULL** |
+| `created_at` | `TIMESTAMP TZ` | `NOT NULL` | `NOW()` | Operational ticket launch time |
+| `updated_at` | `TIMESTAMP TZ` | `NOT NULL` | `NOW()` | Kept accurate via DB Trigger |
 
 ### 4. `activity_logs`
-An immutable ledger capturing operational workflows for the Master Admin view.
+An audit ledger capturing precise events for administrative review.
 
-| Column Name | Data Type | Constraints | Example / Notes |
+| Column Name | Data Type | Constraints | Default | Notes / Examples |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `SERIAL` | `PRIMARY KEY` | *Auto-Increment* | Unique log track ID |
+| `task_id` | `INTEGER` | `NOT NULL`, `REFERENCES tasks(id)` | | **ON DELETE CASCADE** |
+| `user_id` | `INTEGER` | `REFERENCES users(id)` | | **ON DELETE SET NULL** (The actor) |
+| `action` | `VARCHAR(255)` | `NOT NULL` | | e.g., `Marked task as completed` |
+| `timestamp` | `TIMESTAMP TZ` | `NOT NULL` | `NOW()` | Event timestamp |
+
+### 5. `building_managers`
+A composite key junction table modeling the relationship between properties and managers.
+
+| Column Name | Data Type | Constraints | Notes / Examples |
 | :--- | :--- | :--- | :--- |
-| `id` | `INTEGER` | Primary Key, Auto-Increment | `90001` |
-| `task_id` | `INTEGER` | Foreign Key (`tasks.id`), Cascade Delete | Target task identifier |
-| `user_id` | `INTEGER` | Foreign Key (`users.id`), Set Null | The actor performing the action (e.g., Contractor) |
-| `action` | `VARCHAR(255)` | Not Null | `Started task`, `Marked task as completed` |
-| `timestamp` | `TIMESTAMP` | Not Null, Default: `NOW()` | Exact moment execution happened |
+| `user_id` | `INTEGER` | `PRIMARY KEY`, `REFERENCES users(id)` | **ON DELETE CASCADE** |
+| `building_id` | `INTEGER` | `PRIMARY KEY`, `REFERENCES buildings(id)` | **ON DELETE CASCADE** |
 
 ---
 
-## Query Optimization & indexing Strategies
+## ⚡ Performance Optimization (Indexes)
 
-To guarantee rapid performance on mobile applications over limited data connections, ensure the following indexes are compiled within PostgreSQL:
+To ensure rapid response times when accessing data over mobile networks, the following indexes are defined:
 
-* **Task Assignments:** Index on `tasks(assigned_to)` ensures that the contractor's home feed renders immediately without full table scans.
-* **Geographical Filtering:** Composite index on `buildings(city, district)` for instant administrative telemetry lookups.
-* **Activity Tracking:** Index on `activity_logs(task_id)` to speed up structural audit-trail popups inside the administrator workspace.
+* **`idx_tasks_assigned_to`**: Optimizes the Contractor's workflow dashboard. Prevents full table scans when a contractor requests their current tasks list.
+* **`idx_buildings_city_district`**: A composite index optimized for administrative analytics and geographic sorting across fields.
+* **`idx_activity_logs_task_id`**: Accelerates loading detailed task histories and timelines inside the management portal.
+* **`idx_building_managers_user`**: Speeds up system access queries immediately after a building manager logs in, ensuring safe scoped routing.
+
+---
+
+## ⚙️ Automated Triggers
+
+The schema uses an internal PostgreSQL trigger function to automate timestamp records:
+
+* **`update_task_modtime`**: Executes `BEFORE UPDATE` on the `tasks` table. It automatically adjusts `updated_at = NOW()` whenever any attribute (such as a status modification) changes. This eliminates manual timestamp definitions on the FastAPI application layer.
