@@ -204,7 +204,7 @@ async def test_updated_at_trigger(conn):
 
     before = (await conn.fetchrow("SELECT updated_at FROM tasks WHERE id = $1", tid))["updated_at"]
     # Small sleep so NOW() advances
-    import asyncio; await asyncio.sleep(0.05)
+    import asyncio; await asyncio.sleep(1)
     await conn.execute("UPDATE tasks SET title = 'Updated' WHERE id = $1", tid)
     after = (await conn.fetchrow("SELECT updated_at FROM tasks WHERE id = $1", tid))["updated_at"]
 
