@@ -45,25 +45,25 @@ async def get_user(user_id: int):
     query = "select * from users where id = $1"
     return await _fetch_row(query, user_id)
 
-async def get_user_by_email(email: str):
-    query = "select * from users where email = $1"
-    return await _fetch_row(query, email)
+async def get_user_by_login(login: str):
+    query = "select * from users where login = $1"
+    return await _fetch_row(query, login)
 
 async def get_contractors():
     query = "select * from users where role = 'contractor' order by last_name, first_name"
     return await _fetch_rows(query)
 
-async def add_user(email: str, password: str, first_name: str, last_name: str, role: str):
-    query = "insert into users (email, password_hash, first_name, last_name, role) values ($1, $2, $3, $4, $5)"
-    await _execute(query, email, password, first_name, last_name, role)
+async def add_user(login: str, password: str, first_name: str, last_name: str, role: str):
+    query = "insert into users (login, password_hash, first_name, last_name, role) values ($1, $2, $3, $4, $5)"
+    await _execute(query, login, password, first_name, last_name, role)
 
 async def delete_user(user_id: int):
     query = "delete from users where id = $1"
     await _execute(query, user_id)
 
-async def update_user(user_id: int, email: str, password: str, first_name: str, last_name: str, role: str):
-    query = "update users set email = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6 where id = $1"
-    await _execute(query, user_id, email, password, first_name, last_name, role)
+async def update_user(user_id: int, login: str, password: str, first_name: str, last_name: str, role: str):
+    query = "update users set login = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6 where id = $1"
+    await _execute(query, user_id, login, password, first_name, last_name, role)
 
 
 
@@ -81,13 +81,13 @@ async def get_buildings_by_manager(user_id: int):
     query = "select b.* from buildings b left join building_managers bm on b.id = bm.building_id where bm.user_id = $1 order by city, district, street_address"
     return await _fetch_rows(query, user_id)
 
-async def add_building(name: str, city: str, district: str | None, street_address: str):
-    query = "insert into buildings (name, city, district, street_address) values ($1, $2, $3, $4)"
-    await _execute(query, name, city, district, street_address)
+async def add_building(city: str, district: str | None, street_address: str):
+    query = "insert into buildings (city, district, street_address) values ($1, $2, $3)"
+    await _execute(query, city, district, street_address)
 
-async def update_building(building_id: int, name: str, city: str, district: str | None, street_address: str):
-    query = "update buildings set name = $2, city = $3, district = $4, street_address = $5 where id = $1"
-    await _execute(query, building_id, name, city, district, street_address)
+async def update_building(building_id: int, city: str, district: str | None, street_address: str):
+    query = "update buildings set city = $2, district = $3, street_address = $4 where id = $1"
+    await _execute(query, building_id, city, district, street_address)
 
 async def delete_building(building_id: int):
     query = "delete from buildings where id = $1"

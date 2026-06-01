@@ -7,7 +7,7 @@ CREATE TYPE task_status AS ENUM ('pending', 'completed');
 -- 1. USERS TABLE
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    login VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -18,7 +18,6 @@ CREATE TABLE users (
 -- 2. BUILDINGS TABLE
 CREATE TABLE buildings (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
     city VARCHAR(100) NOT NULL,
     district VARCHAR(100),
     street_address VARCHAR(255) NOT NULL,
