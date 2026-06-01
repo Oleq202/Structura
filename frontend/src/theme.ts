@@ -127,6 +127,8 @@ export const font = {
     weight: {
         regular: 400,
         medium: 500,
+        big: 600,
+        bold: 700,
     },
     lineHeight: {
         tight: 1.3,
@@ -153,6 +155,8 @@ export const spacing = {
     10: "40px",
     12: "48px",
     16: "64px",
+    24: "96px",
+    32: "128px",
 } as const;
 
 export const radius = {
@@ -173,11 +177,17 @@ export const shadow = {
 export const components = {
     topBar: {
         background: colors.shell,
-        color: colors.shellText,
-        padding: `${spacing[3]} ${spacing[4]}`,
+        borderTop: `1px solid ${colors.shellDeep}`,
+        padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
+        borderRadius: radius.lg,
         display: "flex",
+        justifyContent: "space-around",
         alignItems: "center",
-        justifyContent: "space-between",
+        position: "fixed" as const,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
     },
 
     filterStrip: {
@@ -189,9 +199,17 @@ export const components = {
 
     bottomNav: {
         background: colors.shell,
-        padding: `${spacing[2]} 0 ${spacing[4]}`,
+        borderTop: `1px solid ${colors.shellDeep}`,
+        padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
+        borderRadius: radius.lg,
         display: "flex",
         justifyContent: "space-around",
+        alignItems: "center",
+        position: "fixed" as const,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
     },
 
     card: {
