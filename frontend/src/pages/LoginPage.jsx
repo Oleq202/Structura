@@ -64,7 +64,6 @@ export default function LoginPage() {
 
     const togglePassword = () => setShowPassword((v) => !v);
 
-    /* ── helpers ── */
     const inputStyle = (hasError, isFocused) => ({
         ...components.input,
         boxSizing: "border-box",
@@ -144,7 +143,6 @@ export default function LoginPage() {
                         gap: spacing[5],
                     }}
                 >
-                    {/* Login field */}
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         <label style={labelStyle}>Login</label>
                         <input
@@ -163,7 +161,6 @@ export default function LoginPage() {
                         {loginError && <p style={errorStyle}>{loginError}</p>}
                     </div>
 
-                    {/* Password field */}
                     <div style={{ display: "flex", flexDirection: "column" }}>
                         <label style={labelStyle}>Password</label>
                         <div
@@ -189,7 +186,7 @@ export default function LoginPage() {
                                 }}
                                 onFocus={() => setPasswordFocused(true)}
                                 onBlur={() => setPasswordFocused(false)}
-                                placeholder="At least 6 characters"
+                                placeholder="Must be at least 6 characters long"
                             />
                             <button
                                 type="button"
@@ -231,7 +228,6 @@ export default function LoginPage() {
                         )}
                     </div>
 
-                    {/* General error */}
                     {error && (
                         <p
                             style={{
