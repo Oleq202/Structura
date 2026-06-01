@@ -82,8 +82,10 @@ export const status = {
 } as const;
 
 export const colors = {
+    shellLight: navy[400],
     shell: navy[500],
     shellDeep: navy[600],
+    deepNavy: navy[700],
     shellText: "#ffffff",
     shellTextMuted: "#a8d4f5",
 
@@ -176,15 +178,15 @@ export const shadow = {
 
 export const components = {
     topBar: {
-        background: colors.shell,
-        borderTop: `1px solid ${colors.shellDeep}`,
+        background: colors.shellLight,
+        borderBottom: `1px solid ${colors.shellDeep}`,
         padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
         borderRadius: radius.lg,
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
         position: "fixed" as const,
-        bottom: 0,
+        top: "52px",
         left: 0,
         right: 0,
         zIndex: 100,
