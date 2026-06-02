@@ -75,9 +75,9 @@ export default function Bottombar() {
 
     const links = [
         { key: "tasks", href: "#tasks", label: "Tasks" },
-        { key: "settings", href: "#settings", label: "Settings" },
         { key: "calendar", href: "#calendar", label: "Calendar" },
         { key: "logs", href: "#logs", label: "Logs" },
+        { key: "settings", href: "#settings", label: "Settings" },
     ];
 
     return (
