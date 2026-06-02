@@ -3,6 +3,7 @@ import Task from "../components/Task";
 import Bottombar from "../components/Bottombar";
 import Navbar from "../components/Navbar";
 import AppHeader from "../components/AppHeader";
+import CreateTask from "../components/CreateTask";
 import {
     colors,
     font,
@@ -15,6 +16,12 @@ import {
 
 export default function ManagerPage() {
     const [activeFilter, setActiveFilter] = useState("all");
+    const [isCreateTaskOpen, setCreateTaskOpen] = useState(false);
+    const openCreateTask = () => setCreateTaskOpen(true);
+    const closeCreateTask = () => setCreateTaskOpen(false);
+    // const togglePassword = () => setShowPassword((v) => !v);
+    const toggleCreateTask = () => setCreateTaskOpen((v) => !v);
+
     const building = {
         id: 2,
         name: "Blok A",
@@ -34,6 +41,33 @@ export default function ManagerPage() {
         firstName: "Marek",
         lastName: "Nowak",
     };
+
+    const buildings = [
+        {
+            id: 1,
+            street_address: "ul. Górna 12",
+            district: "Wilda",
+            city: "Poznań",
+        },
+        {
+            id: 2,
+            street_address: "ul. Dolna 5",
+            district: "Jeżyce",
+            city: "Poznań",
+        },
+        {
+            id: 3,
+            street_address: "ul. Środkowa 8",
+            district: "Grunwald",
+            city: "Poznań",
+        },
+    ];
+
+    const contractors = [
+        { id: 4, firstName: "Marek", lastName: "Nowak" },
+        { id: 5, firstName: "Piotr", lastName: "Wiśniewski" },
+        { id: 6, firstName: "Tomasz", lastName: "Zając" },
+    ];
 
     const pendingTask = {
         id: 1,
@@ -80,8 +114,6 @@ export default function ManagerPage() {
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
             />
-            <div>Structura</div>
-            <div>All, Pending, Completed</div>
             <div
                 style={{
                     display: "flex",
@@ -137,6 +169,7 @@ export default function ManagerPage() {
                 onMouseLeave={(e) =>
                     (e.currentTarget.style.background = colors.primary)
                 }
+                onClick={toggleCreateTask}
             >
                 <svg
                     width="32"
@@ -152,6 +185,13 @@ export default function ManagerPage() {
                     <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
             </button>
+            {isCreateTaskOpen && (
+                <CreateTask
+                    buildings={buildings}
+                    contractors={contractors}
+                    onClose={closeCreateTask}
+                />
+            )}
             <Bottombar />
         </div>
     );
