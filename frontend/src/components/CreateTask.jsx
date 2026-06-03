@@ -108,7 +108,7 @@ export default function CreateTask({
                 justifyContent: "center",
                 padding: `0 ${spacing[4]}`,
                 boxSizing: "border-box",
-                zIndex: 1000,
+                zIndex: 100,
             }}
             onClick={() => onClose?.()}
         >

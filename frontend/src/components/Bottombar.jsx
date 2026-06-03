@@ -92,7 +92,7 @@ export default function Bottombar() {
                   : "tasks";
 
     return (
-        <nav style={{ ...components.bottomNav }}>
+        <nav style={{ ...components.bottomNav, zIndex: 2000 }}>
             {links.map(({ key, to, label }) => {
                 const isActive = activeKey === key;
                 return (
