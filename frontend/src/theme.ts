@@ -185,11 +185,10 @@ export const components = {
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
-        position: "fixed" as const,
-        top: "52px",
-        left: 0,
-        right: 0,
-        zIndex: 100,
+        flexShrink: 0,
+        position: "sticky" as const,
+        top: 0,
+        zIndex: 10,
     },
 
     filterStrip: {
@@ -207,11 +206,7 @@ export const components = {
         display: "flex",
         justifyContent: "space-around",
         alignItems: "center",
-        position: "fixed" as const,
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
+        flexShrink: 0,
     },
 
     card: {
