@@ -9,7 +9,7 @@ import {
     status,
 } from "../theme";
 
-export default function LoginPage() {
+export default function LoginPage({ onLoginSuccess }) {
     const loginRef = useRef(null);
     const [login, setLogin] = useState("");
     const [loginError, setLoginError] = useState("");
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
         setLoading(true);
         try {
-            console.log("Successfully logged in");
+            onLoginSuccess();
         } catch (err) {
             setError("Wrong email or password");
         } finally {

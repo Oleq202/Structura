@@ -1,8 +1,6 @@
 import { useState } from "react";
 import Task from "../components/Task";
-import Bottombar from "../components/Bottombar";
 import Navbar from "../components/Navbar";
-import AppHeader from "../components/AppHeader";
 import CreateTask from "../components/CreateTask";
 import {
     colors,
@@ -109,7 +107,6 @@ export default function ManagerPage() {
                 minHeight: "100vh",
             }}
         >
-            <AppHeader />
             <Navbar
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
@@ -192,7 +189,6 @@ export default function ManagerPage() {
                     onClose={closeCreateTask}
                 />
             )}
-            <Bottombar />
         </div>
     );
 }

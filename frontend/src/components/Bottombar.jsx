@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { colors, font, spacing, radius, shadow, components } from "../theme";
+import { colors, font, spacing, radius, components } from "../theme";
+import { Link, useLocation } from "react-router-dom";
 
 const NAV_ICONS = {
     tasks: (
@@ -70,28 +70,35 @@ const NAV_ICONS = {
     ),
 };
 
-export default function Bottombar() {
-    const [active, setActive] = useState("tasks");
+const links = [
+    { key: "tasks", to: "/", label: "Tasks" },
+    { key: "calendar", to: "/calendar", label: "Calendar" },
+    { key: "logs", to: "/logs", label: "Logs" },
+    { key: "settings", to: "/settings", label: "Settings" },
+];
 
-    const links = [
-        { key: "tasks", href: "#tasks", label: "Tasks" },
-        { key: "calendar", href: "#calendar", label: "Calendar" },
-        { key: "logs", href: "#logs", label: "Logs" },
-        { key: "settings", href: "#settings", label: "Settings" },
-    ];
+export default function Bottombar() {
+    const pathname = useLocation().pathname;
+
+    const activeKey =
+        pathname === "/"
+            ? "tasks"
+            : pathname === "/calendar"
+              ? "calendar"
+              : pathname === "/logs"
+                ? "logs"
+                : pathname === "/settings"
+                  ? "settings"
+                  : "tasks";
 
     return (
         <nav style={{ ...components.bottomNav }}>
-            {links.map(({ key, href, label }) => {
-                const isActive = active === key;
+            {links.map(({ key, to, label }) => {
+                const isActive = activeKey === key;
                 return (
-                    <a
+                    <Link
                         key={key}
-                        href={href}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            setActive(key);
-                        }}
+                        to={to}
                         style={{
                             display: "flex",
                             flexDirection: "column",
@@ -144,7 +151,7 @@ export default function Bottombar() {
                             {NAV_ICONS[key]}
                         </span>
                         {label}
-                    </a>
+                    </Link>
                 );
             })}
         </nav>
