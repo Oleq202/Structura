@@ -15,10 +15,14 @@ import {
 export default function ManagerPage() {
     const [activeFilter, setActiveFilter] = useState("all");
     const [isCreateTaskOpen, setCreateTaskOpen] = useState(false);
+    const [expandedTaskId, setExpandedTaskId] = useState(null);
     const openCreateTask = () => setCreateTaskOpen(true);
     const closeCreateTask = () => setCreateTaskOpen(false);
     // const togglePassword = () => setShowPassword((v) => !v);
     const toggleCreateTask = () => setCreateTaskOpen((v) => !v);
+    const toggleTaskExpanded = (taskId) => {
+        setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
+    };
 
     const building = {
         id: 2,
@@ -99,12 +103,8 @@ export default function ManagerPage() {
                 display: "flex",
                 flexDirection: "column",
                 background: colors.pageBg,
-                alignItems: "center",
-                justifyContent: "center",
                 fontFamily: font.family.sans,
-                padding: `${spacing[20]} ${spacing[4]} ${spacing[16]}`,
                 boxSizing: "border-box",
-                minHeight: "100vh",
             }}
         >
             <Navbar
@@ -116,11 +116,14 @@ export default function ManagerPage() {
                     display: "flex",
                     flexDirection: "column",
                     gap: "16px",
-                    marginTop: "12px",
+                    padding: "16px",
+                    alignItems: "center",
                 }}
             >
                 <Task
                     initialData={pendingTask}
+                    expanded={expandedTaskId === pendingTask.id}
+                    onToggle={() => toggleTaskExpanded(pendingTask.id)}
                     onMarkCompleted={() =>
                         console.log("Mark completed:", pendingTask.id)
                     }
@@ -128,6 +131,8 @@ export default function ManagerPage() {
                 />
                 <Task
                     initialData={pendingTask}
+                    expanded={expandedTaskId === pendingTask.id}
+                    onToggle={() => toggleTaskExpanded(pendingTask.id)}
                     onMarkCompleted={() =>
                         console.log("Mark completed:", pendingTask.id)
                     }
@@ -135,6 +140,63 @@ export default function ManagerPage() {
                 />
                 <Task
                     initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
                     onMarkCompleted={() =>
                         console.log("Mark completed:", completedTask.id)
                     }

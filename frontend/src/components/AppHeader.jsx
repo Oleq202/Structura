@@ -4,11 +4,6 @@ export default function AppHeader() {
     return (
         <div
             style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                zIndex: 101,
                 background: colors.shell,
                 height: "52px",
                 display: "flex",
@@ -16,6 +11,7 @@ export default function AppHeader() {
                 gap: spacing[3],
                 padding: `0 ${spacing[4]}`,
                 boxSizing: "border-box",
+                flexShrink: 0,
             }}
         >
             <img

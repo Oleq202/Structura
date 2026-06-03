@@ -77,9 +77,8 @@ function formatTimestamp(iso) {
     });
 }
 
-export default function Task({ initialData, onMarkCompleted, onReassign }) {
+export default function Task({ initialData, expanded, onToggle, onMarkCompleted, onReassign }) {
     const [task] = useState(initialData);
-    const [expanded, setExpanded] = useState(false);
     const isPending = task.status === "pending";
     const badgeKey = STATUS_BADGE[task.status] ?? "new";
     const badge = badgeStyle(badgeKey);
@@ -103,7 +102,7 @@ export default function Task({ initialData, onMarkCompleted, onReassign }) {
                 overflow: "hidden",
                 cursor: "pointer",
             }}
-            onClick={() => setExpanded((v) => !v)}
+            onClick={onToggle}
         >
             <div style={{ padding: `${spacing[4]} ${spacing[5]}` }}>
                 <h2
