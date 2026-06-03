@@ -8,12 +8,15 @@ import {
     components,
     status,
 } from "../theme";
+import { translations } from "../i18n";
 
 export default function CreateTask({
     buildings = [],
     contractors = [],
     onClose,
+    language = "pl",
 }) {
+    const t = translations[language];
     const createTaskRef = useRef(null);
     const [task, setTask] = useState({
         title: "",
@@ -61,7 +64,7 @@ export default function CreateTask({
         setAssignedToError("");
 
         if (!task.title) {
-            setTitleError("Title is required");
+            setTitleError(t.required);
             return;
         }
 
@@ -170,7 +173,7 @@ export default function CreateTask({
                         lineHeight: font.lineHeight.tight,
                     }}
                 >
-                    Create new task
+                    {t.createNewTask}
                 </h1>
                 <form
                     onSubmit={handleSubmit}
@@ -181,7 +184,7 @@ export default function CreateTask({
                     }}
                 >
                     <div>
-                        <label style={labelStyle}>Title</label>
+                        <label style={labelStyle}>{t.title}</label>
                         <input
                             style={inputStyle(!!titleError, titleFocused)}
                             ref={createTaskRef}
@@ -192,13 +195,13 @@ export default function CreateTask({
                             }
                             onFocus={() => setTitleFocused(true)}
                             onBlur={() => setTitleFocused(false)}
-                            placeholder="Enter task title"
+                            placeholder={t.enterTaskTitle}
                         />
                         {titleError && <p style={errorStyle}>{titleError}</p>}
                     </div>
 
                     <div>
-                        <label style={labelStyle}>Description</label>
+                        <label style={labelStyle}>{t.description}</label>
                         <input
                             style={inputStyle(
                                 !!descriptionError,
@@ -214,7 +217,7 @@ export default function CreateTask({
                             }
                             onFocus={() => setDescriptionFocused(true)}
                             onBlur={() => setDescriptionFocused(false)}
-                            placeholder="Enter task description"
+                            placeholder={t.enterTaskDescription}
                         />
                         {descriptionError && (
                             <p style={errorStyle}>{descriptionError}</p>
@@ -222,7 +225,7 @@ export default function CreateTask({
                     </div>
 
                     <div>
-                        <label style={labelStyle}>Building</label>
+                        <label style={labelStyle}>{t.building}</label>
                         <select
                             style={inputStyle(!!buildingIdError, false)}
                             value={task.buildingId}
@@ -230,7 +233,7 @@ export default function CreateTask({
                                 setTask({ ...task, buildingId: e.target.value })
                             }
                         >
-                            <option value="">Select a building</option>
+                            <option value="">{t.selectBuilding}</option>
                             {buildings.map((b) => (
                                 <option key={b.id} value={b.id}>
                                     {b.street_address}, {b.district}, {b.city}
@@ -243,7 +246,7 @@ export default function CreateTask({
                     </div>
 
                     <div>
-                        <label style={labelStyle}>Contractor</label>
+                        <label style={labelStyle}>{t.contractor}</label>
                         <select
                             style={inputStyle(!!assignedToError, false)}
                             value={task.assignedTo}
@@ -251,7 +254,7 @@ export default function CreateTask({
                                 setTask({ ...task, assignedTo: e.target.value })
                             }
                         >
-                            <option value="">Select a contractor</option>
+                            <option value="">{t.selectContractor}</option>
                             {contractors.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.firstName} {c.lastName}
@@ -290,7 +293,7 @@ export default function CreateTask({
                                 boxSizing: "border-box",
                             }}
                         >
-                            Cancel
+                            {t.cancel}
                         </button>
 
                         <button
@@ -329,7 +332,7 @@ export default function CreateTask({
                                 e.currentTarget.style.transform = "scale(1)";
                             }}
                         >
-                            {loading ? "Creating…" : "Create task"}
+                            {loading ? t.creating : t.createTask}
                         </button>
                     </div>
                 </form>

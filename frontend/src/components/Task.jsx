@@ -8,6 +8,7 @@ import {
     components,
     badgeStyle,
 } from "../theme";
+import { translations } from "../i18n";
 
 const STATUS_BADGE = {
     pending: "new",
@@ -23,11 +24,11 @@ function Avatar({ firstName, lastName }) {
     return <div style={components.avatar}>{initials}</div>;
 }
 
-function UserCell({ user }) {
+function UserCell({ user, t }) {
     if (!user) {
         return (
             <span style={{ color: colors.textMuted, fontStyle: "italic" }}>
-                Unassigned
+                {t.unassigned}
             </span>
         );
     }
@@ -66,9 +67,10 @@ function MetaRow({ label, children }) {
     );
 }
 
-function formatTimestamp(iso) {
+function formatTimestamp(iso, language) {
     if (!iso) return "";
-    return new Date(iso).toLocaleString("pl-PL", {
+    const locale = language === "pl" ? "pl-PL" : "en-US";
+    return new Date(iso).toLocaleString(locale, {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -77,7 +79,8 @@ function formatTimestamp(iso) {
     });
 }
 
-export default function Task({ initialData, expanded, onToggle, onMarkCompleted, onReassign }) {
+export default function Task({ initialData, expanded, onToggle, onMarkCompleted, onReassign, language = "pl" }) {
+    const t = translations[language];
     const [task] = useState(initialData);
     const isPending = task.status === "pending";
     const badgeKey = STATUS_BADGE[task.status] ?? "new";
@@ -125,7 +128,7 @@ export default function Task({ initialData, expanded, onToggle, onMarkCompleted,
                             paddingTop: spacing[3],
                         }}
                     >
-                        <MetaRow label="Building">
+                        <MetaRow label={t.building}>
                             <div
                                 style={{
                                     display: "flex",
@@ -183,29 +186,29 @@ export default function Task({ initialData, expanded, onToggle, onMarkCompleted,
                             </p>
                         )}
 
-                        <MetaRow label="Created by">
-                            <UserCell user={task.created_by} />
+                        <MetaRow label={t.createdBy}>
+                            <UserCell user={task.created_by} t={t} />
                         </MetaRow>
 
-                        <MetaRow label="Assigned to">
-                            <UserCell user={task.assigned_to} />
+                        <MetaRow label={t.assignedTo}>
+                            <UserCell user={task.assigned_to} t={t} />
                         </MetaRow>
 
                         {task.created_at && (
-                            <MetaRow label="Created">
+                            <MetaRow label={t.created}>
                                 <span style={{ color: colors.textSecondary }}>
-                                    {formatTimestamp(task.created_at)}
+                                    {formatTimestamp(task.created_at, language)}
                                 </span>
                             </MetaRow>
                         )}
 
                         {task.updated_at &&
                             task.updated_at !== task.created_at && (
-                                <MetaRow label="Last updated">
+                                <MetaRow label={t.lastUpdated}>
                                     <span
                                         style={{ color: colors.textSecondary }}
                                     >
-                                        {formatTimestamp(task.updated_at)}
+                                        {formatTimestamp(task.updated_at, language)}
                                     </span>
                                 </MetaRow>
                             )}
@@ -231,7 +234,7 @@ export default function Task({ initialData, expanded, onToggle, onMarkCompleted,
                                             colors.primary)
                                     }
                                 >
-                                    Mark completed
+                                    {t.markCompleted}
                                 </button>
                                 <button
                                     style={{
@@ -242,7 +245,7 @@ export default function Task({ initialData, expanded, onToggle, onMarkCompleted,
                                     }}
                                     onClick={onReassign}
                                 >
-                                    Reassign
+                                    {t.reassign}
                                 </button>
                             </div>
                         )}

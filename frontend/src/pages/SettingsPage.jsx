@@ -14,11 +14,11 @@ function Avatar({ firstName, lastName }) {
     return <div style={components.avatar}>{initials}</div>;
 }
 
-function UserCell({ user }) {
+function UserCell({ user, t }) {
     if (!user) {
         return (
             <span style={{ color: colors.textMuted, fontStyle: "italic" }}>
-                Unassigned
+                {t.unassigned}
             </span>
         );
     }
@@ -68,7 +68,7 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
                         gap: spacing[3],
                     }}
                 >
-                    <UserCell user={currentUser} />
+                    <UserCell user={currentUser} t={t} />
                 </div>
                 <LanguageSwitcher
                     language={language}
@@ -157,9 +157,7 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
                             fontSize: font.size.md,
                         }}
                     >
-                        {language === "pl"
-                            ? "Dostęp do ustawień jest ograniczony do administratorów."
-                            : "Settings access is limited to administrators."}
+                        {t.settingsAccessLimited}
                     </div>
                 )}
             </div>

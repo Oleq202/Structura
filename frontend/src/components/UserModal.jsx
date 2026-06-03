@@ -267,7 +267,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                             }}
                             onFocus={() => setFocused({ ...focused, login: true })}
                             onBlur={() => setFocused({ ...focused, login: false })}
-                            placeholder="Enter login"
+                            placeholder={t.enterLogin}
                         />
                         {errors.login && <p style={errorStyle}>{errors.login}</p>}
                     </div>
@@ -295,15 +295,15 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                                     }}
                                     onFocus={() => setFocused({ ...focused, password: true })}
                                     onBlur={() => setFocused({ ...focused, password: false })}
-                                    placeholder="Enter password"
+                                    placeholder={t.enterPassword}
                                 />
                                 <button
                                     type="button"
                                     onClick={togglePassword}
                                     aria-label={
                                         showPassword
-                                            ? "Hide password"
-                                            : "Show password"
+                                            ? t.hidePassword
+                                            : t.showPassword
                                     }
                                     style={{
                                         position: "absolute",
@@ -327,7 +327,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                                         (e.currentTarget.style.color = colors.textSecondary)
                                     }
                                 >
-                                    {showPassword ? "Hide" : "Show"}
+                                    {showPassword ? t.hide : t.show}
                                 </button>
                             </div>
                             {errors.password && <p style={errorStyle}>{errors.password}</p>}
@@ -346,7 +346,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                             }}
                             onFocus={() => setFocused({ ...focused, firstName: true })}
                             onBlur={() => setFocused({ ...focused, firstName: false })}
-                            placeholder="Enter first name"
+                            placeholder={t.enterFirstName}
                         />
                         {errors.firstName && <p style={errorStyle}>{errors.firstName}</p>}
                     </div>
@@ -363,7 +363,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                             }}
                             onFocus={() => setFocused({ ...focused, lastName: true })}
                             onBlur={() => setFocused({ ...focused, lastName: false })}
-                            placeholder="Enter last name"
+                            placeholder={t.enterLastName}
                         />
                         {errors.lastName && <p style={errorStyle}>{errors.lastName}</p>}
                     </div>
@@ -394,7 +394,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                                 onChange={(e) => setBuildingSearch(e.target.value)}
                                 onFocus={() => setFocused({ ...focused, buildingSearch: true })}
                                 onBlur={() => setFocused({ ...focused, buildingSearch: false })}
-                                placeholder={language === "pl" ? "Szukaj budynków..." : "Search buildings..."}
+                                placeholder={t.searchBuildings}
                             />
                             <div
                                 style={{
@@ -452,7 +452,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                                             textAlign: "center",
                                         }}
                                     >
-                                        {language === "pl" ? "Brak wyników" : "No results"}
+                                        {t.noResults}
                                     </div>
                                 )}
                             </div>
@@ -521,7 +521,7 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
                                 e.currentTarget.style.transform = "scale(1)";
                             }}
                         >
-                            {loading ? "Saving…" : isEdit ? t.update : t.create}
+                            {loading ? t.saving : isEdit ? t.update : t.create}
                         </button>
                     </div>
                 </form>

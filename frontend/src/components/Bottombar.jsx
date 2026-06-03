@@ -1,5 +1,6 @@
 import { colors, font, spacing, radius, components } from "../theme";
 import { Link, useLocation } from "react-router-dom";
+import { translations } from "../i18n";
 
 const NAV_ICONS = {
     tasks: (
@@ -71,13 +72,14 @@ const NAV_ICONS = {
 };
 
 const links = [
-    { key: "tasks", to: "/", label: "Tasks" },
-    { key: "calendar", to: "/calendar", label: "Calendar" },
-    { key: "logs", to: "/logs", label: "Logs" },
-    { key: "settings", to: "/settings", label: "Settings" },
+    { key: "tasks", to: "/", labelKey: "tasks" },
+    { key: "calendar", to: "/calendar", labelKey: "calendar" },
+    { key: "logs", to: "/logs", labelKey: "logs" },
+    { key: "settings", to: "/settings", labelKey: "settings" },
 ];
 
-export default function Bottombar() {
+export default function Bottombar({ language = "pl" }) {
+    const t = translations[language];
     const pathname = useLocation().pathname;
 
     const activeKey =
@@ -93,7 +95,7 @@ export default function Bottombar() {
 
     return (
         <nav style={{ ...components.bottomNav, zIndex: 2000 }}>
-            {links.map(({ key, to, label }) => {
+            {links.map(({ key, to, labelKey }) => {
                 const isActive = activeKey === key;
                 return (
                     <Link
@@ -150,7 +152,7 @@ export default function Bottombar() {
                         >
                             {NAV_ICONS[key]}
                         </span>
-                        {label}
+                        {t[labelKey]}
                     </Link>
                 );
             })}

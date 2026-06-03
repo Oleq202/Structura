@@ -12,7 +12,7 @@ import {
     badgeStyle,
 } from "../theme";
 
-export default function ManagerPage() {
+export default function ManagerPage({ language = "pl" }) {
     const [activeFilter, setActiveFilter] = useState("all");
     const [isCreateTaskOpen, setCreateTaskOpen] = useState(false);
     const [expandedTaskId, setExpandedTaskId] = useState(null);
@@ -110,6 +110,7 @@ export default function ManagerPage() {
             <Navbar
                 activeFilter={activeFilter}
                 onFilterChange={setActiveFilter}
+                language={language}
             />
             <div
                 style={{
@@ -128,15 +129,7 @@ export default function ManagerPage() {
                         console.log("Mark completed:", pendingTask.id)
                     }
                     onReassign={() => console.log("Reassign:", pendingTask.id)}
-                />
-                <Task
-                    initialData={pendingTask}
-                    expanded={expandedTaskId === pendingTask.id}
-                    onToggle={() => toggleTaskExpanded(pendingTask.id)}
-                    onMarkCompleted={() =>
-                        console.log("Mark completed:", pendingTask.id)
-                    }
-                    onReassign={() => console.log("Reassign:", pendingTask.id)}
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -148,6 +141,7 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -159,6 +153,7 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -170,6 +165,7 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -181,6 +177,7 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -192,6 +189,7 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
                 />
                 <Task
                     initialData={completedTask}
@@ -203,6 +201,19 @@ export default function ManagerPage() {
                     onReassign={() =>
                         console.log("Reassign:", completedTask.id)
                     }
+                    language={language}
+                />
+                <Task
+                    initialData={completedTask}
+                    expanded={expandedTaskId === completedTask.id}
+                    onToggle={() => toggleTaskExpanded(completedTask.id)}
+                    onMarkCompleted={() =>
+                        console.log("Mark completed:", completedTask.id)
+                    }
+                    onReassign={() =>
+                        console.log("Reassign:", completedTask.id)
+                    }
+                    language={language}
                 />
             </div>
             <button
@@ -249,6 +260,7 @@ export default function ManagerPage() {
                     buildings={buildings}
                     contractors={contractors}
                     onClose={closeCreateTask}
+                    language={language}
                 />
             )}
         </div>

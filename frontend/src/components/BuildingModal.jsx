@@ -215,7 +215,7 @@ export default function BuildingModal({ building = null, onClose, onSave, langua
                             }}
                             onFocus={() => setFocused({ ...focused, city: true })}
                             onBlur={() => setFocused({ ...focused, city: false })}
-                            placeholder="Enter city"
+                            placeholder={t.enterCity}
                         />
                         {errors.city && <p style={errorStyle}>{errors.city}</p>}
                     </div>
@@ -229,7 +229,7 @@ export default function BuildingModal({ building = null, onClose, onSave, langua
                             onChange={(e) => setFormData({ ...formData, district: e.target.value })}
                             onFocus={() => setFocused({ ...focused, district: true })}
                             onBlur={() => setFocused({ ...focused, district: false })}
-                            placeholder="Enter district (optional)"
+                            placeholder={t.enterDistrict}
                         />
                     </div>
 
@@ -245,7 +245,7 @@ export default function BuildingModal({ building = null, onClose, onSave, langua
                             }}
                             onFocus={() => setFocused({ ...focused, streetAddress: true })}
                             onBlur={() => setFocused({ ...focused, streetAddress: false })}
-                            placeholder="Enter street address"
+                            placeholder={t.enterStreetAddress}
                         />
                         {errors.streetAddress && <p style={errorStyle}>{errors.streetAddress}</p>}
                     </div>
@@ -312,7 +312,7 @@ export default function BuildingModal({ building = null, onClose, onSave, langua
                                 e.currentTarget.style.transform = "scale(1)";
                             }}
                         >
-                            {loading ? "Saving…" : isEdit ? t.update : t.create}
+                            {loading ? t.saving : isEdit ? t.update : t.create}
                         </button>
                     </div>
                 </form>

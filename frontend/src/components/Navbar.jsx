@@ -1,22 +1,26 @@
 import { colors, font, spacing, radius, shadow, components } from "../theme";
+import { translations } from "../i18n";
 
 export default function Navbar({
     activeFilter = "all",
     onFilterChange = () => {},
     buildings = [],
+    language = "pl",
 }) {
+    const t = translations[language];
     const staticFilters = [
-        { key: "all", label: "All" },
-        { key: "done", label: "Done" },
+        { key: "all", labelKey: "all" },
+        { key: "done", labelKey: "done" },
     ];
 
     const filters = [...staticFilters, ...buildings];
 
     return (
         <nav style={{ ...components.topBar }}>
-            {filters.map(({ key, label }) => {
+            {filters.map(({ key, label, labelKey }) => {
                 const isActive = activeFilter === key;
                 const isBuilding = !["all", "done"].includes(key);
+                const displayLabel = labelKey ? t[labelKey] : label;
 
                 return (
                     <button
@@ -83,7 +87,7 @@ export default function Navbar({
                                 }}
                             />
                         )}
-                        {label}
+                        {displayLabel}
                     </button>
                 );
             })}

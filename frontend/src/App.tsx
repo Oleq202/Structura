@@ -26,7 +26,7 @@ export default function App() {
     };
 
     if (!isLoggedIn) {
-        return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+        return <LoginPage onLoginSuccess={handleLoginSuccess} language={language} />;
     }
 
     return (
@@ -35,9 +35,9 @@ export default function App() {
                 <AppHeader />
                 <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                     <Routes>
-                        <Route path="/" element={<ManagerPage />} />
-                        <Route path="/calendar" element={<CalendarPage />} />
-                        <Route path="/logs" element={<LogsPage />} />
+                        <Route path="/" element={<ManagerPage language={language} />} />
+                        <Route path="/calendar" element={<CalendarPage language={language} />} />
+                        <Route path="/logs" element={<LogsPage language={language} />} />
                         <Route
                             path="/settings"
                             element={
@@ -51,7 +51,7 @@ export default function App() {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </div>
-                <Bottombar />
+                <Bottombar language={language} />
             </div>
         </BrowserRouter>
     );

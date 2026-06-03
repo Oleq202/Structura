@@ -1,4 +1,5 @@
 import { colors, radius, shadow, spacing, font } from "../theme";
+import { translations } from "../i18n";
 
 const labelStyle = {
     fontSize: font.size.sm,
@@ -8,7 +9,8 @@ const labelStyle = {
     display: "block",
 };
 
-export default function NotDoneYet({ text }) {
+export default function NotDoneYet({ text, language = "pl" }) {
+    const t = translations[language];
     return (
         <div
             style={{
@@ -47,10 +49,10 @@ export default function NotDoneYet({ text }) {
                         marginBottom: spacing[3],
                     }}
                 >
-                    {text} is under construction!
+                    {text} {t.underConstruction}
                 </h2>
                 <p style={labelStyle}>
-                    We're working hard to bring you this feature. Stay tuned!
+                    {t.workingHard}
                 </p>
             </div>
         </div>

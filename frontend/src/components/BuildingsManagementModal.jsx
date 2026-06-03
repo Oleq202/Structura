@@ -27,7 +27,7 @@ export default function BuildingsManagementModal({ onClose, language }) {
     };
 
     const handleDelete = (buildingId) => {
-        if (confirm(language === "pl" ? "Czy na pewno chcesz usunąć ten budynek?" : "Are you sure you want to delete this building?")) {
+        if (confirm(t.deleteBuildingConfirm)) {
             setBuildings(buildings.filter((b) => b.id !== buildingId));
             console.log("Deleted building:", buildingId);
         }
@@ -148,7 +148,7 @@ export default function BuildingsManagementModal({ onClose, language }) {
                             (e.currentTarget.style.background = colors.primary)
                         }
                     >
-                        {language === "pl" ? "+ Dodaj budynek" : "+ Add Building"}
+                        {t.addBuildingButton}
                     </button>
 
                     <div
@@ -231,7 +231,7 @@ export default function BuildingsManagementModal({ onClose, language }) {
                                             e.currentTarget.style.color = colors.textBody;
                                         }}
                                     >
-                                        {language === "pl" ? "Edytuj" : "Edit"}
+                                        {t.edit}
                                     </button>
                                     <button
                                         onClick={() => handleDelete(building.id)}
@@ -255,7 +255,7 @@ export default function BuildingsManagementModal({ onClose, language }) {
                                             e.currentTarget.style.background = "transparent";
                                         }}
                                     >
-                                        {language === "pl" ? "Usuń" : "Delete"}
+                                        {t.delete}
                                     </button>
                                 </div>
                             </div>

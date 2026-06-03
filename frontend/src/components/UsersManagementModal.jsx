@@ -27,7 +27,7 @@ export default function UsersManagementModal({ onClose, language }) {
     };
 
     const handleDelete = (userId) => {
-        if (confirm(language === "pl" ? "Czy na pewno chcesz usunąć tego użytkownika?" : "Are you sure you want to delete this user?")) {
+        if (confirm(t.deleteUserConfirm)) {
             setUsers(users.filter((u) => u.id !== userId));
             console.log("Deleted user:", userId);
         }
@@ -161,7 +161,7 @@ export default function UsersManagementModal({ onClose, language }) {
                             (e.currentTarget.style.background = colors.primary)
                         }
                     >
-                        {language === "pl" ? "+ Dodaj użytkownika" : "+ Add User"}
+                        {t.addUserButton}
                     </button>
 
                     <div
@@ -263,7 +263,7 @@ export default function UsersManagementModal({ onClose, language }) {
                                                 e.currentTarget.style.color = colors.textBody;
                                             }}
                                         >
-                                            {language === "pl" ? "Edytuj" : "Edit"}
+                                            {t.edit}
                                         </button>
                                         <button
                                             onClick={() => handleDelete(user.id)}
@@ -287,7 +287,7 @@ export default function UsersManagementModal({ onClose, language }) {
                                                 e.currentTarget.style.background = "transparent";
                                             }}
                                         >
-                                            {language === "pl" ? "Usuń" : "Delete"}
+                                            {t.delete}
                                         </button>
                                     </div>
                                 </div>

@@ -8,8 +8,10 @@ import {
     components,
     status,
 } from "../theme";
+import { translations } from "../i18n";
 
-export default function LoginPage({ onLoginSuccess }) {
+export default function LoginPage({ onLoginSuccess, language = "pl" }) {
+    const t = translations[language];
     const loginRef = useRef(null);
     const [login, setLogin] = useState("");
     const [loginError, setLoginError] = useState("");
@@ -29,17 +31,17 @@ export default function LoginPage({ onLoginSuccess }) {
         let valid = true;
 
         if (!login) {
-            setLoginError("Login is required");
+            setLoginError(t.loginRequired);
             valid = false;
         } else {
             setLoginError("");
         }
 
         if (!password) {
-            setPasswordError("Password is required");
+            setPasswordError(t.passwordRequired);
             valid = false;
         } else if (password.length < 6) {
-            setPasswordError("Password must be at least 6 characters");
+            setPasswordError(t.passwordMinLength);
             valid = false;
         } else {
             setPasswordError("");
@@ -56,7 +58,7 @@ export default function LoginPage({ onLoginSuccess }) {
         try {
             onLoginSuccess();
         } catch (err) {
-            setError("Wrong email or password");
+            setError(t.wrongEmailOrPassword);
         } finally {
             setLoading(false);
         }
@@ -132,7 +134,7 @@ export default function LoginPage({ onLoginSuccess }) {
                         lineHeight: font.lineHeight.tight,
                     }}
                 >
-                    Sign in
+                    {t.signIn}
                 </h1>
 
                 <form
@@ -144,7 +146,7 @@ export default function LoginPage({ onLoginSuccess }) {
                     }}
                 >
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                        <label style={labelStyle}>Login</label>
+                        <label style={labelStyle}>{t.login}</label>
                         <input
                             style={inputStyle(!!loginError, loginFocused)}
                             ref={loginRef}
@@ -156,13 +158,13 @@ export default function LoginPage({ onLoginSuccess }) {
                             }}
                             onFocus={() => setLoginFocused(true)}
                             onBlur={() => setLoginFocused(false)}
-                            placeholder="Your username"
+                            placeholder={t.yourUsername}
                         />
                         {loginError && <p style={errorStyle}>{loginError}</p>}
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column" }}>
-                        <label style={labelStyle}>Password</label>
+                        <label style={labelStyle}>{t.password}</label>
                         <div
                             style={{
                                 position: "relative",
@@ -186,15 +188,15 @@ export default function LoginPage({ onLoginSuccess }) {
                                 }}
                                 onFocus={() => setPasswordFocused(true)}
                                 onBlur={() => setPasswordFocused(false)}
-                                placeholder="Must be at least 6 characters long"
+                                placeholder={t.atLeast6Chars}
                             />
                             <button
                                 type="button"
                                 onClick={togglePassword}
                                 aria-label={
                                     showPassword
-                                        ? "Hide password"
-                                        : "Show password"
+                                        ? t.hidePassword
+                                        : t.showPassword
                                 }
                                 style={{
                                     position: "absolute",
@@ -220,7 +222,7 @@ export default function LoginPage({ onLoginSuccess }) {
                                         colors.textSecondary)
                                 }
                             >
-                                {showPassword ? "Hide" : "Show"}
+                                {showPassword ? t.hide : t.show}
                             </button>
                         </div>
                         {passwordError && (
@@ -277,7 +279,7 @@ export default function LoginPage({ onLoginSuccess }) {
                             e.currentTarget.style.transform = "scale(1)";
                         }}
                     >
-                        {loading ? "Signing in…" : "Sign in"}
+                        {loading ? t.signingIn : t.signIn}
                     </button>
                 </form>
             </div>
