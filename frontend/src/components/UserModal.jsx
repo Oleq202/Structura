@@ -16,7 +16,7 @@ const mockBuildings = [
     { id: 3, city: "Poznań", district: "Grunwald", street_address: "ul. Środkowa 8" },
 ];
 
-export default function UserModal({ user = null, buildings = mockBuildings, onClose, language }) {
+export default function UserModal({ user = null, buildings = mockBuildings, onClose, onSave, language }) {
     const t = translations[language];
     const loginRef = useRef(null);
     const isEdit = !!user;
@@ -126,7 +126,16 @@ export default function UserModal({ user = null, buildings = mockBuildings, onCl
 
         setLoading(true);
         try {
-            console.log(isEdit ? "Updating user:" : "Creating user:", formData);
+            const savedUser = {
+                id: user?.id || Date.now(),
+                login: formData.login,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                role: formData.role,
+                assignedBuildings: formData.assignedBuildings,
+            };
+            console.log(isEdit ? "Updating user:" : "Creating user:", savedUser);
+            if (onSave) onSave(savedUser);
             if (onClose) onClose();
         } catch (err) {
             console.error("Error saving user", err);

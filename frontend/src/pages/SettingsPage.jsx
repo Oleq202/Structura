@@ -2,8 +2,8 @@ import { useState } from "react";
 import { colors, font, spacing, radius, shadow, components } from "../theme";
 import { translations } from "../i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
-import UserModal from "../components/UserModal";
-import BuildingModal from "../components/BuildingModal";
+import UsersManagementModal from "../components/UsersManagementModal";
+import BuildingsManagementModal from "../components/BuildingsManagementModal";
 
 function Avatar({ firstName, lastName }) {
     const initials =
@@ -33,8 +33,8 @@ function UserCell({ user }) {
 
 export default function SettingsPage({ currentUser, language, onLanguageChange }) {
     const t = translations[language];
-    const [isUserModalOpen, setUserModalOpen] = useState(false);
-    const [isBuildingModalOpen, setBuildingModalOpen] = useState(false);
+    const [isUsersModalOpen, setUsersModalOpen] = useState(false);
+    const [isBuildingsModalOpen, setBuildingsModalOpen] = useState(false);
 
     const isAdmin = currentUser?.role === "admin";
 
@@ -87,7 +87,7 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
                 {isAdmin ? (
                     <>
                         <button
-                            onClick={() => setUserModalOpen(true)}
+                            onClick={() => setUsersModalOpen(true)}
                             style={{
                                 ...components.primaryButton,
                                 width: "100%",
@@ -118,7 +118,7 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
                         </button>
 
                         <button
-                            onClick={() => setBuildingModalOpen(true)}
+                            onClick={() => setBuildingsModalOpen(true)}
                             style={{
                                 ...components.primaryButton,
                                 width: "100%",
@@ -164,16 +164,16 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
                 )}
             </div>
 
-            {isUserModalOpen && (
-                <UserModal
-                    onClose={() => setUserModalOpen(false)}
+            {isUsersModalOpen && (
+                <UsersManagementModal
+                    onClose={() => setUsersModalOpen(false)}
                     language={language}
                 />
             )}
 
-            {isBuildingModalOpen && (
-                <BuildingModal
-                    onClose={() => setBuildingModalOpen(false)}
+            {isBuildingsModalOpen && (
+                <BuildingsManagementModal
+                    onClose={() => setBuildingsModalOpen(false)}
                     language={language}
                 />
             )}

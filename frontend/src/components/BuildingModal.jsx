@@ -10,7 +10,7 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
-export default function BuildingModal({ building = null, onClose, language }) {
+export default function BuildingModal({ building = null, onClose, onSave, language }) {
     const t = translations[language];
     const cityRef = useRef(null);
     const isEdit = !!building;
@@ -98,7 +98,14 @@ export default function BuildingModal({ building = null, onClose, language }) {
 
         setLoading(true);
         try {
-            console.log(isEdit ? "Updating building:" : "Creating building:", formData);
+            const savedBuilding = {
+                id: building?.id || Date.now(),
+                city: formData.city,
+                district: formData.district,
+                street_address: formData.streetAddress,
+            };
+            console.log(isEdit ? "Updating building:" : "Creating building:", savedBuilding);
+            if (onSave) onSave(savedBuilding);
             if (onClose) onClose();
         } catch (err) {
             console.error("Error saving building", err);
