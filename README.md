@@ -171,4 +171,4 @@ Once the backend is running, access the interactive API documentation at:
 
 ## License
 
-This project is licensed under the MIT License.
+All rights reserved.
