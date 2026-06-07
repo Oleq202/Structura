@@ -51,6 +51,11 @@ async def get_user_by_login(login: str):
     return await _fetch_row(query, login)
 
 
+async def get_all_users():
+    query = "select * from users order by last_name, first_name"
+    return await _fetch_rows(query)
+
+
 async def get_contractors():
     query = (
         "select * from users where role = 'contractor' order by last_name, first_name"
@@ -123,6 +128,11 @@ async def delete_building(building_id: int):
 async def get_task(task_id: int):
     query = "select * from tasks where id = $1"
     return await _fetch_row(query, task_id)
+
+
+async def get_all_tasks():
+    query = "select * from tasks order by created_at desc"
+    return await _fetch_rows(query)
 
 
 async def get_task_by_contractor(user_id: int):
