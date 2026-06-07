@@ -21,6 +21,19 @@ export async function login(login, password) {
 	return response.json();
 }
 
+export async function getUsers() {
+	const response = await fetch(
+		`${API_BASE}/users`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error("Failed to fetch users");
+	}
+	return response.json();
+}
+
 export async function createUser(userData) {
 	const response = await fetch(
 		`${API_BASE}/users`,
@@ -69,6 +82,21 @@ export async function deleteUser(userId) {
 	);
 	if (!response.ok) {
 		throw new Error("Failed to delete user");
+	}
+	return response.json();
+}
+
+export async function getBuildings() {
+	const response = await fetch(
+		`${API_BASE}/buildings`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			"Failed to fetch buildings"
+		);
 	}
 	return response.json();
 }
@@ -180,5 +208,85 @@ export async function removeBuildingManager(
 		throw new Error(
 			"Failed to remove building manager"
 		);
+	return response.json();
+}
+
+export async function getTasks() {
+	const response = await fetch(
+		`${API_BASE}/tasks`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error("Failed to fetch tasks");
+	}
+	return response.json();
+}
+
+export async function createTask(taskData) {
+	const response = await fetch(
+		`${API_BASE}/tasks`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type":
+					"application/json",
+			},
+			body: JSON.stringify(taskData),
+		}
+	);
+	if (!response.ok) {
+		throw new Error("Failed to create task");
+	}
+	return response.json();
+}
+
+export async function updateTask(
+	taskId,
+	taskData
+) {
+	const response = await fetch(
+		`${API_BASE}/tasks/${taskId}`,
+		{
+			method: "PUT",
+			headers: {
+				"Content-Type":
+					"application/json",
+			},
+			body: JSON.stringify(taskData),
+		}
+	);
+	if (!response.ok) {
+		throw new Error("Failed to update task");
+	}
+	return response.json();
+}
+
+export async function deleteTask(taskId) {
+	const response = await fetch(
+		`${API_BASE}/tasks/${taskId}`,
+		{
+			method: "DELETE",
+		}
+	);
+	if (!response.ok) {
+		throw new Error("Failed to delete task");
+	}
+	return response.json();
+}
+
+export async function getContractors() {
+	const response = await fetch(
+		`${API_BASE}/users?role=contractor`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			"Failed to fetch contractors"
+		);
+	}
 	return response.json();
 }
