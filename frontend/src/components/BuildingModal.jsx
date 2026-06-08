@@ -27,19 +27,19 @@ export default function BuildingModal({
 	const [formData, setFormData] = useState({
 		city: building?.city || "",
 		district: building?.district || "",
-		streetAddress:
+		street_address:
 			building?.street_address || "",
 	});
 
 	const [errors, setErrors] = useState({
 		city: "",
-		streetAddress: "",
+		street_address: "",
 	});
 
 	const [focused, setFocused] = useState({
 		city: false,
 		district: false,
-		streetAddress: false,
+		street_address: false,
 	});
 
 	const [loading, setLoading] = useState(false);
@@ -99,8 +99,8 @@ export default function BuildingModal({
 			valid = false;
 		}
 
-		if (!formData.streetAddress) {
-			newErrors.streetAddress = t.required;
+		if (!formData.street_address) {
+			newErrors.street_address = t.required;
 			valid = false;
 		}
 
@@ -115,18 +115,14 @@ export default function BuildingModal({
 		setLoading(true);
 		try {
 			const savedBuilding = {
-				id: building?.id || Date.now(),
+				...(building?.id && {
+					id: building.id,
+				}),
 				city: formData.city,
 				district: formData.district,
 				street_address:
-					formData.streetAddress,
+					formData.street_address,
 			};
-			console.log(
-				isEdit
-					? "Updating building:"
-					: "Creating building:",
-				savedBuilding
-			);
 			if (onSave) onSave(savedBuilding);
 			if (onClose) onClose();
 		} catch (err) {
@@ -248,47 +244,54 @@ export default function BuildingModal({
 				>
 					<div>
 						<label style={labelStyle}>
-							{t.city}
+							{t.streetAddress}
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.city,
-								focused.city
+								!!errors.street_address,
+								focused.street_address
 							)}
-							ref={cityRef}
 							type="text"
-							value={formData.city}
+							value={
+								formData.street_address
+							}
 							onChange={(e) => {
 								setFormData({
 									...formData,
-									city: e.target
-										.value,
+									street_address:
+										e.target
+											.value,
 								});
-								if (errors.city)
+								if (
+									errors.street_address
+								)
 									setErrors({
 										...errors,
-										city: "",
+										street_address:
+											"",
 									});
 							}}
 							onFocus={() =>
 								setFocused({
 									...focused,
-									city: true,
+									street_address: true,
 								})
 							}
 							onBlur={() =>
 								setFocused({
 									...focused,
-									city: false,
+									street_address: false,
 								})
 							}
 							placeholder={
-								t.enterCity
+								t.enterStreetAddress
 							}
 						/>
-						{errors.city && (
+						{errors.street_address && (
 							<p style={errorStyle}>
-								{errors.city}
+								{
+									errors.street_address
+								}
 							</p>
 						)}
 					</div>
@@ -334,54 +337,47 @@ export default function BuildingModal({
 
 					<div>
 						<label style={labelStyle}>
-							{t.streetAddress}
+							{t.city}
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.streetAddress,
-								focused.streetAddress
+								!!errors.city,
+								focused.city
 							)}
+							ref={cityRef}
 							type="text"
-							value={
-								formData.streetAddress
-							}
+							value={formData.city}
 							onChange={(e) => {
 								setFormData({
 									...formData,
-									streetAddress:
-										e.target
-											.value,
+									city: e.target
+										.value,
 								});
-								if (
-									errors.streetAddress
-								)
+								if (errors.city)
 									setErrors({
 										...errors,
-										streetAddress:
-											"",
+										city: "",
 									});
 							}}
 							onFocus={() =>
 								setFocused({
 									...focused,
-									streetAddress: true,
+									city: true,
 								})
 							}
 							onBlur={() =>
 								setFocused({
 									...focused,
-									streetAddress: false,
+									city: false,
 								})
 							}
 							placeholder={
-								t.enterStreetAddress
+								t.enterCity
 							}
 						/>
-						{errors.streetAddress && (
+						{errors.city && (
 							<p style={errorStyle}>
-								{
-									errors.streetAddress
-								}
+								{errors.city}
 							</p>
 						)}
 					</div>

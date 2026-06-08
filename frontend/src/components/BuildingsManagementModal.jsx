@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	colors,
 	font,
@@ -10,27 +10,7 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 import BuildingModal from "./BuildingModal";
-
-const mockBuildings = [
-	{
-		id: 1,
-		city: "Poznań",
-		district: "Wilda",
-		street_address: "ul. Górna 12",
-	},
-	{
-		id: 2,
-		city: "Poznań",
-		district: "Jeżyce",
-		street_address: "ul. Dolna 5",
-	},
-	{
-		id: 3,
-		city: "Poznań",
-		district: "Grunwald",
-		street_address: "ul. Środkowa 8",
-	},
-];
+import * as api from "../services/api";
 
 export default function BuildingsManagementModal({
 	onClose,
@@ -38,53 +18,54 @@ export default function BuildingsManagementModal({
 }) {
 	const t = translations[language];
 	const [buildings, setBuildings] = useState(
-		mockBuildings
+		[]
 	);
 	const [editingBuilding, setEditingBuilding] =
 		useState(null);
+
+	useEffect(() => {
+		api.getBuildings()
+			.then(setBuildings)
+			.catch(console.error);
+	}, []);
 
 	const handleEdit = (building) => {
 		setEditingBuilding(building);
 	};
 
-	const handleDelete = (buildingId) => {
+	const handleDelete = async (buildingId) => {
 		if (confirm(t.deleteBuildingConfirm)) {
+			await api.deleteBuilding(buildingId);
 			setBuildings(
 				buildings.filter(
 					(b) => b.id !== buildingId
 				)
 			);
-			console.log(
-				"Deleted building:",
-				buildingId
-			);
 		}
 	};
 
-	const handleBuildingSaved = (
+	const handleBuildingSaved = async (
 		savedBuilding
 	) => {
-		if (editingBuilding) {
+		if (editingBuilding?.id) {
+			const updated =
+				await api.updateBuilding(
+					savedBuilding.id,
+					savedBuilding
+				);
 			setBuildings(
 				buildings.map((b) =>
-					b.id === savedBuilding.id
-						? savedBuilding
+					b.id === updated.id
+						? updated
 						: b
 				)
 			);
 		} else {
-			setBuildings([
-				...buildings,
-				{
-					...savedBuilding,
-					id:
-						Math.max(
-							...buildings.map(
-								(b) => b.id
-							)
-						) + 1,
-				},
-			]);
+			const created =
+				await api.createBuilding(
+					savedBuilding
+				);
+			setBuildings([...buildings, created]);
 		}
 		setEditingBuilding(null);
 	};
