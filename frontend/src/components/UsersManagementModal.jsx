@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	colors,
 	font,
@@ -10,37 +10,29 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 import UserModal from "./UserModal";
-
-const mockUsers = [
-	{
-		id: 1,
-		login: "admin",
-		firstName: "Jan",
-		lastName: "Kowalski",
-		role: "admin",
-	},
-	{
-		id: 2,
-		login: "manager1",
-		firstName: "Anna",
-		lastName: "Nowak",
-		role: "manager",
-	},
-	{
-		id: 3,
-		login: "contractor1",
-		firstName: "Piotr",
-		lastName: "Wiśniewski",
-		role: "contractor",
-	},
-];
+import * as api from "../services/api";
 
 export default function UsersManagementModal({
 	onClose,
 	language,
 }) {
 	const t = translations[language];
-	const [users, setUsers] = useState(mockUsers);
+	const [users, setUsers] = useState([]);
+	const [buildings, setBuildings] = useState(
+		[]
+	);
+	useEffect(() => {
+		Promise.all([
+			api.getUsers(),
+			api.getBuildings(),
+		])
+			.then(([users, buildings]) => {
+				setUsers(users);
+				setBuildings(buildings);
+			})
+			.catch(console.error);
+	}, []);
+
 	const [editingUser, setEditingUser] =
 		useState(null);
 
@@ -48,39 +40,34 @@ export default function UsersManagementModal({
 		setEditingUser(user);
 	};
 
-	const handleDelete = (userId) => {
+	const handleDelete = async (user_id) => {
 		if (confirm(t.deleteUserConfirm)) {
+			await api.deleteUser(user_id);
 			setUsers(
 				users.filter(
-					(u) => u.id !== userId
+					(u) => u.id !== user_id
 				)
 			);
-			console.log("Deleted user:", userId);
 		}
 	};
 
-	const handleUserSaved = (savedUser) => {
-		if (editingUser) {
+	const handleUserSaved = async (savedUser) => {
+		if (editingUser?.id) {
+			const updated = await api.updateUser(
+				savedUser.id,
+				savedUser
+			);
 			setUsers(
 				users.map((u) =>
-					u.id === savedUser.id
-						? savedUser
+					u.id === updated.id
+						? updated
 						: u
 				)
 			);
 		} else {
-			setUsers([
-				...users,
-				{
-					...savedUser,
-					id:
-						Math.max(
-							...users.map(
-								(u) => u.id
-							)
-						) + 1,
-				},
-			]);
+			const created =
+				await api.createUser(savedUser);
+			setUsers([...users, created]);
 		}
 		setEditingUser(null);
 	};
@@ -328,10 +315,10 @@ export default function UsersManagementModal({
 												}}
 											>
 												{
-													user.firstName
+													user.first_name
 												}{" "}
 												{
-													user.lastName
+													user.last_name
 												}
 											</span>
 											<span
@@ -496,6 +483,7 @@ export default function UsersManagementModal({
 							? editingUser
 							: null
 					}
+					buildings={buildings}
 					onClose={() =>
 						setEditingUser(null)
 					}

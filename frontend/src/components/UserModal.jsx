@@ -14,30 +14,9 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
-const mockBuildings = [
-	{
-		id: 1,
-		city: "Poznań",
-		district: "Wilda",
-		street_address: "ul. Górna 12",
-	},
-	{
-		id: 2,
-		city: "Poznań",
-		district: "Jeżyce",
-		street_address: "ul. Dolna 5",
-	},
-	{
-		id: 3,
-		city: "Poznań",
-		district: "Grunwald",
-		street_address: "ul. Środkowa 8",
-	},
-];
-
 export default function UserModal({
 	user = null,
-	buildings = mockBuildings,
+	buildings = [],
 	onClose,
 	onSave,
 	language,
@@ -49,8 +28,8 @@ export default function UserModal({
 	const [formData, setFormData] = useState({
 		login: user?.login || "",
 		password: "",
-		firstName: user?.firstName || "",
-		lastName: user?.lastName || "",
+		first_name: user?.first_name || "",
+		last_name: user?.last_name || "",
 		role: user?.role || "manager",
 		assignedBuildings:
 			user?.assignedBuildings || [],
@@ -59,15 +38,15 @@ export default function UserModal({
 	const [errors, setErrors] = useState({
 		login: "",
 		password: "",
-		firstName: "",
-		lastName: "",
+		first_name: "",
+		last_name: "",
 	});
 
 	const [focused, setFocused] = useState({
 		login: false,
 		password: false,
-		firstName: false,
-		lastName: false,
+		first_name: false,
+		last_name: false,
 		buildingSearch: false,
 	});
 
@@ -144,13 +123,13 @@ export default function UserModal({
 			valid = false;
 		}
 
-		if (!formData.firstName) {
-			newErrors.firstName = t.required;
+		if (!formData.first_name) {
+			newErrors.first_name = t.required;
 			valid = false;
 		}
 
-		if (!formData.lastName) {
-			newErrors.lastName = t.required;
+		if (!formData.last_name) {
+			newErrors.last_name = t.required;
 			valid = false;
 		}
 
@@ -165,14 +144,17 @@ export default function UserModal({
 		setLoading(true);
 		try {
 			const savedUser = {
-				id: user?.id || Date.now(),
 				login: formData.login,
-				firstName: formData.firstName,
-				lastName: formData.lastName,
+				first_name: formData.first_name,
+				last_name: formData.last_name,
 				role: formData.role,
-				assignedBuildings:
-					formData.assignedBuildings,
 			};
+			if (!isEdit) {
+				savedUser.password =
+					formData.password;
+			} else {
+				savedUser.id = user.id;
+			}
 			console.log(
 				isEdit
 					? "Updating user:"
@@ -192,21 +174,21 @@ export default function UserModal({
 	};
 
 	const toggleBuildingAssignment = (
-		buildingId
+		building_id
 	) => {
 		setFormData((prev) => ({
 			...prev,
 			assignedBuildings:
 				prev.assignedBuildings.includes(
-					buildingId
+					building_id
 				)
 					? prev.assignedBuildings.filter(
 							(id) =>
-								id !== buildingId
+								id !== building_id
 						)
 					: [
 							...prev.assignedBuildings,
-							buildingId,
+							building_id,
 						],
 		}));
 	};
@@ -541,104 +523,106 @@ export default function UserModal({
 
 					<div>
 						<label style={labelStyle}>
-							{t.firstName}
+							{t.first_name}
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.firstName,
-								focused.firstName
+								!!errors.first_name,
+								focused.first_name
 							)}
 							type="text"
 							value={
-								formData.firstName
+								formData.first_name
 							}
 							onChange={(e) => {
 								setFormData({
 									...formData,
-									firstName:
+									first_name:
 										e.target
 											.value,
 								});
 								if (
-									errors.firstName
+									errors.first_name
 								)
 									setErrors({
 										...errors,
-										firstName:
+										first_name:
 											"",
 									});
 							}}
 							onFocus={() =>
 								setFocused({
 									...focused,
-									firstName: true,
+									first_name: true,
 								})
 							}
 							onBlur={() =>
 								setFocused({
 									...focused,
-									firstName: false,
+									first_name: false,
 								})
 							}
 							placeholder={
 								t.enterFirstName
 							}
 						/>
-						{errors.firstName && (
+						{errors.first_name && (
 							<p style={errorStyle}>
-								{errors.firstName}
+								{
+									errors.first_name
+								}
 							</p>
 						)}
 					</div>
 
 					<div>
 						<label style={labelStyle}>
-							{t.lastName}
+							{t.last_name}
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.lastName,
-								focused.lastName
+								!!errors.last_name,
+								focused.last_name
 							)}
 							type="text"
 							value={
-								formData.lastName
+								formData.last_name
 							}
 							onChange={(e) => {
 								setFormData({
 									...formData,
-									lastName:
+									last_name:
 										e.target
 											.value,
 								});
 								if (
-									errors.lastName
+									errors.last_name
 								)
 									setErrors({
 										...errors,
-										lastName:
+										last_name:
 											"",
 									});
 							}}
 							onFocus={() =>
 								setFocused({
 									...focused,
-									lastName: true,
+									last_name: true,
 								})
 							}
 							onBlur={() =>
 								setFocused({
 									...focused,
-									lastName: false,
+									last_name: false,
 								})
 							}
 							placeholder={
 								t.enterLastName
 							}
 						/>
-						{errors.lastName && (
+						{errors.last_name && (
 							<p style={errorStyle}>
-								{errors.lastName}
+								{errors.last_name}
 							</p>
 						)}
 					</div>
@@ -795,10 +779,12 @@ export default function UserModal({
 													{
 														building.street_address
 													}
+
 													,{" "}
 													{
 														building.district
 													}
+
 													,{" "}
 													{
 														building.city
