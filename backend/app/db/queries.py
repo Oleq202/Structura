@@ -126,12 +126,28 @@ async def delete_building(building_id: int):
 
 
 async def get_task(task_id: int):
-    query = "select * from tasks where id = $1"
+    query = """select t.*, 
+        cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
+        at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
+        b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        from tasks t
+        left join users cb on t.created_by = cb.id
+        left join users at on t.assigned_to = at.id
+        left join buildings b on t.building_id = b.id
+        where t.id = $1"""
     return await _fetch_row(query, task_id)
 
 
 async def get_all_tasks():
-    query = "select * from tasks order by created_at desc"
+    query = """select t.*, 
+        cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
+        at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
+        b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        from tasks t
+        left join users cb on t.created_by = cb.id
+        left join users at on t.assigned_to = at.id
+        left join buildings b on t.building_id = b.id
+        order by t.created_at desc"""
     return await _fetch_rows(query)
 
 
@@ -181,10 +197,38 @@ async def update_task(
     created_by: int | None,
     assigned_to: int | None,
 ):
-    query = "update tasks set title = $2, description = $3, building_id = $4, created_by = $5, assigned_to = $6 where id = $1"
-    await _execute(
-        query, task_id, title, description, building_id, created_by, assigned_to
-    )
+    updates = []
+    params = [task_id]
+    param_index = 2
+    
+    if title is not None:
+        updates.append(f"title = ${param_index}")
+        params.append(title)
+        param_index += 1
+    
+    if description is not None:
+        updates.append(f"description = ${param_index}")
+        params.append(description)
+        param_index += 1
+    
+    if building_id is not None:
+        updates.append(f"building_id = ${param_index}")
+        params.append(building_id)
+        param_index += 1
+    
+    if created_by is not None:
+        updates.append(f"created_by = ${param_index}")
+        params.append(created_by)
+        param_index += 1
+    
+    if assigned_to is not None:
+        updates.append(f"assigned_to = ${param_index}")
+        params.append(assigned_to)
+        param_index += 1
+    
+    if updates:
+        query = f"update tasks set {', '.join(updates)} where id = $1"
+        await _execute(query, *params)
 
 
 async def update_task_status(task_id: int, status: str):

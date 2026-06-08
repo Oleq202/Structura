@@ -160,11 +160,44 @@ async def delete_building_manager_endpoint(manager: BuildingManager):
 
 
 # Task endpoints
-@app.get("/tasks", response_model=List[Task])
+@app.get("/tasks")
 async def get_tasks():
     from .db.queries import get_all_tasks
     tasks = await get_all_tasks()
-    return [Task(**task) for task in tasks]
+    result = []
+    for task in tasks:
+        task_obj = {
+            "id": task["id"],
+            "title": task["title"],
+            "description": task["description"],
+            "building_id": task["building_id"],
+            "created_by": task["created_by"],
+            "assigned_to": task["assigned_to"],
+            "status": task["status"],
+            "created_at": task["created_at"],
+            "created_by_user": {
+                "id": task["created_by_id"],
+                "login": task["created_by_login"],
+                "first_name": task["created_by_first_name"],
+                "last_name": task["created_by_last_name"],
+                "role": task["created_by_role"],
+            } if task["created_by_id"] else None,
+            "assigned_to_user": {
+                "id": task["assigned_to_id"],
+                "login": task["assigned_to_login"],
+                "first_name": task["assigned_to_first_name"],
+                "last_name": task["assigned_to_last_name"],
+                "role": task["assigned_to_role"],
+            } if task["assigned_to_id"] else None,
+            "building": {
+                "id": task["building_id"],
+                "city": task["building_city"],
+                "district": task["building_district"],
+                "street_address": task["building_street_address"],
+            } if task["building_city"] else None,
+        }
+        result.append(task_obj)
+    return result
 
 
 @app.get("/tasks/{task_id}", response_model=Task)
@@ -187,7 +220,7 @@ async def create_task(task: TaskCreate):
     return {"message": "Task created successfully"}
 
 
-@app.put("/tasks/{task_id}", response_model=Task)
+@app.put("/tasks/{task_id}")
 async def update_task_endpoint(task_id: int, task: TaskUpdate):
     await update_task(
         task_id,
@@ -202,7 +235,37 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
     updated_task = await get_task(task_id)
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
-    return Task(**updated_task)
+    task_obj = {
+        "id": updated_task["id"],
+        "title": updated_task["title"],
+        "description": updated_task["description"],
+        "building_id": updated_task["building_id"],
+        "created_by": updated_task["created_by"],
+        "assigned_to": updated_task["assigned_to"],
+        "status": updated_task["status"],
+        "created_at": updated_task["created_at"],
+        "created_by_user": {
+            "id": updated_task["created_by_id"],
+            "login": updated_task["created_by_login"],
+            "first_name": updated_task["created_by_first_name"],
+            "last_name": updated_task["created_by_last_name"],
+            "role": updated_task["created_by_role"],
+        } if updated_task["created_by_id"] else None,
+        "assigned_to_user": {
+            "id": updated_task["assigned_to_id"],
+            "login": updated_task["assigned_to_login"],
+            "first_name": updated_task["assigned_to_first_name"],
+            "last_name": updated_task["assigned_to_last_name"],
+            "role": updated_task["assigned_to_role"],
+        } if updated_task["assigned_to_id"] else None,
+        "building": {
+            "id": updated_task["building_id"],
+            "city": updated_task["building_city"],
+            "district": updated_task["building_district"],
+            "street_address": updated_task["building_street_address"],
+        } if updated_task["building_city"] else None,
+    }
+    return task_obj
 
 
 @app.delete("/tasks/{task_id}")
