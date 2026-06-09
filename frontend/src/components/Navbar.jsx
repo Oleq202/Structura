@@ -17,7 +17,11 @@ export default function Navbar({
 	const t = translations[language];
 	const staticFilters = [
 		{ key: "all", labelKey: "all" },
-		{ key: "done", labelKey: "done" },
+		{ key: "pending", labelKey: "pending" },
+		{
+			key: "completed",
+			labelKey: "completed",
+		},
 	];
 
 	const filters = [
@@ -33,7 +37,8 @@ export default function Navbar({
 						activeFilter === key;
 					const isBuilding = ![
 						"all",
-						"done",
+						"pending",
+						"completed",
 					].includes(key);
 					const displayLabel = labelKey
 						? t[labelKey]
