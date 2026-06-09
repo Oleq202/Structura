@@ -1,41 +1,79 @@
 import { useState } from "react";
-import { colors, font, spacing, radius, shadow, components } from "../theme";
+import {
+	colors,
+	font,
+	spacing,
+	radius,
+	shadow,
+	components,
+} from "../theme";
 import { translations } from "../i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import UsersManagementModal from "../components/UsersManagementModal";
 import BuildingsManagementModal from "../components/BuildingsManagementModal";
 
-function Avatar({ firstName, lastName }) {
+function Avatar({ first_name, last_name }) {
 	const initials =
-		[firstName, lastName]
+		[first_name, last_name]
 			.filter(Boolean)
 			.map((name) => name[0].toUpperCase())
 			.join("") || "?";
-	return <div style={components.avatar}>{initials}</div>;
+	return (
+		<div style={components.avatar}>
+			{initials}
+		</div>
+	);
 }
 
 function UserCell({ user, t }) {
 	if (!user) {
-		return <span style={{ color: colors.textMuted, fontStyle: "italic" }}>{t.unassigned}</span>;
+		return (
+			<span
+				style={{
+					color: colors.textMuted,
+					fontStyle: "italic",
+				}}
+			>
+				{t.unassigned}
+			</span>
+		);
 	}
-	const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+	const full_name = [
+		user.first_name,
+		user.last_name,
+	]
+		.filter(Boolean)
+		.join(" ");
 	return (
 		<>
-			<span>{fullName}</span>
-			<Avatar firstName={user.firstName} lastName={user.lastName} />
+			<span>{full_name}</span>
+			<Avatar
+				first_name={user.first_name}
+				last_name={user.last_name}
+			/>
 		</>
 	);
 }
 
-export default function SettingsPage({ currentUser, language, onLanguageChange }) {
+export default function SettingsPage({
+	currentUser,
+	language,
+	onLanguageChange,
+}) {
 	const t = translations[language];
-	const [isUsersModalOpen, setUsersModalOpen] = useState(false);
-	const [isBuildingsModalOpen, setBuildingsModalOpen] = useState(false);
+	const [isUsersModalOpen, setUsersModalOpen] =
+		useState(false);
+	const [
+		isBuildingsModalOpen,
+		setBuildingsModalOpen,
+	] = useState(false);
 
 	const isAdmin = currentUser?.role === "admin";
 
 	const handleLanguageToggle = () => {
-		onLanguageChange(language === "pl" ? "en" : "pl");
+		onLanguageChange(
+			language === "pl" ? "en" : "pl"
+		);
 	};
 
 	return (
@@ -53,7 +91,8 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
 				style={{
 					padding: `${spacing[6]} ${spacing[4]}`,
 					display: "flex",
-					justifyContent: "space-between",
+					justifyContent:
+						"space-between",
 					alignItems: "center",
 				}}
 			>
@@ -64,9 +103,17 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
 						gap: spacing[3],
 					}}
 				>
-					<UserCell user={currentUser} t={t} />
+					<UserCell
+						user={currentUser}
+						t={t}
+					/>
 				</div>
-				<LanguageSwitcher language={language} onLanguageChange={handleLanguageToggle} />
+				<LanguageSwitcher
+					language={language}
+					onLanguageChange={
+						handleLanguageToggle
+					}
+				/>
 			</div>
 
 			<div
@@ -80,55 +127,101 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
 				{isAdmin ? (
 					<>
 						<button
-							onClick={() => setUsersModalOpen(true)}
+							onClick={() =>
+								setUsersModalOpen(
+									true
+								)
+							}
 							style={{
 								...components.primaryButton,
 								width: "100%",
 								padding: `${spacing[4]} ${spacing[6]}`,
-								borderRadius: radius.lg,
-								fontSize: font.size.md,
-								fontFamily: font.family.sans,
-								fontWeight: font.weight.medium,
-								letterSpacing: font.letterSpacing.wide,
+								borderRadius:
+									radius.lg,
+								fontSize:
+									font.size.md,
+								fontFamily:
+									font.family
+										.sans,
+								fontWeight:
+									font.weight
+										.medium,
+								letterSpacing:
+									font
+										.letterSpacing
+										.wide,
 								cursor: "pointer",
-								boxSizing: "border-box",
-								transition: "background 0.15s, transform 0.1s",
+								boxSizing:
+									"border-box",
+								transition:
+									"background 0.15s, transform 0.1s",
 							}}
 							onMouseEnter={(e) =>
-								(e.currentTarget.style.background = colors.primaryHover)
+								(e.currentTarget.style.background =
+									colors.primaryHover)
 							}
 							onMouseLeave={(e) =>
-								(e.currentTarget.style.background = colors.primary)
+								(e.currentTarget.style.background =
+									colors.primary)
 							}
-							onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
-							onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+							onMouseDown={(e) =>
+								(e.currentTarget.style.transform =
+									"scale(0.98)")
+							}
+							onMouseUp={(e) =>
+								(e.currentTarget.style.transform =
+									"scale(1)")
+							}
 						>
 							{t.addUser}
 						</button>
 
 						<button
-							onClick={() => setBuildingsModalOpen(true)}
+							onClick={() =>
+								setBuildingsModalOpen(
+									true
+								)
+							}
 							style={{
 								...components.primaryButton,
 								width: "100%",
 								padding: `${spacing[4]} ${spacing[6]}`,
-								borderRadius: radius.lg,
-								fontSize: font.size.md,
-								fontFamily: font.family.sans,
-								fontWeight: font.weight.medium,
-								letterSpacing: font.letterSpacing.wide,
+								borderRadius:
+									radius.lg,
+								fontSize:
+									font.size.md,
+								fontFamily:
+									font.family
+										.sans,
+								fontWeight:
+									font.weight
+										.medium,
+								letterSpacing:
+									font
+										.letterSpacing
+										.wide,
 								cursor: "pointer",
-								boxSizing: "border-box",
-								transition: "background 0.15s, transform 0.1s",
+								boxSizing:
+									"border-box",
+								transition:
+									"background 0.15s, transform 0.1s",
 							}}
 							onMouseEnter={(e) =>
-								(e.currentTarget.style.background = colors.primaryHover)
+								(e.currentTarget.style.background =
+									colors.primaryHover)
 							}
 							onMouseLeave={(e) =>
-								(e.currentTarget.style.background = colors.primary)
+								(e.currentTarget.style.background =
+									colors.primary)
 							}
-							onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
-							onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+							onMouseDown={(e) =>
+								(e.currentTarget.style.transform =
+									"scale(0.98)")
+							}
+							onMouseUp={(e) =>
+								(e.currentTarget.style.transform =
+									"scale(1)")
+							}
 						>
 							{t.addBuilding}
 						</button>
@@ -139,7 +232,8 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
 							textAlign: "center",
 							padding: spacing[8],
 							color: colors.textSecondary,
-							fontSize: font.size.md,
+							fontSize:
+								font.size.md,
 						}}
 					>
 						{t.settingsAccessLimited}
@@ -149,14 +243,20 @@ export default function SettingsPage({ currentUser, language, onLanguageChange }
 
 			{isUsersModalOpen && (
 				<UsersManagementModal
-					onClose={() => setUsersModalOpen(false)}
+					onClose={() =>
+						setUsersModalOpen(false)
+					}
 					language={language}
 				/>
 			)}
 
 			{isBuildingsModalOpen && (
 				<BuildingsManagementModal
-					onClose={() => setBuildingsModalOpen(false)}
+					onClose={() =>
+						setBuildingsModalOpen(
+							false
+						)
+					}
 					language={language}
 				/>
 			)}

@@ -1,92 +1,153 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Task from "../components/Task";
 import Navbar from "../components/Navbar";
 import CreateTask from "../components/CreateTask";
-import { colors, font, spacing, radius, shadow, components, badgeStyle } from "../theme";
+import {
+	colors,
+	font,
+	spacing,
+	radius,
+	shadow,
+	components,
+	badgeStyle,
+} from "../theme";
+import { translations } from "../i18n";
+import * as api from "../services/api";
 
-export default function ManagerPage({ language = "pl" }) {
-	const [activeFilter, setActiveFilter] = useState("all");
-	const [isCreateTaskOpen, setCreateTaskOpen] = useState(false);
-	const [expandedTaskId, setExpandedTaskId] = useState(null);
-	const openCreateTask = () => setCreateTaskOpen(true);
-	const closeCreateTask = () => setCreateTaskOpen(false);
-	// const togglePassword = () => setShowPassword((v) => !v);
-	const toggleCreateTask = () => setCreateTaskOpen((v) => !v);
+export default function ManagerPage({
+	currentUser,
+	language = "pl",
+}) {
+	const [activeFilter, setActiveFilter] =
+		useState("all");
+	const [isCreateTaskOpen, setCreateTaskOpen] =
+		useState(false);
+	const [expandedTaskId, setExpandedTaskId] =
+		useState(null);
+	const [tasks, setTasks] = useState([]);
+	const [buildings, setBuildings] = useState(
+		[]
+	);
+	const [contractors, setContractors] =
+		useState([]);
+	const openCreateTask = () =>
+		setCreateTaskOpen(true);
+	const closeCreateTask = () =>
+		setCreateTaskOpen(false);
+	const toggleCreateTask = () =>
+		setCreateTaskOpen((v) => !v);
 	const toggleTaskExpanded = (taskId) => {
-		setExpandedTaskId((prev) => (prev === taskId ? null : taskId));
+		setExpandedTaskId((prev) =>
+			prev === taskId ? null : taskId
+		);
 	};
 
-	const building = {
-		id: 2,
-		name: "Blok A",
-		city: "Poznań",
-		district: "Wilda",
-		street_address: "ul. Górna 12",
+	const refreshTasks = () => {
+		api.getTasks()
+			.then(setTasks)
+			.catch(console.error);
 	};
 
-	const manager = {
-		id: 3,
-		firstName: "Anna",
-		lastName: "Kowalska",
+	useEffect(() => {
+		Promise.all([
+			api.getTasks(),
+			api.getBuildings(),
+			api.getContractors(),
+		])
+			.then(
+				([
+					tasks,
+					buildings,
+					contractors,
+				]) => {
+					setTasks(tasks);
+					setBuildings(buildings);
+					setContractors(contractors);
+				}
+			)
+			.catch(console.error);
+	}, []);
+
+	const handleMarkCompleted = async (
+		taskId
+	) => {
+		try {
+			await api.updateTask(taskId, {
+				status: "completed",
+			});
+			refreshTasks();
+		} catch (err) {
+			console.error(
+				"Error marking task as completed",
+				err
+			);
+		}
 	};
 
-	const contractor = {
-		id: 4,
-		firstName: "Marek",
-		lastName: "Nowak",
+	const handleReassign = async (taskId) => {
+		console.log("Reassign task:", taskId);
 	};
 
-	const buildings = [
-		{
-			id: 1,
-			street_address: "ul. Górna 12",
-			district: "Wilda",
-			city: "Poznań",
-		},
-		{
-			id: 2,
-			street_address: "ul. Dolna 5",
-			district: "Jeżyce",
-			city: "Poznań",
-		},
-		{
-			id: 3,
-			street_address: "ul. Środkowa 8",
-			district: "Grunwald",
-			city: "Poznań",
-		},
-	];
-
-	const contractors = [
-		{ id: 4, firstName: "Marek", lastName: "Nowak" },
-		{ id: 5, firstName: "Piotr", lastName: "Wiśniewski" },
-		{ id: 6, firstName: "Tomasz", lastName: "Zając" },
-	];
-
-	const pendingTask = {
-		id: 1,
-		title: "Replace HVAC filters in Unit 4B",
-		description:
-			"Filters in unit 4B are overdue for replacement. Tenant reported reduced airflow. Use the standard 16×20×1 MERV-8 filters from the supply closet on floor 2.",
-		status: "pending",
-		building,
-		created_by: manager,
-		assigned_to: contractor,
-		created_at: "2025-10-15T12:00:00Z",
-		updated_at: "2025-10-15T12:00:00Z",
+	const getFilteredTasks = () => {
+		switch (activeFilter) {
+			case "pending":
+				return tasks.filter(
+					(t) => t.status === "pending"
+				);
+			case "completed":
+				return tasks.filter(
+					(t) =>
+						t.status === "completed"
+				);
+			default:
+				if (
+					![
+						"all",
+						"pending",
+						"completed",
+					].includes(activeFilter)
+				) {
+					return tasks.filter(
+						(t) =>
+							t.building_id ===
+							parseInt(activeFilter)
+					);
+				}
+				return tasks;
+		}
 	};
 
-	const completedTask = {
-		id: 2,
-		title: "Fix leaking pipe in basement",
-		description: "Water leak reported near the boiler room. Pipe joint needs resealing.",
-		status: "completed",
-		building,
-		created_by: manager,
-		assigned_to: contractor,
-		created_at: "2025-10-10T09:00:00Z",
-		updated_at: "2025-10-11T14:30:00Z",
+	const groupTasksByBuilding = (
+		tasksToGroup
+	) => {
+		const groups = {};
+		tasksToGroup.forEach((task) => {
+			const buildingId = task.building_id;
+			if (!groups[buildingId]) {
+				groups[buildingId] = {
+					building: task.building,
+					tasks: [],
+				};
+			}
+			groups[buildingId].tasks.push(task);
+		});
+
+		return Object.values(groups).sort(
+			(a, b) => {
+				const aAddress = a.building
+					? `${a.building.street_address}, ${a.building.district || ""}, ${a.building.city}`
+					: "";
+				const bAddress = b.building
+					? `${b.building.street_address}, ${b.building.district || ""}, ${b.building.city}`
+					: "";
+				return aAddress.localeCompare(
+					bAddress
+				);
+			}
+		);
 	};
+
+	const filteredTasks = getFilteredTasks();
 
 	return (
 		<div
@@ -107,75 +168,403 @@ export default function ManagerPage({ language = "pl" }) {
 				style={{
 					display: "flex",
 					flexDirection: "column",
-					gap: "16px",
+					gap: "24px",
 					padding: "16px",
 					alignItems: "center",
 				}}
 			>
-				<Task
-					initialData={pendingTask}
-					expanded={expandedTaskId === pendingTask.id}
-					onToggle={() => toggleTaskExpanded(pendingTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", pendingTask.id)}
-					onReassign={() => console.log("Reassign:", pendingTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
-				<Task
-					initialData={completedTask}
-					expanded={expandedTaskId === completedTask.id}
-					onToggle={() => toggleTaskExpanded(completedTask.id)}
-					onMarkCompleted={() => console.log("Mark completed:", completedTask.id)}
-					onReassign={() => console.log("Reassign:", completedTask.id)}
-					language={language}
-				/>
+				{activeFilter === "all" ? (
+					<>
+						{(() => {
+							const pendingTasks =
+								tasks.filter(
+									(t) =>
+										t.status ===
+										"pending"
+								);
+							const pendingGroups =
+								groupTasksByBuilding(
+									pendingTasks
+								);
+							return pendingGroups.length >
+								0 ? (
+								<>
+									<h2
+										style={{
+											fontSize:
+												font
+													.size
+													.lg,
+											fontWeight:
+												font
+													.weight
+													.medium,
+											color: colors.textHeading,
+											margin: 0,
+											width: "100%",
+											maxWidth:
+												"420px",
+										}}
+									>
+										{
+											translations[
+												language
+											]
+												.pendingTasks
+										}
+									</h2>
+									{pendingGroups.map(
+										(
+											group
+										) => (
+											<div
+												key={
+													group
+														.building
+														?.id ||
+													group
+														.tasks[0]
+														?.building_id
+												}
+												style={{
+													width: "100%",
+													maxWidth:
+														"420px",
+												}}
+											>
+												<div
+													style={{
+														fontSize:
+															font
+																.size
+																.sm,
+														color: colors.textSecondary,
+														marginBottom:
+															spacing[3],
+														fontWeight:
+															font
+																.weight
+																.medium,
+													}}
+												>
+													{
+														group
+															.building
+															?.street_address
+													}
+
+													,{" "}
+													{
+														group
+															.building
+															?.district
+													}
+
+													,{" "}
+													{
+														group
+															.building
+															?.city
+													}
+												</div>
+												<div
+													style={{
+														display:
+															"flex",
+														flexDirection:
+															"column",
+														gap: spacing[3],
+													}}
+												>
+													{group.tasks.map(
+														(
+															task
+														) => (
+															<Task
+																key={
+																	task.id
+																}
+																initialData={
+																	task
+																}
+																expanded={
+																	expandedTaskId ===
+																	task.id
+																}
+																onToggle={() =>
+																	toggleTaskExpanded(
+																		task.id
+																	)
+																}
+																onMarkCompleted={() =>
+																	handleMarkCompleted(
+																		task.id
+																	)
+																}
+																onReassign={() =>
+																	handleReassign(
+																		task.id
+																	)
+																}
+																language={
+																	language
+																}
+															/>
+														)
+													)}
+												</div>
+											</div>
+										)
+									)}
+								</>
+							) : null;
+						})()}
+						{(() => {
+							const completedTasks =
+								tasks.filter(
+									(t) =>
+										t.status ===
+										"completed"
+								);
+							const completedGroups =
+								groupTasksByBuilding(
+									completedTasks
+								);
+							return completedGroups.length >
+								0 ? (
+								<>
+									<h2
+										style={{
+											fontSize:
+												font
+													.size
+													.lg,
+											fontWeight:
+												font
+													.weight
+													.medium,
+											color: colors.textHeading,
+											margin: 0,
+											width: "100%",
+											maxWidth:
+												"420px",
+										}}
+									>
+										{
+											translations[
+												language
+											]
+												.completedTasks
+										}
+									</h2>
+									{completedGroups.map(
+										(
+											group
+										) => (
+											<div
+												key={
+													group
+														.building
+														?.id ||
+													group
+														.tasks[0]
+														?.building_id
+												}
+												style={{
+													width: "100%",
+													maxWidth:
+														"420px",
+												}}
+											>
+												<div
+													style={{
+														fontSize:
+															font
+																.size
+																.sm,
+														color: colors.textSecondary,
+														marginBottom:
+															spacing[3],
+														fontWeight:
+															font
+																.weight
+																.medium,
+													}}
+												>
+													{
+														group
+															.building
+															?.street_address
+													}
+
+													,{" "}
+													{
+														group
+															.building
+															?.district
+													}
+
+													,{" "}
+													{
+														group
+															.building
+															?.city
+													}
+												</div>
+												<div
+													style={{
+														display:
+															"flex",
+														flexDirection:
+															"column",
+														gap: spacing[3],
+													}}
+												>
+													{group.tasks.map(
+														(
+															task
+														) => (
+															<Task
+																key={
+																	task.id
+																}
+																initialData={
+																	task
+																}
+																expanded={
+																	expandedTaskId ===
+																	task.id
+																}
+																onToggle={() =>
+																	toggleTaskExpanded(
+																		task.id
+																	)
+																}
+																onMarkCompleted={() =>
+																	handleMarkCompleted(
+																		task.id
+																	)
+																}
+																onReassign={() =>
+																	handleReassign(
+																		task.id
+																	)
+																}
+																language={
+																	language
+																}
+															/>
+														)
+													)}
+												</div>
+											</div>
+										)
+									)}
+								</>
+							) : null;
+						})()}
+					</>
+				) : (
+					<>
+						{groupTasksByBuilding(
+							filteredTasks
+						).map((group) => (
+							<div
+								key={
+									group.building
+										?.id ||
+									group.tasks[0]
+										?.building_id
+								}
+								style={{
+									width: "100%",
+									maxWidth:
+										"420px",
+								}}
+							>
+								<div
+									style={{
+										fontSize:
+											font
+												.size
+												.sm,
+										color: colors.textSecondary,
+										marginBottom:
+											spacing[3],
+										fontWeight:
+											font
+												.weight
+												.medium,
+									}}
+								>
+									{
+										group
+											.building
+											?.street_address
+									}
+									,{" "}
+									{
+										group
+											.building
+											?.district
+									}
+									,{" "}
+									{
+										group
+											.building
+											?.city
+									}
+								</div>
+								<div
+									style={{
+										display:
+											"flex",
+										flexDirection:
+											"column",
+										gap: spacing[3],
+									}}
+								>
+									{group.tasks.map(
+										(
+											task
+										) => (
+											<Task
+												key={
+													task.id
+												}
+												initialData={
+													task
+												}
+												expanded={
+													expandedTaskId ===
+													task.id
+												}
+												onToggle={() =>
+													toggleTaskExpanded(
+														task.id
+													)
+												}
+												onMarkCompleted={() =>
+													handleMarkCompleted(
+														task.id
+													)
+												}
+												onReassign={() =>
+													handleReassign(
+														task.id
+													)
+												}
+												language={
+													language
+												}
+											/>
+										)
+									)}
+								</div>
+							</div>
+						))}
+					</>
+				)}
 			</div>
 			<button
 				style={{
@@ -194,8 +583,14 @@ export default function ManagerPage({ language = "pl" }) {
 					alignItems: "center",
 					justifyContent: "center",
 				}}
-				onMouseEnter={(e) => (e.currentTarget.style.background = colors.primaryHover)}
-				onMouseLeave={(e) => (e.currentTarget.style.background = colors.primary)}
+				onMouseEnter={(e) =>
+					(e.currentTarget.style.background =
+						colors.primaryHover)
+				}
+				onMouseLeave={(e) =>
+					(e.currentTarget.style.background =
+						colors.primary)
+				}
 				onClick={toggleCreateTask}
 			>
 				<svg
@@ -208,15 +603,27 @@ export default function ManagerPage({ language = "pl" }) {
 					strokeLinecap="round"
 					strokeLinejoin="round"
 				>
-					<line x1="12" y1="5" x2="12" y2="19" />
-					<line x1="5" y1="12" x2="19" y2="12" />
+					<line
+						x1="12"
+						y1="5"
+						x2="12"
+						y2="19"
+					/>
+					<line
+						x1="5"
+						y1="12"
+						x2="19"
+						y2="12"
+					/>
 				</svg>
 			</button>
 			{isCreateTaskOpen && (
 				<CreateTask
 					buildings={buildings}
 					contractors={contractors}
+					currentUser={currentUser}
 					onClose={closeCreateTask}
+					onTaskCreated={refreshTasks}
 					language={language}
 				/>
 			)}
