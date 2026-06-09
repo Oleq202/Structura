@@ -1,19 +1,39 @@
-import { useState, useRef, useEffect } from "react";
-import { colors, font, spacing, radius, shadow, components, status } from "../theme";
+import {
+	useState,
+	useRef,
+	useEffect,
+} from "react";
+import {
+	colors,
+	font,
+	spacing,
+	radius,
+	shadow,
+	components,
+	status,
+} from "../theme";
 import { translations } from "../i18n";
 
-export default function LoginPage({ onLoginSuccess, language = "pl" }) {
+export default function LoginPage({
+	onLoginSuccess,
+	language = "pl",
+}) {
 	const t = translations[language];
 	const loginRef = useRef(null);
 	const [login, setLogin] = useState("");
-	const [loginError, setLoginError] = useState("");
-	const [passwordError, setPasswordError] = useState("");
+	const [loginError, setLoginError] =
+		useState("");
+	const [passwordError, setPasswordError] =
+		useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [showPassword, setShowPassword] = useState(false);
-	const [loginFocused, setLoginFocused] = useState(false);
-	const [passwordFocused, setPasswordFocused] = useState(false);
+	const [showPassword, setShowPassword] =
+		useState(false);
+	const [loginFocused, setLoginFocused] =
+		useState(false);
+	const [passwordFocused, setPasswordFocused] =
+		useState(false);
 
 	useEffect(() => {
 		loginRef.current.focus();
@@ -56,7 +76,8 @@ export default function LoginPage({ onLoginSuccess, language = "pl" }) {
 		}
 	};
 
-	const togglePassword = () => setShowPassword((v) => !v);
+	const togglePassword = () =>
+		setShowPassword((v) => !v);
 
 	const inputStyle = (hasError, isFocused) => ({
 		...components.input,
@@ -70,10 +91,16 @@ export default function LoginPage({ onLoginSuccess, language = "pl" }) {
 			: isFocused
 				? `1px solid ${colors.borderStrong}`
 				: `1px solid ${colors.borderDefault}`,
-		background: hasError ? status.danger.bg : colors.cardBg,
+		background: hasError
+			? status.danger.bg
+			: colors.cardBg,
 		color: colors.textBody,
-		boxShadow: isFocused && !hasError ? shadow.focus : "none",
-		transition: "border-color 0.15s, box-shadow 0.15s",
+		boxShadow:
+			isFocused && !hasError
+				? shadow.focus
+				: "none",
+		transition:
+			"border-color 0.15s, box-shadow 0.15s",
 	});
 
 	const labelStyle = {
@@ -117,13 +144,18 @@ export default function LoginPage({ onLoginSuccess, language = "pl" }) {
 			>
 				<h1
 					style={{
-						fontSize: font.size["2xl"],
-						fontWeight: font.weight.medium,
+						fontSize:
+							font.size["2xl"],
+						fontWeight:
+							font.weight.medium,
 						color: colors.textHeading,
 						marginBottom: spacing[6],
 						marginTop: 0,
-						letterSpacing: font.letterSpacing.tight,
-						lineHeight: font.lineHeight.tight,
+						letterSpacing:
+							font.letterSpacing
+								.tight,
+						lineHeight:
+							font.lineHeight.tight,
 					}}
 				>
 					{t.signIn}
@@ -137,85 +169,193 @@ export default function LoginPage({ onLoginSuccess, language = "pl" }) {
 						gap: spacing[5],
 					}}
 				>
-					<div style={{ display: "flex", flexDirection: "column" }}>
-						<label style={labelStyle}>{t.login}</label>
+					<div
+						style={{
+							display: "flex",
+							flexDirection:
+								"column",
+						}}
+					>
+						<label style={labelStyle}>
+							{t.login}
+						</label>
 						<input
-							style={inputStyle(!!loginError, loginFocused)}
+							style={inputStyle(
+								!!loginError,
+								loginFocused
+							)}
 							ref={loginRef}
 							type="text"
 							value={login}
 							onChange={(e) => {
-								setLogin(e.target.value);
-								if (loginError) setLoginError("");
+								setLogin(
+									e.target.value
+								);
+								if (loginError)
+									setLoginError(
+										""
+									);
 							}}
-							onFocus={() => setLoginFocused(true)}
-							onBlur={() => setLoginFocused(false)}
-							placeholder={t.yourUsername}
+							onFocus={() =>
+								setLoginFocused(
+									true
+								)
+							}
+							onBlur={() =>
+								setLoginFocused(
+									false
+								)
+							}
+							placeholder={
+								t.yourUsername
+							}
+							aria-label={t.login}
 						/>
-						{loginError && <p style={errorStyle}>{loginError}</p>}
+						{loginError && (
+							<p style={errorStyle}>
+								{loginError}
+							</p>
+						)}
 					</div>
 
-					<div style={{ display: "flex", flexDirection: "column" }}>
-						<label style={labelStyle}>{t.password}</label>
+					<div
+						style={{
+							display: "flex",
+							flexDirection:
+								"column",
+						}}
+					>
+						<label style={labelStyle}>
+							{t.password}
+						</label>
 						<div
 							style={{
-								position: "relative",
+								position:
+									"relative",
 								display: "flex",
-								alignItems: "center",
+								alignItems:
+									"center",
 							}}
 						>
 							<input
 								style={{
-									...inputStyle(!!passwordError, passwordFocused),
-									paddingRight: spacing[10],
+									...inputStyle(
+										!!passwordError,
+										passwordFocused
+									),
+									paddingRight:
+										spacing[10],
 								}}
-								type={showPassword ? "text" : "password"}
+								type={
+									showPassword
+										? "text"
+										: "password"
+								}
 								value={password}
 								onChange={(e) => {
-									setPassword(e.target.value);
-									if (passwordError) setPasswordError("");
+									setPassword(
+										e.target
+											.value
+									);
+									if (
+										passwordError
+									)
+										setPasswordError(
+											""
+										);
 								}}
-								onFocus={() => setPasswordFocused(true)}
-								onBlur={() => setPasswordFocused(false)}
-								placeholder={t.atLeast5Chars}
+								onFocus={() =>
+									setPasswordFocused(
+										true
+									)
+								}
+								onBlur={() =>
+									setPasswordFocused(
+										false
+									)
+								}
+								placeholder={
+									t.atLeast5Chars
+								}
+								aria-label={
+									t.password
+								}
 							/>
 							<button
 								type="button"
-								onClick={togglePassword}
-								aria-label={showPassword ? t.hidePassword : t.showPassword}
+								onClick={
+									togglePassword
+								}
 								style={{
-									position: "absolute",
+									position:
+										"absolute",
 									right: spacing[3],
-									background: "none",
+									background:
+										"none",
 									border: "none",
 									cursor: "pointer",
-									fontSize: font.size.xs,
-									fontFamily: font.family.sans,
-									fontWeight: font.weight.medium,
+									fontSize:
+										font.size
+											.xs,
+									fontFamily:
+										font
+											.family
+											.sans,
+									fontWeight:
+										font
+											.weight
+											.medium,
 									color: colors.textSecondary,
 									padding: 0,
-									letterSpacing: font.letterSpacing.wide,
-									textTransform: "uppercase",
-									transition: "color 0.15s",
+									letterSpacing:
+										font
+											.letterSpacing
+											.wide,
+									textTransform:
+										"uppercase",
+									transition:
+										"color 0.15s",
 								}}
-								onMouseEnter={(e) => (e.currentTarget.style.color = colors.primary)}
-								onMouseLeave={(e) =>
-									(e.currentTarget.style.color = colors.textSecondary)
+								onMouseEnter={(
+									e
+								) =>
+									(e.currentTarget.style.color =
+										colors.primary)
+								}
+								onMouseLeave={(
+									e
+								) =>
+									(e.currentTarget.style.color =
+										colors.textSecondary)
+								}
+								aria-label={
+									showPassword
+										? t.hidePassword
+										: t.showPassword
 								}
 							>
-								{showPassword ? t.hide : t.show}
+								{showPassword
+									? t.hide
+									: t.show}
 							</button>
 						</div>
-						{passwordError && <p style={errorStyle}>{passwordError}</p>}
+						{passwordError && (
+							<p style={errorStyle}>
+								{passwordError}
+							</p>
+						)}
 					</div>
 
 					{error && (
 						<p
 							style={{
 								...errorStyle,
-								background: status.danger.bg,
+								background:
+									status.danger
+										.bg,
 								border: `0.5px solid ${status.danger.border}`,
-								borderRadius: radius.md,
+								borderRadius:
+									radius.md,
 								padding: `${spacing[2]} ${spacing[3]}`,
 								margin: 0,
 							}}
@@ -231,30 +371,52 @@ export default function LoginPage({ onLoginSuccess, language = "pl" }) {
 							...components.primaryButton,
 							width: "100%",
 							padding: `${spacing[3]} ${spacing[4]}`,
-							borderRadius: radius.lg,
-							fontSize: font.size.base,
-							fontFamily: font.family.sans,
-							fontWeight: font.weight.medium,
-							letterSpacing: font.letterSpacing.wide,
-							cursor: loading ? "not-allowed" : "pointer",
-							opacity: loading ? 0.55 : 1,
-							transition: "background 0.15s, opacity 0.15s, transform 0.1s",
-							boxSizing: "border-box",
+							borderRadius:
+								radius.lg,
+							fontSize:
+								font.size.base,
+							fontFamily:
+								font.family.sans,
+							fontWeight:
+								font.weight
+									.medium,
+							letterSpacing:
+								font.letterSpacing
+									.wide,
+							cursor: loading
+								? "not-allowed"
+								: "pointer",
+							opacity: loading
+								? 0.55
+								: 1,
+							transition:
+								"background 0.15s, opacity 0.15s, transform 0.1s",
+							boxSizing:
+								"border-box",
 						}}
 						onMouseEnter={(e) => {
-							if (!loading) e.currentTarget.style.background = colors.primaryHover;
+							if (!loading)
+								e.currentTarget.style.background =
+									colors.primaryHover;
 						}}
 						onMouseLeave={(e) => {
-							e.currentTarget.style.background = colors.primary;
+							e.currentTarget.style.background =
+								colors.primary;
 						}}
 						onMouseDown={(e) => {
-							if (!loading) e.currentTarget.style.transform = "scale(0.97)";
+							if (!loading)
+								e.currentTarget.style.transform =
+									"scale(0.97)";
 						}}
 						onMouseUp={(e) => {
-							e.currentTarget.style.transform = "scale(1)";
+							e.currentTarget.style.transform =
+								"scale(1)";
 						}}
+						aria-label={t.signIn}
 					>
-						{loading ? t.signingIn : t.signIn}
+						{loading
+							? t.signingIn
+							: t.signIn}
 					</button>
 				</form>
 			</div>

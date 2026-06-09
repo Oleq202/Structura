@@ -190,6 +190,7 @@ export default function BuildingModal({
 						justifyContent: "center",
 						padding: spacing[1],
 					}}
+					aria-label={t.close}
 				>
 					<svg
 						width="18"
@@ -286,6 +287,9 @@ export default function BuildingModal({
 							placeholder={
 								t.enterStreetAddress
 							}
+							aria-label={
+								t.streetAddress
+							}
 						/>
 						{errors.street_address && (
 							<p style={errorStyle}>
@@ -332,6 +336,9 @@ export default function BuildingModal({
 							placeholder={
 								t.enterDistrict
 							}
+							aria-label={
+								t.district
+							}
 						/>
 					</div>
 
@@ -374,6 +381,7 @@ export default function BuildingModal({
 							placeholder={
 								t.enterCity
 							}
+							aria-label={t.city}
 						/>
 						{errors.city && (
 							<p style={errorStyle}>
@@ -417,6 +425,7 @@ export default function BuildingModal({
 								boxSizing:
 									"border-box",
 							}}
+							aria-label={t.cancel}
 						>
 							{t.cancel}
 						</button>
@@ -472,6 +481,13 @@ export default function BuildingModal({
 								e.currentTarget.style.transform =
 									"scale(1)";
 							}}
+							aria-label={
+								loading
+									? t.saving
+									: isEdit
+										? t.update
+										: t.create
+							}
 						>
 							{loading
 								? t.saving

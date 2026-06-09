@@ -243,6 +243,7 @@ export default function CreateTask({
 						justifyContent: "center",
 						padding: spacing[1],
 					}}
+					aria-label={t.close}
 				>
 					<svg
 						width="18"
@@ -326,6 +327,9 @@ export default function CreateTask({
 							placeholder={
 								t.enterTaskTitle
 							}
+							aria-label={
+								t.enterTaskTitle
+							}
 						/>
 						{titleError && (
 							<p style={errorStyle}>
@@ -368,6 +372,9 @@ export default function CreateTask({
 							placeholder={
 								t.enterTaskDescription
 							}
+							aria-label={
+								t.enterTaskDescription
+							}
 						/>
 						{descriptionError && (
 							<p style={errorStyle}>
@@ -407,6 +414,9 @@ export default function CreateTask({
 								)
 							}
 							placeholder={
+								t.searchBuildings
+							}
+							aria-label={
 								t.searchBuildings
 							}
 						/>
@@ -488,6 +498,9 @@ export default function CreateTask({
 													height: "16px",
 													cursor: "pointer",
 												}}
+												aria-label={
+													t.selectBuilding
+												}
 											/>
 											<span>
 												{
@@ -563,6 +576,9 @@ export default function CreateTask({
 								)
 							}
 							placeholder={
+								t.searchContractors
+							}
+							aria-label={
 								t.searchContractors
 							}
 						/>
@@ -644,6 +660,9 @@ export default function CreateTask({
 													height: "16px",
 													cursor: "pointer",
 												}}
+												aria-label={
+													t.selectContractor
+												}
 											/>
 											<span>
 												{
@@ -716,6 +735,7 @@ export default function CreateTask({
 								boxSizing:
 									"border-box",
 							}}
+							aria-label={t.cancel}
 						>
 							{t.cancel}
 						</button>
@@ -771,6 +791,9 @@ export default function CreateTask({
 								e.currentTarget.style.transform =
 									"scale(1)";
 							}}
+							aria-label={
+								t.createTask
+							}
 						>
 							{loading
 								? t.creating

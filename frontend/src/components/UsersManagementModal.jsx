@@ -163,6 +163,7 @@ export default function UsersManagementModal({
 								"center",
 							padding: spacing[1],
 						}}
+						aria-label={t.close}
 					>
 						<svg
 							width="18"
@@ -242,6 +243,9 @@ export default function UsersManagementModal({
 						onMouseLeave={(e) =>
 							(e.currentTarget.style.background =
 								colors.primary)
+						}
+						aria-label={
+							t.addUserButton
 						}
 					>
 						{t.addUserButton}
@@ -412,6 +416,9 @@ export default function UsersManagementModal({
 												e.currentTarget.style.color =
 													colors.textBody;
 											}}
+											aria-label={
+												t.edit
+											}
 										>
 											{
 												t.edit
@@ -463,6 +470,9 @@ export default function UsersManagementModal({
 												e.currentTarget.style.background =
 													"transparent";
 											}}
+											aria-label={
+												t.delete
+											}
 										>
 											{
 												t.delete

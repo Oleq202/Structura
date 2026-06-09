@@ -132,6 +132,7 @@ export default function BuildingsManagementModal({
 								"center",
 							padding: spacing[1],
 						}}
+						aria-label={t.close}
 					>
 						<svg
 							width="18"
@@ -211,6 +212,9 @@ export default function BuildingsManagementModal({
 						onMouseLeave={(e) =>
 							(e.currentTarget.style.background =
 								colors.primary)
+						}
+						aria-label={
+							t.addBuildingButton
 						}
 					>
 						{t.addBuildingButton}
@@ -349,6 +353,9 @@ export default function BuildingsManagementModal({
 												e.currentTarget.style.color =
 													colors.textBody;
 											}}
+											aria-label={
+												t.edit
+											}
 										>
 											{
 												t.edit
@@ -400,6 +407,9 @@ export default function BuildingsManagementModal({
 												e.currentTarget.style.background =
 													"transparent";
 											}}
+											aria-label={
+												t.delete
+											}
 										>
 											{
 												t.delete

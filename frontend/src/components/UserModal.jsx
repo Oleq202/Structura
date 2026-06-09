@@ -271,6 +271,7 @@ export default function UserModal({
 						justifyContent: "center",
 						padding: spacing[1],
 					}}
+					aria-label={t.close}
 				>
 					<svg
 						width="18"
@@ -363,6 +364,7 @@ export default function UserModal({
 							placeholder={
 								t.enterLogin
 							}
+							aria-label={t.login}
 						/>
 						{errors.login && (
 							<p style={errorStyle}>
@@ -447,16 +449,14 @@ export default function UserModal({
 									placeholder={
 										t.enterPassword
 									}
+									aria-label={
+										t.password
+									}
 								/>
 								<button
 									type="button"
 									onClick={
 										togglePassword
-									}
-									aria-label={
-										showPassword
-											? t.hidePassword
-											: t.showPassword
 									}
 									style={{
 										position:
@@ -501,6 +501,11 @@ export default function UserModal({
 										(e.currentTarget.style.color =
 											colors.textSecondary)
 									}
+									aria-label={
+										showPassword
+											? t.hide
+											: t.show
+									}
 								>
 									{showPassword
 										? t.hide
@@ -523,7 +528,7 @@ export default function UserModal({
 
 					<div>
 						<label style={labelStyle}>
-							{t.first_name}
+							{t.firstName}
 						</label>
 						<input
 							style={inputStyle(
@@ -565,6 +570,9 @@ export default function UserModal({
 							placeholder={
 								t.enterFirstName
 							}
+							aria-label={
+								t.first_name
+							}
 						/>
 						{errors.first_name && (
 							<p style={errorStyle}>
@@ -577,7 +585,7 @@ export default function UserModal({
 
 					<div>
 						<label style={labelStyle}>
-							{t.last_name}
+							{t.lastName}
 						</label>
 						<input
 							style={inputStyle(
@@ -619,6 +627,9 @@ export default function UserModal({
 							placeholder={
 								t.enterLastName
 							}
+							aria-label={
+								t.last_name
+							}
 						/>
 						{errors.last_name && (
 							<p style={errorStyle}>
@@ -644,14 +655,30 @@ export default function UserModal({
 										.value,
 								})
 							}
+							aria-label={t.role}
 						>
-							<option value="admin">
+							<option
+								value="admin"
+								aria-label={
+									t.admin
+								}
+							>
 								{t.admin}
 							</option>
-							<option value="manager">
+							<option
+								value="manager"
+								aria-label={
+									t.manager
+								}
+							>
 								{t.manager}
 							</option>
-							<option value="contractor">
+							<option
+								value="contractor"
+								aria-label={
+									t.contractor
+								}
+							>
 								{t.contractor}
 							</option>
 						</select>
@@ -699,6 +726,9 @@ export default function UserModal({
 									})
 								}
 								placeholder={
+									t.searchBuildings
+								}
+								aria-label={
 									t.searchBuildings
 								}
 							/>
@@ -774,6 +804,9 @@ export default function UserModal({
 														height: "16px",
 														cursor: "pointer",
 													}}
+													aria-label={
+														building.street_address
+													}
 												/>
 												<span>
 													{
@@ -851,6 +884,7 @@ export default function UserModal({
 								boxSizing:
 									"border-box",
 							}}
+							aria-label={t.cancel}
 						>
 							{t.cancel}
 						</button>
@@ -906,6 +940,13 @@ export default function UserModal({
 								e.currentTarget.style.transform =
 									"scale(1)";
 							}}
+							aria-label={
+								loading
+									? t.saving
+									: isEdit
+										? t.update
+										: t.create
+							}
 						>
 							{loading
 								? t.saving

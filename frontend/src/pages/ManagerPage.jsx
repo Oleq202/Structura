@@ -18,6 +18,7 @@ export default function ManagerPage({
 	currentUser,
 	language = "pl",
 }) {
+	const t = translations[language];
 	const [activeFilter, setActiveFilter] =
 		useState("all");
 	const [isCreateTaskOpen, setCreateTaskOpen] =
@@ -592,6 +593,7 @@ export default function ManagerPage({
 						colors.primary)
 				}
 				onClick={toggleCreateTask}
+				aria-label={t.createTask}
 			>
 				<svg
 					width="32"
