@@ -13,11 +13,14 @@ import {
 	status,
 } from "../theme";
 import { translations } from "../i18n";
+import * as api from "../services/api";
 
 export default function CreateTask({
 	buildings = [],
 	contractors = [],
+	currentUser,
 	onClose,
+	onTaskCreated,
 	language = "pl",
 }) {
 	const t = translations[language];
@@ -25,8 +28,8 @@ export default function CreateTask({
 	const [task, setTask] = useState({
 		title: "",
 		description: "",
-		buildingId: "",
-		assignedTo: "",
+		building_id: "",
+		assigned_to: "",
 	});
 	const [loading, setLoading] = useState(false);
 	const [titleError, setTitleError] =
@@ -45,6 +48,52 @@ export default function CreateTask({
 		descriptionFocused,
 		setDescriptionFocused,
 	] = useState(false);
+	const [buildingSearch, setBuildingSearch] =
+		useState("");
+	const [
+		contractorSearch,
+		setContractorSearch,
+	] = useState("");
+	const [
+		buildingSearchFocused,
+		setBuildingSearchFocused,
+	] = useState(false);
+	const [
+		contractorSearchFocused,
+		setContractorSearchFocused,
+	] = useState(false);
+
+	const filteredBuildings = buildings.filter(
+		(building) => {
+			const search =
+				buildingSearch.toLowerCase();
+			return (
+				building.city
+					.toLowerCase()
+					.includes(search) ||
+				building.district
+					?.toLowerCase()
+					.includes(search) ||
+				building.street_address
+					.toLowerCase()
+					.includes(search)
+			);
+		}
+	);
+
+	const filteredContractors =
+		contractors.filter((contractor) => {
+			const search =
+				contractorSearch.toLowerCase();
+			return (
+				contractor.first_name
+					.toLowerCase()
+					.includes(search) ||
+				contractor.last_name
+					.toLowerCase()
+					.includes(search)
+			);
+		});
 
 	useEffect(() => {
 		if (createTaskRef.current) {
@@ -76,7 +125,7 @@ export default function CreateTask({
 			"border-color 0.15s, box-shadow 0.15s",
 	});
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setTitleError("");
 		setDescriptionError("");
@@ -88,12 +137,30 @@ export default function CreateTask({
 			return;
 		}
 
+		if (!task.building_id) {
+			setBuildingIdError(t.required);
+			return;
+		}
+
+		if (!task.assigned_to) {
+			setAssignedToError(t.required);
+			return;
+		}
+
 		setLoading(true);
 		try {
-			console.log(
-				"Successfully created task:",
-				task
-			);
+			await api.createTask({
+				title: task.title,
+				description: task.description,
+				building_id: parseInt(
+					task.building_id
+				),
+				created_by: currentUser.id,
+				assigned_to: parseInt(
+					task.assigned_to
+				),
+			});
+			if (onTaskCreated) onTaskCreated();
 			if (onClose) onClose();
 		} catch (err) {
 			console.error(
@@ -313,46 +380,149 @@ export default function CreateTask({
 						<label style={labelStyle}>
 							{t.building}
 						</label>
-						<select
-							style={inputStyle(
-								!!buildingIdError,
-								false
-							)}
-							value={
-								task.buildingId
-							}
+						<input
+							style={{
+								...inputStyle(
+									!!buildingIdError,
+									buildingSearchFocused
+								),
+								marginBottom:
+									spacing[2],
+							}}
+							type="text"
+							value={buildingSearch}
 							onChange={(e) =>
-								setTask({
-									...task,
-									buildingId:
-										e.target
-											.value,
-								})
-							}
-						>
-							<option value="">
-								{t.selectBuilding}
-							</option>
-							{buildings.map(
-								(b) => (
-									<option
-										key={b.id}
-										value={
-											b.id
-										}
-									>
-										{
-											b.street_address
-										}
-										,{" "}
-										{
-											b.district
-										}
-										, {b.city}
-									</option>
+								setBuildingSearch(
+									e.target.value
 								)
+							}
+							onFocus={() =>
+								setBuildingSearchFocused(
+									true
+								)
+							}
+							onBlur={() =>
+								setBuildingSearchFocused(
+									false
+								)
+							}
+							placeholder={
+								t.searchBuildings
+							}
+						/>
+						<div
+							style={{
+								display: "flex",
+								flexDirection:
+									"column",
+								gap: spacing[2],
+								maxHeight:
+									"150px",
+								overflowY: "auto",
+								paddingRight:
+									spacing[1],
+							}}
+						>
+							{filteredBuildings.length >
+							0 ? (
+								filteredBuildings.map(
+									(b) => (
+										<label
+											key={
+												b.id
+											}
+											style={{
+												display:
+													"flex",
+												alignItems:
+													"center",
+												gap: spacing[2],
+												fontSize:
+													font
+														.size
+														.sm,
+												color: colors.textBody,
+												cursor: "pointer",
+												padding:
+													spacing[1],
+												borderRadius:
+													radius.sm,
+												transition:
+													"background 0.15s",
+											}}
+											onMouseEnter={(
+												e
+											) => {
+												e.currentTarget.style.background =
+													colors.pageBg;
+											}}
+											onMouseLeave={(
+												e
+											) => {
+												e.currentTarget.style.background =
+													"transparent";
+											}}
+										>
+											<input
+												type="radio"
+												name="building"
+												checked={
+													task.building_id ===
+													String(
+														b.id
+													)
+												}
+												onChange={() =>
+													setTask(
+														{
+															...task,
+															building_id:
+																String(
+																	b.id
+																),
+														}
+													)
+												}
+												style={{
+													width: "16px",
+													height: "16px",
+													cursor: "pointer",
+												}}
+											/>
+											<span>
+												{
+													b.street_address
+												}
+												,{" "}
+												{
+													b.district
+												}
+												,{" "}
+												{
+													b.city
+												}
+											</span>
+										</label>
+									)
+								)
+							) : (
+								<div
+									style={{
+										fontSize:
+											font
+												.size
+												.sm,
+										color: colors.textSecondary,
+										padding:
+											spacing[2],
+										textAlign:
+											"center",
+									}}
+								>
+									{t.noResults}
+								</div>
 							)}
-						</select>
+						</div>
 						{buildingIdError && (
 							<p style={errorStyle}>
 								{buildingIdError}
@@ -364,46 +534,146 @@ export default function CreateTask({
 						<label style={labelStyle}>
 							{t.contractor}
 						</label>
-						<select
-							style={inputStyle(
-								!!assignedToError,
-								false
-							)}
+						<input
+							style={{
+								...inputStyle(
+									!!assignedToError,
+									contractorSearchFocused
+								),
+								marginBottom:
+									spacing[2],
+							}}
+							type="text"
 							value={
-								task.assignedTo
+								contractorSearch
 							}
 							onChange={(e) =>
-								setTask({
-									...task,
-									assignedTo:
-										e.target
-											.value,
-								})
-							}
-						>
-							<option value="">
-								{
-									t.selectContractor
-								}
-							</option>
-							{contractors.map(
-								(c) => (
-									<option
-										key={c.id}
-										value={
-											c.id
-										}
-									>
-										{
-											c.firstName
-										}{" "}
-										{
-											c.lastName
-										}
-									</option>
+								setContractorSearch(
+									e.target.value
 								)
+							}
+							onFocus={() =>
+								setContractorSearchFocused(
+									true
+								)
+							}
+							onBlur={() =>
+								setContractorSearchFocused(
+									false
+								)
+							}
+							placeholder={
+								t.searchContractors
+							}
+						/>
+						<div
+							style={{
+								display: "flex",
+								flexDirection:
+									"column",
+								gap: spacing[2],
+								maxHeight:
+									"150px",
+								overflowY: "auto",
+								paddingRight:
+									spacing[1],
+							}}
+						>
+							{filteredContractors.length >
+							0 ? (
+								filteredContractors.map(
+									(c) => (
+										<label
+											key={
+												c.id
+											}
+											style={{
+												display:
+													"flex",
+												alignItems:
+													"center",
+												gap: spacing[2],
+												fontSize:
+													font
+														.size
+														.sm,
+												color: colors.textBody,
+												cursor: "pointer",
+												padding:
+													spacing[1],
+												borderRadius:
+													radius.sm,
+												transition:
+													"background 0.15s",
+											}}
+											onMouseEnter={(
+												e
+											) => {
+												e.currentTarget.style.background =
+													colors.pageBg;
+											}}
+											onMouseLeave={(
+												e
+											) => {
+												e.currentTarget.style.background =
+													"transparent";
+											}}
+										>
+											<input
+												type="radio"
+												name="contractor"
+												checked={
+													task.assigned_to ===
+													String(
+														c.id
+													)
+												}
+												onChange={() =>
+													setTask(
+														{
+															...task,
+															assigned_to:
+																String(
+																	c.id
+																),
+														}
+													)
+												}
+												style={{
+													width: "16px",
+													height: "16px",
+													cursor: "pointer",
+												}}
+											/>
+											<span>
+												{
+													c.first_name
+												}{" "}
+												{
+													c.last_name
+												}
+											</span>
+										</label>
+									)
+								)
+							) : (
+								<div
+									style={{
+										fontSize:
+											font
+												.size
+												.sm,
+										color: colors.textSecondary,
+										padding:
+											spacing[2],
+										textAlign:
+											"center",
+									}}
+								>
+									{t.noResults}
+								</div>
 							)}
-						</select>
+						</div>
 						{assignedToError && (
 							<p style={errorStyle}>
 								{assignedToError}

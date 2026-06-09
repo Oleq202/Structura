@@ -15,9 +15,9 @@ const STATUS_BADGE = {
 	completed: "done",
 };
 
-function Avatar({ firstName, lastName }) {
+function Avatar({ first_name, last_name }) {
 	const initials =
-		[firstName, lastName]
+		[first_name, last_name]
 			.filter(Boolean)
 			.map((name) => name[0].toUpperCase())
 			.join("") || "?";
@@ -42,8 +42,8 @@ function UserCell({ user, t }) {
 		);
 	}
 	const fullName = [
-		user.firstName,
-		user.lastName,
+		user.first_name,
+		user.last_name,
 	]
 		.filter(Boolean)
 		.join(" ");
@@ -51,8 +51,8 @@ function UserCell({ user, t }) {
 		<>
 			<span>{fullName}</span>
 			<Avatar
-				firstName={user.firstName}
-				lastName={user.lastName}
+				first_name={user.first_name}
+				last_name={user.last_name}
 			/>
 		</>
 	);
@@ -266,7 +266,7 @@ export default function Task({
 						>
 							<UserCell
 								user={
-									task.created_by
+									task.created_by_user
 								}
 								t={t}
 							/>
@@ -277,7 +277,7 @@ export default function Task({
 						>
 							<UserCell
 								user={
-									task.assigned_to
+									task.assigned_to_user
 								}
 								t={t}
 							/>
