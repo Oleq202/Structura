@@ -128,6 +128,8 @@ export default function Task({
 
 	return (
 		<div
+			role="button"
+			tabIndex={0}
 			style={{
 				width: "100%",
 				maxWidth: "420px",

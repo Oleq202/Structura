@@ -73,6 +73,8 @@ export default function BuildingsManagementModal({
 	return (
 		<>
 			<div
+				role="button"
+				tabIndex={0}
 				style={{
 					position: "fixed",
 					top: 0,

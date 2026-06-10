@@ -14,6 +14,22 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
+const labelStyle = {
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	color: colors.textSecondary,
+	marginBottom: spacing[1],
+	display: "block",
+};
+
+const errorStyle = {
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	color: status.danger.text,
+	marginTop: spacing[1],
+	paddingLeft: spacing[1],
+};
+
 export default function LoginPage({
 	onLoginSuccess,
 	language = "pl",
@@ -102,22 +118,6 @@ export default function LoginPage({
 		transition:
 			"border-color 0.15s, box-shadow 0.15s",
 	});
-
-	const labelStyle = {
-		fontSize: font.size.sm,
-		fontFamily: font.family.sans,
-		color: colors.textSecondary,
-		marginBottom: spacing[1],
-		display: "block",
-	};
-
-	const errorStyle = {
-		fontSize: font.size.xs,
-		fontFamily: font.family.sans,
-		color: status.danger.text,
-		marginTop: spacing[1],
-		paddingLeft: spacing[1],
-	};
 
 	return (
 		<div

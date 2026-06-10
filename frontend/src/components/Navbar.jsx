@@ -10,6 +10,15 @@ import { translations } from "../i18n";
 
 const EMPTY_BUILDINGS = [];
 
+const staticFilters = [
+	{ key: "all", labelKey: "all" },
+	{ key: "pending", labelKey: "pending" },
+	{
+		key: "completed",
+		labelKey: "completed",
+	},
+];
+
 export default function Navbar({
 	activeFilter = "all",
 	onFilterChange = () => {},
@@ -17,20 +26,10 @@ export default function Navbar({
 	language = "pl",
 }) {
 	const t = translations[language];
-	const staticFilters = [
-		{ key: "all", labelKey: "all" },
-		{ key: "pending", labelKey: "pending" },
-		{
-			key: "completed",
-			labelKey: "completed",
-		},
-	];
-
 	const filters = [
 		...staticFilters,
 		...buildings,
 	];
-
 	return (
 		<nav style={{ ...components.topBar }}>
 			{filters.map(

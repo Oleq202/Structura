@@ -18,6 +18,22 @@ import * as api from "../services/api";
 const EMPTY_BUILDINGS = [];
 const EMPTY_CONTRACTORS = [];
 
+const errorStyle = {
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	color: status.danger.text,
+	marginTop: spacing[1],
+	paddingLeft: spacing[1],
+};
+
+const labelStyle = {
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	color: colors.textSecondary,
+	marginBottom: spacing[1],
+	display: "block",
+};
+
 export default function CreateTask({
 	buildings = EMPTY_BUILDINGS,
 	contractors = EMPTY_CONTRACTORS,
@@ -175,24 +191,10 @@ export default function CreateTask({
 		}
 	};
 
-	const errorStyle = {
-		fontSize: font.size.xs,
-		fontFamily: font.family.sans,
-		color: status.danger.text,
-		marginTop: spacing[1],
-		paddingLeft: spacing[1],
-	};
-
-	const labelStyle = {
-		fontSize: font.size.sm,
-		fontFamily: font.family.sans,
-		color: colors.textSecondary,
-		marginBottom: spacing[1],
-		display: "block",
-	};
-
 	return (
 		<div
+			role="button"
+			tabIndex={0}
 			style={{
 				position: "fixed",
 				top: 0,

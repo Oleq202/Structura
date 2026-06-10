@@ -14,6 +14,22 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
+const errorStyle = {
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	color: status.danger.text,
+	marginTop: spacing[1],
+	paddingLeft: spacing[1],
+};
+
+const labelStyle = {
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	color: colors.textSecondary,
+	marginBottom: spacing[1],
+	display: "block",
+};
+
 export default function BuildingModal({
 	building = null,
 	onClose,
@@ -74,22 +90,6 @@ export default function BuildingModal({
 			"border-color 0.15s, box-shadow 0.15s",
 	});
 
-	const errorStyle = {
-		fontSize: font.size.xs,
-		fontFamily: font.family.sans,
-		color: status.danger.text,
-		marginTop: spacing[1],
-		paddingLeft: spacing[1],
-	};
-
-	const labelStyle = {
-		fontSize: font.size.sm,
-		fontFamily: font.family.sans,
-		color: colors.textSecondary,
-		marginBottom: spacing[1],
-		display: "block",
-	};
-
 	const validate = () => {
 		const newErrors = {};
 		let valid = true;
@@ -137,6 +137,8 @@ export default function BuildingModal({
 
 	return (
 		<div
+			role="button"
+			tabIndex={0}
 			style={{
 				position: "fixed",
 				top: 0,
