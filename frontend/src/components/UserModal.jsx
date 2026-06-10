@@ -233,6 +233,12 @@ export default function UserModal({
 				zIndex: 100,
 			}}
 			onClick={() => onClose?.()}
+			onKeyDown={(e) => {
+				if (e.key === "Escape") {
+					e.preventDefault();
+					onClose?.();
+				}
+			}}
 		>
 			<div
 				style={{

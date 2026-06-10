@@ -139,6 +139,15 @@ export default function Task({
 				cursor: "pointer",
 			}}
 			onClick={onToggle}
+			onKeyDown={(e) => {
+				if (
+					e.key === "Enter" ||
+					e.key === " "
+				) {
+					e.preventDefault();
+					onToggle();
+				}
+			}}
 		>
 			<div
 				style={{
