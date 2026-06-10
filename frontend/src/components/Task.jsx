@@ -330,6 +330,7 @@ export default function Task({
 								}}
 							>
 								<button
+									type="button"
 									style={{
 										...components.primaryButton,
 										flex: 1,
@@ -364,6 +365,7 @@ export default function Task({
 									}
 								</button>
 								<button
+									type="button"
 									style={{
 										...components.ghostButton,
 										padding: `${spacing[3]} ${spacing[4]}`,

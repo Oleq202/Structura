@@ -46,6 +46,7 @@ export default function Navbar({
 
 					return (
 						<button
+							type="button"
 							key={key}
 							onClick={() =>
 								onFilterChange(

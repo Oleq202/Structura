@@ -180,6 +180,7 @@ export default function BuildingsManagementModal({
 					</h1>
 
 					<button
+						type="button"
 						onClick={() =>
 							setEditingBuilding({})
 						}
@@ -306,6 +307,7 @@ export default function BuildingsManagementModal({
 										}}
 									>
 										<button
+											type="button"
 											onClick={() =>
 												handleEdit(
 													building
@@ -362,6 +364,7 @@ export default function BuildingsManagementModal({
 											}
 										</button>
 										<button
+											type="button"
 											onClick={() =>
 												handleDelete(
 													building.id

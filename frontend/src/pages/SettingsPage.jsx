@@ -127,6 +127,7 @@ export default function SettingsPage({
 				{isAdmin ? (
 					<>
 						<button
+							type="button"
 							onClick={() =>
 								setUsersModalOpen(
 									true
@@ -177,6 +178,7 @@ export default function SettingsPage({
 						</button>
 
 						<button
+							type="button"
 							onClick={() =>
 								setBuildingsModalOpen(
 									true

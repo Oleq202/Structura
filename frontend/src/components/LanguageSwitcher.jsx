@@ -11,6 +11,7 @@ export default function LanguageSwitcher({
 }) {
 	return (
 		<button
+			type="button"
 			onClick={onLanguageChange}
 			style={{
 				background: "transparent",

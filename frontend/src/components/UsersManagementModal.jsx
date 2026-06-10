@@ -211,6 +211,7 @@ export default function UsersManagementModal({
 					</h1>
 
 					<button
+						type="button"
 						onClick={() =>
 							setEditingUser({})
 						}
@@ -369,6 +370,7 @@ export default function UsersManagementModal({
 										}}
 									>
 										<button
+											type="button"
 											onClick={() =>
 												handleEdit(
 													user
@@ -425,6 +427,7 @@ export default function UsersManagementModal({
 											}
 										</button>
 										<button
+											type="button"
 											onClick={() =>
 												handleDelete(
 													user.id

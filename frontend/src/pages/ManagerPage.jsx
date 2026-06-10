@@ -568,6 +568,7 @@ export default function ManagerPage({
 				)}
 			</div>
 			<button
+				type="button"
 				style={{
 					...components.primaryButton,
 					position: "fixed",
