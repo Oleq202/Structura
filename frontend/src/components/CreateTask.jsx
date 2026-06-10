@@ -15,9 +15,12 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 
+const EMPTY_BUILDINGS = [];
+const EMPTY_CONTRACTORS = [];
+
 export default function CreateTask({
-	buildings = [],
-	contractors = [],
+	buildings = EMPTY_BUILDINGS,
+	contractors = EMPTY_CONTRACTORS,
 	currentUser,
 	onClose,
 	onTaskCreated,

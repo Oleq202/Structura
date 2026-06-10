@@ -14,9 +14,11 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
+const EMPTY_BUILDINGS = [];
+
 export default function UserModal({
 	user = null,
-	buildings = [],
+	buildings = EMPTY_BUILDINGS,
 	onClose,
 	onSave,
 	language,

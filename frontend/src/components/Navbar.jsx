@@ -8,10 +8,12 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
+const EMPTY_BUILDINGS = [];
+
 export default function Navbar({
 	activeFilter = "all",
 	onFilterChange = () => {},
-	buildings = [],
+	buildings = EMPTY_BUILDINGS,
 	language = "pl",
 }) {
 	const t = translations[language];

@@ -39,7 +39,32 @@ export default function App() {
 		defaultLanguage
 	);
 	const [currentUser, setCurrentUser] =
-		useState<User | null>(null);
+		useState<User | null>(() => {
+			const stored = localStorage.getItem(
+				"currentUser:v1"
+			);
+			if (stored) {
+				try {
+					return JSON.parse(stored);
+				} catch (error) {
+					console.error(
+						"Failed to parse stored user:",
+						error
+					);
+					localStorage.removeItem(
+						"currentUser:v1"
+					);
+					return null;
+				}
+			}
+			return null;
+		});
+
+	const handleLogout = () => {
+		localStorage.removeItem("currentUser:v1");
+		setCurrentUser(null);
+		setIsLoggedIn(false);
+	};
 
 	const handleLoginSuccess = async (
 		loginInput: string,
@@ -51,7 +76,7 @@ export default function App() {
 				passwordInput
 			);
 			localStorage.setItem(
-				"currentUser",
+				"currentUser:v1",
 				JSON.stringify(user)
 			);
 			setCurrentUser(user);
@@ -100,6 +125,9 @@ export default function App() {
 											}
 											language={
 												language
+											}
+											onLogout={
+												handleLogout
 											}
 										/>
 									}
