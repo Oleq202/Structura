@@ -30,6 +30,30 @@ const labelStyle = {
 	display: "block",
 };
 
+const inputStyle = (hasError, isFocused) => ({
+	...components.input,
+	boxSizing: "border-box",
+	padding: `${spacing[2]} ${spacing[3]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	border: hasError
+		? `1px solid ${status.danger.border}`
+		: isFocused
+			? `1px solid ${colors.borderStrong}`
+			: `1px solid ${colors.borderDefault}`,
+	background: hasError
+		? status.danger.bg
+		: colors.cardBg,
+	color: colors.textBody,
+	boxShadow:
+		isFocused && !hasError
+			? shadow.focus
+			: "none",
+	transition:
+		"border-color 0.15s, box-shadow 0.15s",
+});
+
 export default function BuildingModal({
 	building = null,
 	onClose,
@@ -65,30 +89,6 @@ export default function BuildingModal({
 			cityRef.current.focus();
 		}
 	}, []);
-
-	const inputStyle = (hasError, isFocused) => ({
-		...components.input,
-		boxSizing: "border-box",
-		padding: `${spacing[2]} ${spacing[3]}`,
-		borderRadius: radius.lg,
-		fontSize: font.size.sm,
-		fontFamily: font.family.sans,
-		border: hasError
-			? `1px solid ${status.danger.border}`
-			: isFocused
-				? `1px solid ${colors.borderStrong}`
-				: `1px solid ${colors.borderDefault}`,
-		background: hasError
-			? status.danger.bg
-			: colors.cardBg,
-		color: colors.textBody,
-		boxShadow:
-			isFocused && !hasError
-				? shadow.focus
-				: "none",
-		transition:
-			"border-color 0.15s, box-shadow 0.15s",
-	});
 
 	const validate = () => {
 		const newErrors = {};

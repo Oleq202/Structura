@@ -1,4 +1,4 @@
-export const navy = {
+const navy = {
 	50: "#e8f0f8",
 	100: "#c2d5eb",
 	200: "#8fb3d4",
@@ -11,7 +11,7 @@ export const navy = {
 	900: "#09152a",
 } as const;
 
-export const blue = {
+const blue = {
 	50: "#e0f0fd",
 	100: "#b3d9fa",
 	200: "#7bbef5",
@@ -24,7 +24,7 @@ export const blue = {
 	900: "#062849",
 } as const;
 
-export const neutral = {
+const neutral = {
 	0: "#ffffff",
 	50: "#f8fafc",
 	100: "#f0f4f8",
@@ -291,42 +291,3 @@ export function badgeStyle(
 		gap: "4px",
 	};
 }
-
-export const cssVars = `
-  :root {
-    --color-shell:           ${colors.shell};
-    --color-shell-deep:      ${colors.shellDeep};
-    --color-shell-text:      ${colors.shellText};
-    --color-shell-muted:     ${colors.shellTextMuted};
-
-    --color-page-bg:         ${colors.pageBg};
-    --color-card-bg:         ${colors.cardBg};
-    --color-card-border:     ${colors.cardBorder};
-
-    --color-primary:         ${colors.primary};
-    --color-primary-hover:   ${colors.primaryHover};
-    --color-primary-text:    ${colors.primaryText};
-
-    --color-text-heading:    ${colors.textHeading};
-    --color-text-body:       ${colors.textBody};
-    --color-text-secondary:  ${colors.textSecondary};
-    --color-text-muted:      ${colors.textMuted};
-
-    --color-border-subtle:   ${colors.borderSubtle};
-    --color-border-default:  ${colors.borderDefault};
-    --color-border-strong:   ${colors.borderStrong};
-
-    --font-sans:             ${font.family.sans};
-    --font-mono:             ${font.family.mono};
-
-    --radius-sm:  ${radius.sm};
-    --radius-md:  ${radius.md};
-    --radius-lg:  ${radius.lg};
-    --radius-xl:  ${radius.xl};
-    --radius-full:${radius.full};
-
-    --shadow-card: ${shadow.card};
-    --shadow-modal:${shadow.modal};
-    --shadow-focus:${shadow.focus};
-  }
-`;

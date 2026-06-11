@@ -14,6 +14,30 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 
+const groupTasksByBuilding = (tasksToGroup) => {
+	const groups = {};
+	tasksToGroup.forEach((task) => {
+		const buildingId = task.building_id;
+		if (!groups[buildingId]) {
+			groups[buildingId] = {
+				building: task.building,
+				tasks: [],
+			};
+		}
+		groups[buildingId].tasks.push(task);
+	});
+
+	return Object.values(groups).sort((a, b) => {
+		const aAddress = a.building
+			? `${a.building.street_address}, ${a.building.district || ""}, ${a.building.city}`
+			: "";
+		const bAddress = b.building
+			? `${b.building.street_address}, ${b.building.district || ""}, ${b.building.city}`
+			: "";
+		return aAddress.localeCompare(bAddress);
+	});
+};
+
 export default function ManagerPage({
 	currentUser,
 	language = "pl",
@@ -41,6 +65,35 @@ export default function ManagerPage({
 		setExpandedTaskId((prev) =>
 			prev === taskId ? null : taskId
 		);
+	};
+
+	const getFilteredTasks = () => {
+		switch (activeFilter) {
+			case "pending":
+				return tasks.filter(
+					(t) => t.status === "pending"
+				);
+			case "completed":
+				return tasks.filter(
+					(t) =>
+						t.status === "completed"
+				);
+			default:
+				if (
+					![
+						"all",
+						"pending",
+						"completed",
+					].includes(activeFilter)
+				) {
+					return tasks.filter(
+						(t) =>
+							t.building_id ===
+							parseInt(activeFilter)
+					);
+				}
+				return tasks;
+		}
 	};
 
 	const refreshTasks = () => {
@@ -87,65 +140,6 @@ export default function ManagerPage({
 
 	const handleReassign = async (taskId) => {
 		console.log("Reassign task:", taskId);
-	};
-
-	const getFilteredTasks = () => {
-		switch (activeFilter) {
-			case "pending":
-				return tasks.filter(
-					(t) => t.status === "pending"
-				);
-			case "completed":
-				return tasks.filter(
-					(t) =>
-						t.status === "completed"
-				);
-			default:
-				if (
-					![
-						"all",
-						"pending",
-						"completed",
-					].includes(activeFilter)
-				) {
-					return tasks.filter(
-						(t) =>
-							t.building_id ===
-							parseInt(activeFilter)
-					);
-				}
-				return tasks;
-		}
-	};
-
-	const groupTasksByBuilding = (
-		tasksToGroup
-	) => {
-		const groups = {};
-		tasksToGroup.forEach((task) => {
-			const buildingId = task.building_id;
-			if (!groups[buildingId]) {
-				groups[buildingId] = {
-					building: task.building,
-					tasks: [],
-				};
-			}
-			groups[buildingId].tasks.push(task);
-		});
-
-		return Object.values(groups).sort(
-			(a, b) => {
-				const aAddress = a.building
-					? `${a.building.street_address}, ${a.building.district || ""}, ${a.building.city}`
-					: "";
-				const bAddress = b.building
-					? `${b.building.street_address}, ${b.building.district || ""}, ${b.building.city}`
-					: "";
-				return aAddress.localeCompare(
-					bAddress
-				);
-			}
-		);
 	};
 
 	const filteredTasks = getFilteredTasks();

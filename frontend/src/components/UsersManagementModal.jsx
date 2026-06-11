@@ -12,6 +12,35 @@ import { translations } from "../i18n";
 import UserModal from "./UserModal";
 import * as api from "../services/api";
 
+const getRoleBadgeColor = (role) => {
+	switch (role) {
+		case "admin":
+			return {
+				bg: "#fcebeb",
+				border: "#f09595",
+				text: "#791f1f",
+			};
+		case "manager":
+			return {
+				bg: "#e0ecfa",
+				border: "#85b7eb",
+				text: "#0e4d8a",
+			};
+		case "contractor":
+			return {
+				bg: "#eaf3de",
+				border: "#97c459",
+				text: "#2d5e10",
+			};
+		default:
+			return {
+				bg: "#f4f7fb",
+				border: "#b0c4d8",
+				text: "#3a5068",
+			};
+	}
+};
+
 export default function UsersManagementModal({
 	onClose,
 	language,
@@ -70,35 +99,6 @@ export default function UsersManagementModal({
 			setUsers([...users, created]);
 		}
 		setEditingUser(null);
-	};
-
-	const getRoleBadgeColor = (role) => {
-		switch (role) {
-			case "admin":
-				return {
-					bg: "#fcebeb",
-					border: "#f09595",
-					text: "#791f1f",
-				};
-			case "manager":
-				return {
-					bg: "#e0ecfa",
-					border: "#85b7eb",
-					text: "#0e4d8a",
-				};
-			case "contractor":
-				return {
-					bg: "#eaf3de",
-					border: "#97c459",
-					text: "#2d5e10",
-				};
-			default:
-				return {
-					bg: "#f4f7fb",
-					border: "#b0c4d8",
-					text: "#3a5068",
-				};
-		}
 	};
 
 	return (
