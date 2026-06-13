@@ -30,6 +30,99 @@ const labelStyle = {
 	display: "block",
 };
 
+const modalOverlayStyle = {
+	position: "fixed",
+	top: 0,
+	left: 0,
+	width: "100vw",
+	height: "100vh",
+	background: "rgba(0, 0, 0, 0.4)",
+	backdropFilter: "blur(6px)",
+	WebkitBackdropFilter: "blur(6px)",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: `0 ${spacing[4]}`,
+	boxSizing: "border-box",
+	zIndex: 10000,
+};
+
+const modalContentStyle = {
+	width: "100%",
+	maxWidth: "360px",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	padding: spacing[8],
+	boxShadow: shadow.modal,
+	boxSizing: "border-box",
+	position: "relative",
+};
+
+const closeButtonStyle = {
+	position: "absolute",
+	top: spacing[4],
+	right: spacing[4],
+	background: "transparent",
+	border: "none",
+	color: colors.textSecondary,
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: spacing[1],
+};
+
+const headingStyle = {
+	fontSize: font.size["2xl"],
+	fontWeight: font.weight.medium,
+	color: colors.textHeading,
+	marginBottom: spacing[6],
+	marginTop: 0,
+	letterSpacing: font.letterSpacing.tight,
+	lineHeight: font.lineHeight.tight,
+};
+
+const submitButtonBaseStyle = {
+	...components.primaryButton,
+	flex: 2,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	transition:
+		"background 0.15s, opacity 0.15s, transform 0.1s",
+	boxSizing: "border-box",
+};
+
+const formStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[5],
+};
+
+const buttonGroupStyle = {
+	display: "flex",
+	gap: spacing[3],
+	marginTop: spacing[2],
+};
+
+const cancelButtonStyle = {
+	flex: 1,
+	background: "transparent",
+	border: `1px solid ${colors.borderDefault}`,
+	color: colors.textBody,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	boxSizing: "border-box",
+};
+
 const inputStyle = (hasError, isFocused) => ({
 	...components.input,
 	boxSizing: "border-box",
@@ -139,22 +232,7 @@ export default function BuildingModal({
 		<div
 			role="button"
 			tabIndex={0}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100vw",
-				height: "100vh",
-				background: "rgba(0, 0, 0, 0.4)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: `0 ${spacing[4]}`,
-				boxSizing: "border-box",
-				zIndex: 100,
-			}}
+			style={modalOverlayStyle}
 			onClick={() => onClose?.()}
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
@@ -164,17 +242,7 @@ export default function BuildingModal({
 			}}
 		>
 			<div
-				style={{
-					width: "100%",
-					maxWidth: "360px",
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					border: `0.5px solid ${colors.cardBorder}`,
-					padding: spacing[8],
-					boxShadow: shadow.modal,
-					boxSizing: "border-box",
-					position: "relative",
-				}}
+				style={modalContentStyle}
 				onClick={(e) =>
 					e.stopPropagation()
 				}
@@ -185,19 +253,7 @@ export default function BuildingModal({
 						e.stopPropagation();
 						onClose?.();
 					}}
-					style={{
-						position: "absolute",
-						top: spacing[4],
-						right: spacing[4],
-						background: "transparent",
-						border: "none",
-						color: colors.textSecondary,
-						cursor: "pointer",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						padding: spacing[1],
-					}}
+					style={closeButtonStyle}
 					aria-label={t.close}
 				>
 					<svg
@@ -223,33 +279,14 @@ export default function BuildingModal({
 					</svg>
 				</button>
 
-				<h1
-					style={{
-						fontSize:
-							font.size["2xl"],
-						fontWeight:
-							font.weight.medium,
-						color: colors.textHeading,
-						marginBottom: spacing[6],
-						marginTop: 0,
-						letterSpacing:
-							font.letterSpacing
-								.tight,
-						lineHeight:
-							font.lineHeight.tight,
-					}}
-				>
+				<h1 style={headingStyle}>
 					{isEdit
 						? t.editBuilding
 						: t.createBuilding}
 				</h1>
 				<form
 					onSubmit={handleSubmit}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[5],
-					}}
+					style={formStyle}
 				>
 					<div>
 						<label style={labelStyle}>
@@ -398,41 +435,16 @@ export default function BuildingModal({
 						)}
 					</div>
 
-					<div
-						style={{
-							display: "flex",
-							gap: spacing[3],
-							marginTop: spacing[2],
-						}}
-					>
+					<div style={buttonGroupStyle}>
 						<button
 							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								onClose?.();
 							}}
-							style={{
-								flex: 1,
-								background:
-									"transparent",
-								border: `1px solid ${colors.borderDefault}`,
-								color: colors.textBody,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								cursor: "pointer",
-								boxSizing:
-									"border-box",
-							}}
+							style={
+								cancelButtonStyle
+							}
 							aria-label={t.cancel}
 						>
 							{t.cancel}
@@ -442,34 +454,13 @@ export default function BuildingModal({
 							type="submit"
 							disabled={loading}
 							style={{
-								...components.primaryButton,
-								flex: 2,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
+								...submitButtonBaseStyle,
 								cursor: loading
 									? "not-allowed"
 									: "pointer",
 								opacity: loading
 									? 0.55
 									: 1,
-								transition:
-									"background 0.15s, opacity 0.15s, transform 0.1s",
-								boxSizing:
-									"border-box",
 							}}
 							onMouseEnter={(e) => {
 								if (!loading)
