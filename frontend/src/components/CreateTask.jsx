@@ -2,6 +2,7 @@ import {
 	useState,
 	useRef,
 	useEffect,
+	useReducer,
 } from "react";
 import {
 	colors,
@@ -34,6 +35,242 @@ const labelStyle = {
 	display: "block",
 };
 
+const modalOverlayStyle = {
+	position: "fixed",
+	top: 0,
+	left: 0,
+	width: "100vw",
+	height: "100vh",
+	background: "rgba(0, 0, 0, 0.4)",
+	backdropFilter: "blur(6px)",
+	WebkitBackdropFilter: "blur(6px)",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: `0 ${spacing[4]}`,
+	boxSizing: "border-box",
+	zIndex: 10000,
+	border: "none",
+	margin: 0,
+	border: "none",
+	margin: 0,
+};
+
+const modalContentStyle = {
+	width: "100%",
+	maxWidth: "360px",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	padding: spacing[8],
+	boxShadow: shadow.modal,
+	boxSizing: "border-box",
+	position: "relative",
+};
+
+const closeButtonStyle = {
+	position: "absolute",
+	top: spacing[4],
+	right: spacing[4],
+	background: "transparent",
+	border: "none",
+	color: colors.textSecondary,
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: spacing[1],
+};
+
+const headingStyle = {
+	fontSize: font.size["2xl"],
+	fontWeight: font.weight.medium,
+	color: colors.textHeading,
+	marginBottom: spacing[6],
+	marginTop: 0,
+	letterSpacing: font.letterSpacing.tight,
+	lineHeight: font.lineHeight.tight,
+};
+
+const formStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[5],
+};
+
+const buttonGroupStyle = {
+	display: "flex",
+	gap: spacing[3],
+	marginTop: spacing[2],
+};
+
+const cancelButtonStyle = {
+	flex: 1,
+	background: "transparent",
+	border: `1px solid ${colors.borderDefault}`,
+	color: colors.textBody,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	boxSizing: "border-box",
+};
+
+const submitButtonStyle = (loading) => ({
+	...components.primaryButton,
+	flex: 2,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	cursor: loading ? "not-allowed" : "pointer",
+	opacity: loading ? 0.55 : 1,
+	transition:
+		"background 0.15s, opacity 0.15s, transform 0.1s",
+	boxSizing: "border-box",
+});
+
+const radioLabelBaseStyle = {
+	display: "flex",
+	alignItems: "center",
+	gap: spacing[2],
+	fontSize: font.size.sm,
+	color: colors.textBody,
+	cursor: "pointer",
+	padding: spacing[1],
+	borderRadius: radius.sm,
+	transition: "background 0.15s",
+};
+
+const inputStyle = (hasError, isFocused) => ({
+	...components.input,
+	boxSizing: "border-box",
+	padding: `${spacing[2]} ${spacing[3]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	border: hasError
+		? `1px solid ${status.danger.border}`
+		: isFocused
+			? `1px solid ${colors.borderStrong}`
+			: `1px solid ${colors.borderDefault}`,
+	background: hasError
+		? status.danger.bg
+		: colors.cardBg,
+	color: colors.textBody,
+	boxShadow:
+		isFocused && !hasError
+			? shadow.focus
+			: "none",
+	transition:
+		"border-color 0.15s, box-shadow 0.15s",
+});
+
+const initialState = {
+	task: {
+		title: "",
+		description: "",
+		building_id: "",
+		assigned_to: "",
+	},
+	loading: false,
+	titleError: "",
+	descriptionError: "",
+	buildingIdError: "",
+	assignedToError: "",
+	titleFocused: false,
+	descriptionFocused: false,
+	buildingSearch: "",
+	contractorSearch: "",
+	buildingSearchFocused: false,
+	contractorSearchFocused: false,
+};
+
+function reducer(state, action) {
+	switch (action.type) {
+		case "SET_TASK":
+			return {
+				...state,
+				task: {
+					...state.task,
+					...action.payload,
+				},
+			};
+		case "SET_LOADING":
+			return {
+				...state,
+				loading: action.payload,
+			};
+		case "SET_TITLE_ERROR":
+			return {
+				...state,
+				titleError: action.payload,
+			};
+		case "SET_DESCRIPTION_ERROR":
+			return {
+				...state,
+				descriptionError: action.payload,
+			};
+		case "SET_BUILDING_ID_ERROR":
+			return {
+				...state,
+				buildingIdError: action.payload,
+			};
+		case "SET_ASSIGNED_TO_ERROR":
+			return {
+				...state,
+				assignedToError: action.payload,
+			};
+		case "SET_TITLE_FOCUSED":
+			return {
+				...state,
+				titleFocused: action.payload,
+			};
+		case "SET_DESCRIPTION_FOCUSED":
+			return {
+				...state,
+				descriptionFocused:
+					action.payload,
+			};
+		case "SET_BUILDING_SEARCH":
+			return {
+				...state,
+				buildingSearch: action.payload,
+			};
+		case "SET_CONTRACTOR_SEARCH":
+			return {
+				...state,
+				contractorSearch: action.payload,
+			};
+		case "SET_BUILDING_SEARCH_FOCUSED":
+			return {
+				...state,
+				buildingSearchFocused:
+					action.payload,
+			};
+		case "SET_CONTRACTOR_SEARCH_FOCUSED":
+			return {
+				...state,
+				contractorSearchFocused:
+					action.payload,
+			};
+		case "CLEAR_ERRORS":
+			return {
+				...state,
+				titleError: "",
+				descriptionError: "",
+				buildingIdError: "",
+				assignedToError: "",
+			};
+		default:
+			return state;
+	}
+}
+
 export default function CreateTask({
 	buildings = EMPTY_BUILDINGS,
 	contractors = EMPTY_CONTRACTORS,
@@ -44,48 +281,15 @@ export default function CreateTask({
 }) {
 	const t = translations[language];
 	const createTaskRef = useRef(null);
-	const [task, setTask] = useState({
-		title: "",
-		description: "",
-		building_id: "",
-		assigned_to: "",
-	});
-	const [loading, setLoading] = useState(false);
-	const [titleError, setTitleError] =
-		useState("");
-	const [
-		descriptionError,
-		setDescriptionError,
-	] = useState("");
-	const [buildingIdError, setBuildingIdError] =
-		useState("");
-	const [assignedToError, setAssignedToError] =
-		useState("");
-	const [titleFocused, setTitleFocused] =
-		useState(false);
-	const [
-		descriptionFocused,
-		setDescriptionFocused,
-	] = useState(false);
-	const [buildingSearch, setBuildingSearch] =
-		useState("");
-	const [
-		contractorSearch,
-		setContractorSearch,
-	] = useState("");
-	const [
-		buildingSearchFocused,
-		setBuildingSearchFocused,
-	] = useState(false);
-	const [
-		contractorSearchFocused,
-		setContractorSearchFocused,
-	] = useState(false);
+	const [state, dispatch] = useReducer(
+		reducer,
+		initialState
+	);
 
 	const filteredBuildings = buildings.filter(
 		(building) => {
 			const search =
-				buildingSearch.toLowerCase();
+				state.buildingSearch.toLowerCase();
 			return (
 				building.city
 					.toLowerCase()
@@ -103,7 +307,7 @@ export default function CreateTask({
 	const filteredContractors =
 		contractors.filter((contractor) => {
 			const search =
-				contractorSearch.toLowerCase();
+				state.contractorSearch.toLowerCase();
 			return (
 				contractor.first_name
 					.toLowerCase()
@@ -120,63 +324,49 @@ export default function CreateTask({
 		}
 	}, []);
 
-	const inputStyle = (hasError, isFocused) => ({
-		...components.input,
-		boxSizing: "border-box",
-		padding: `${spacing[2]} ${spacing[3]}`,
-		borderRadius: radius.lg,
-		fontSize: font.size.sm,
-		fontFamily: font.family.sans,
-		border: hasError
-			? `1px solid ${status.danger.border}`
-			: isFocused
-				? `1px solid ${colors.borderStrong}`
-				: `1px solid ${colors.borderDefault}`,
-		background: hasError
-			? status.danger.bg
-			: colors.cardBg,
-		color: colors.textBody,
-		boxShadow:
-			isFocused && !hasError
-				? shadow.focus
-				: "none",
-		transition:
-			"border-color 0.15s, box-shadow 0.15s",
-	});
-
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		setTitleError("");
-		setDescriptionError("");
-		setBuildingIdError("");
-		setAssignedToError("");
+		dispatch({ type: "CLEAR_ERRORS" });
 
-		if (!task.title) {
-			setTitleError(t.required);
+		if (!state.task.title) {
+			dispatch({
+				type: "SET_TITLE_ERROR",
+				payload: t.required,
+			});
 			return;
 		}
 
-		if (!task.building_id) {
-			setBuildingIdError(t.required);
+		if (!state.task.building_id) {
+			dispatch({
+				type: "SET_BUILDING_ID_ERROR",
+				payload: t.required,
+			});
 			return;
 		}
 
-		if (!task.assigned_to) {
-			setAssignedToError(t.required);
+		if (!state.task.assigned_to) {
+			dispatch({
+				type: "SET_ASSIGNED_TO_ERROR",
+				payload: t.required,
+			});
 			return;
 		}
 
-		setLoading(true);
+		dispatch({
+			type: "SET_LOADING",
+			payload: true,
+		});
 		try {
 			await api.createTask({
-				title: task.title,
-				description: task.description,
+				title: state.task.title,
+				description:
+					state.task.description,
 				building_id: parseInt(
-					task.building_id
+					state.task.building_id
 				),
 				created_by: currentUser.id,
 				assigned_to: parseInt(
-					task.assigned_to
+					state.task.assigned_to
 				),
 			});
 			if (onTaskCreated) onTaskCreated();
@@ -187,30 +377,17 @@ export default function CreateTask({
 				err
 			);
 		} finally {
-			setLoading(false);
+			dispatch({
+				type: "SET_LOADING",
+				payload: false,
+			});
 		}
 	};
 
 	return (
 		<div
-			role="button"
-			tabIndex={0}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100vw",
-				height: "100vh",
-				background: "rgba(0, 0, 0, 0.4)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: `0 ${spacing[4]}`,
-				boxSizing: "border-box",
-				zIndex: 100,
-			}}
+			type="button"
+			style={modalOverlayStyle}
 			onClick={() => onClose?.()}
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
@@ -220,17 +397,7 @@ export default function CreateTask({
 			}}
 		>
 			<div
-				style={{
-					width: "100%",
-					maxWidth: "360px",
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					border: `0.5px solid ${colors.cardBorder}`,
-					padding: spacing[8],
-					boxShadow: shadow.modal,
-					boxSizing: "border-box",
-					position: "relative",
-				}}
+				style={modalContentStyle}
 				onClick={(e) =>
 					e.stopPropagation()
 				}
@@ -241,19 +408,7 @@ export default function CreateTask({
 						e.stopPropagation();
 						onClose?.();
 					}}
-					style={{
-						position: "absolute",
-						top: spacing[4],
-						right: spacing[4],
-						background: "transparent",
-						border: "none",
-						color: colors.textSecondary,
-						cursor: "pointer",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						padding: spacing[1],
-					}}
+					style={closeButtonStyle}
 					aria-label={t.close}
 				>
 					<svg
@@ -279,31 +434,12 @@ export default function CreateTask({
 					</svg>
 				</button>
 
-				<h1
-					style={{
-						fontSize:
-							font.size["2xl"],
-						fontWeight:
-							font.weight.medium,
-						color: colors.textHeading,
-						marginBottom: spacing[6],
-						marginTop: 0,
-						letterSpacing:
-							font.letterSpacing
-								.tight,
-						lineHeight:
-							font.lineHeight.tight,
-					}}
-				>
+				<h1 style={headingStyle}>
 					{t.createNewTask}
 				</h1>
 				<form
 					onSubmit={handleSubmit}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[5],
-					}}
+					style={formStyle}
 				>
 					<div>
 						<label style={labelStyle}>
@@ -311,29 +447,35 @@ export default function CreateTask({
 						</label>
 						<input
 							style={inputStyle(
-								!!titleError,
-								titleFocused
+								!!state.titleError,
+								state.titleFocused
 							)}
 							ref={createTaskRef}
 							type="text"
-							value={task.title}
+							value={
+								state.task.title
+							}
 							onChange={(e) =>
-								setTask({
-									...task,
-									title: e
-										.target
-										.value,
+								dispatch({
+									type: "SET_TASK",
+									payload: {
+										title: e
+											.target
+											.value,
+									},
 								})
 							}
 							onFocus={() =>
-								setTitleFocused(
-									true
-								)
+								dispatch({
+									type: "SET_TITLE_FOCUSED",
+									payload: true,
+								})
 							}
 							onBlur={() =>
-								setTitleFocused(
-									false
-								)
+								dispatch({
+									type: "SET_TITLE_FOCUSED",
+									payload: false,
+								})
 							}
 							placeholder={
 								t.enterTaskTitle
@@ -342,9 +484,9 @@ export default function CreateTask({
 								t.enterTaskTitle
 							}
 						/>
-						{titleError && (
+						{state.titleError && (
 							<p style={errorStyle}>
-								{titleError}
+								{state.titleError}
 							</p>
 						)}
 					</div>
@@ -355,30 +497,36 @@ export default function CreateTask({
 						</label>
 						<input
 							style={inputStyle(
-								!!descriptionError,
-								descriptionFocused
+								!!state.descriptionError,
+								state.descriptionFocused
 							)}
 							type="text"
 							value={
-								task.description
+								state.task
+									.description
 							}
 							onChange={(e) =>
-								setTask({
-									...task,
-									description:
-										e.target
-											.value,
+								dispatch({
+									type: "SET_TASK",
+									payload: {
+										description:
+											e
+												.target
+												.value,
+									},
 								})
 							}
 							onFocus={() =>
-								setDescriptionFocused(
-									true
-								)
+								dispatch({
+									type: "SET_DESCRIPTION_FOCUSED",
+									payload: true,
+								})
 							}
 							onBlur={() =>
-								setDescriptionFocused(
-									false
-								)
+								dispatch({
+									type: "SET_DESCRIPTION_FOCUSED",
+									payload: false,
+								})
 							}
 							placeholder={
 								t.enterTaskDescription
@@ -387,9 +535,11 @@ export default function CreateTask({
 								t.enterTaskDescription
 							}
 						/>
-						{descriptionError && (
+						{state.descriptionError && (
 							<p style={errorStyle}>
-								{descriptionError}
+								{
+									state.descriptionError
+								}
 							</p>
 						)}
 					</div>
@@ -401,28 +551,35 @@ export default function CreateTask({
 						<input
 							style={{
 								...inputStyle(
-									!!buildingIdError,
-									buildingSearchFocused
+									!!state.buildingIdError,
+									state.buildingSearchFocused
 								),
 								marginBottom:
 									spacing[2],
 							}}
 							type="text"
-							value={buildingSearch}
+							value={
+								state.buildingSearch
+							}
 							onChange={(e) =>
-								setBuildingSearch(
-									e.target.value
-								)
+								dispatch({
+									type: "SET_BUILDING_SEARCH",
+									payload:
+										e.target
+											.value,
+								})
 							}
 							onFocus={() =>
-								setBuildingSearchFocused(
-									true
-								)
+								dispatch({
+									type: "SET_BUILDING_SEARCH_FOCUSED",
+									payload: true,
+								})
 							}
 							onBlur={() =>
-								setBuildingSearchFocused(
-									false
-								)
+								dispatch({
+									type: "SET_BUILDING_SEARCH_FOCUSED",
+									payload: false,
+								})
 							}
 							placeholder={
 								t.searchBuildings
@@ -452,25 +609,9 @@ export default function CreateTask({
 											key={
 												b.id
 											}
-											style={{
-												display:
-													"flex",
-												alignItems:
-													"center",
-												gap: spacing[2],
-												fontSize:
-													font
-														.size
-														.sm,
-												color: colors.textBody,
-												cursor: "pointer",
-												padding:
-													spacing[1],
-												borderRadius:
-													radius.sm,
-												transition:
-													"background 0.15s",
-											}}
+											style={
+												radioLabelBaseStyle
+											}
 											onMouseEnter={(
 												e
 											) => {
@@ -488,19 +629,24 @@ export default function CreateTask({
 												type="radio"
 												name="building"
 												checked={
-													task.building_id ===
+													state
+														.task
+														.building_id ===
 													String(
 														b.id
 													)
 												}
 												onChange={() =>
-													setTask(
+													dispatch(
 														{
-															...task,
-															building_id:
-																String(
-																	b.id
-																),
+															type: "SET_TASK",
+															payload:
+																{
+																	building_id:
+																		String(
+																			b.id
+																		),
+																},
 														}
 													)
 												}
@@ -547,9 +693,11 @@ export default function CreateTask({
 								</div>
 							)}
 						</div>
-						{buildingIdError && (
+						{state.buildingIdError && (
 							<p style={errorStyle}>
-								{buildingIdError}
+								{
+									state.buildingIdError
+								}
 							</p>
 						)}
 					</div>
@@ -561,30 +709,35 @@ export default function CreateTask({
 						<input
 							style={{
 								...inputStyle(
-									!!assignedToError,
-									contractorSearchFocused
+									!!state.assignedToError,
+									state.contractorSearchFocused
 								),
 								marginBottom:
 									spacing[2],
 							}}
 							type="text"
 							value={
-								contractorSearch
+								state.contractorSearch
 							}
 							onChange={(e) =>
-								setContractorSearch(
-									e.target.value
-								)
+								dispatch({
+									type: "SET_CONTRACTOR_SEARCH",
+									payload:
+										e.target
+											.value,
+								})
 							}
 							onFocus={() =>
-								setContractorSearchFocused(
-									true
-								)
+								dispatch({
+									type: "SET_CONTRACTOR_SEARCH_FOCUSED",
+									payload: true,
+								})
 							}
 							onBlur={() =>
-								setContractorSearchFocused(
-									false
-								)
+								dispatch({
+									type: "SET_CONTRACTOR_SEARCH_FOCUSED",
+									payload: false,
+								})
 							}
 							placeholder={
 								t.searchContractors
@@ -614,25 +767,9 @@ export default function CreateTask({
 											key={
 												c.id
 											}
-											style={{
-												display:
-													"flex",
-												alignItems:
-													"center",
-												gap: spacing[2],
-												fontSize:
-													font
-														.size
-														.sm,
-												color: colors.textBody,
-												cursor: "pointer",
-												padding:
-													spacing[1],
-												borderRadius:
-													radius.sm,
-												transition:
-													"background 0.15s",
-											}}
+											style={
+												radioLabelBaseStyle
+											}
 											onMouseEnter={(
 												e
 											) => {
@@ -650,19 +787,24 @@ export default function CreateTask({
 												type="radio"
 												name="contractor"
 												checked={
-													task.assigned_to ===
+													state
+														.task
+														.assigned_to ===
 													String(
 														c.id
 													)
 												}
 												onChange={() =>
-													setTask(
+													dispatch(
 														{
-															...task,
-															assigned_to:
-																String(
-																	c.id
-																),
+															type: "SET_TASK",
+															payload:
+																{
+																	assigned_to:
+																		String(
+																			c.id
+																		),
+																},
 														}
 													)
 												}
@@ -704,48 +846,25 @@ export default function CreateTask({
 								</div>
 							)}
 						</div>
-						{assignedToError && (
+						{state.assignedToError && (
 							<p style={errorStyle}>
-								{assignedToError}
+								{
+									state.assignedToError
+								}
 							</p>
 						)}
 					</div>
 
-					<div
-						style={{
-							display: "flex",
-							gap: spacing[3],
-							marginTop: spacing[2],
-						}}
-					>
+					<div style={buttonGroupStyle}>
 						<button
 							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								onClose?.();
 							}}
-							style={{
-								flex: 1,
-								background:
-									"transparent",
-								border: `1px solid ${colors.borderDefault}`,
-								color: colors.textBody,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								cursor: "pointer",
-								boxSizing:
-									"border-box",
-							}}
+							style={
+								cancelButtonStyle
+							}
 							aria-label={t.cancel}
 						>
 							{t.cancel}
@@ -753,39 +872,16 @@ export default function CreateTask({
 
 						<button
 							type="submit"
-							disabled={loading}
-							style={{
-								...components.primaryButton,
-								flex: 2,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
-								cursor: loading
-									? "not-allowed"
-									: "pointer",
-								opacity: loading
-									? 0.55
-									: 1,
-								transition:
-									"background 0.15s, opacity 0.15s, transform 0.1s",
-								boxSizing:
-									"border-box",
-							}}
+							disabled={
+								state.loading
+							}
+							style={submitButtonStyle(
+								state.loading
+							)}
 							onMouseEnter={(e) => {
-								if (!loading)
+								if (
+									!state.loading
+								)
 									e.currentTarget.style.background =
 										colors.primaryHover;
 							}}
@@ -794,7 +890,9 @@ export default function CreateTask({
 									colors.primary;
 							}}
 							onMouseDown={(e) => {
-								if (!loading)
+								if (
+									!state.loading
+								)
 									e.currentTarget.style.transform =
 										"scale(0.97)";
 							}}
@@ -806,7 +904,7 @@ export default function CreateTask({
 								t.createTask
 							}
 						>
-							{loading
+							{state.loading
 								? t.creating
 								: t.createTask}
 						</button>
