@@ -2,6 +2,7 @@ import {
 	useState,
 	useRef,
 	useEffect,
+	useReducer,
 } from "react";
 import {
 	colors,
@@ -15,6 +16,246 @@ import {
 import { translations } from "../i18n";
 
 const EMPTY_BUILDINGS = [];
+
+const initialState = (user) => ({
+	formData: {
+		login: user?.login || "",
+		password: "",
+		first_name: user?.first_name || "",
+		last_name: user?.last_name || "",
+		role: user?.role || "manager",
+		assignedBuildings:
+			user?.assignedBuildings || [],
+	},
+	errors: {
+		login: "",
+		password: "",
+		first_name: "",
+		last_name: "",
+	},
+	focused: {
+		login: false,
+		password: false,
+		first_name: false,
+		last_name: false,
+		buildingSearch: false,
+	},
+	loading: false,
+	buildingSearch: "",
+	showPassword: false,
+});
+
+function reducer(state, action) {
+	switch (action.type) {
+		case "SET_FORM_DATA":
+			return {
+				...state,
+				formData: {
+					...state.formData,
+					...action.payload,
+				},
+			};
+		case "SET_ERRORS":
+			return {
+				...state,
+				errors: {
+					...state.errors,
+					...action.payload,
+				},
+			};
+		case "SET_FOCUSED":
+			return {
+				...state,
+				focused: {
+					...state.focused,
+					...action.payload,
+				},
+			};
+		case "SET_LOADING":
+			return {
+				...state,
+				loading: action.payload,
+			};
+		case "SET_BUILDING_SEARCH":
+			return {
+				...state,
+				buildingSearch: action.payload,
+			};
+		case "SET_SHOW_PASSWORD":
+			return {
+				...state,
+				showPassword: action.payload,
+			};
+		case "TOGGLE_SHOW_PASSWORD":
+			return {
+				...state,
+				showPassword: !state.showPassword,
+			};
+		case "TOGGLE_BUILDING_ASSIGNMENT":
+			const buildingId = action.payload;
+			const assignedBuildings =
+				state.formData.assignedBuildings.includes(
+					buildingId
+				)
+					? state.formData.assignedBuildings.filter(
+							(id) =>
+								id !== buildingId
+						)
+					: [
+							...state.formData
+								.assignedBuildings,
+							buildingId,
+						];
+			return {
+				...state,
+				formData: {
+					...state.formData,
+					assignedBuildings,
+				},
+			};
+		default:
+			return state;
+	}
+}
+
+const modalOverlayStyle = {
+	position: "fixed",
+	top: 0,
+	left: 0,
+	width: "100vw",
+	height: "100vh",
+	background: "rgba(0, 0, 0, 0.4)",
+	backdropFilter: "blur(6px)",
+	WebkitBackdropFilter: "blur(6px)",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: `0 ${spacing[4]}`,
+	boxSizing: "border-box",
+	zIndex: 10000,
+};
+
+const modalContentStyle = {
+	width: "100%",
+	maxWidth: "400px",
+	maxHeight: "90vh",
+	overflowY: "auto",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	padding: spacing[8],
+	boxShadow: shadow.modal,
+	boxSizing: "border-box",
+	position: "relative",
+};
+
+const closeButtonStyle = {
+	position: "absolute",
+	top: spacing[4],
+	right: spacing[4],
+	background: "transparent",
+	border: "none",
+	color: colors.textSecondary,
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: spacing[1],
+};
+
+const headingStyle = {
+	fontSize: font.size["2xl"],
+	fontWeight: font.weight.medium,
+	color: colors.textHeading,
+	marginBottom: spacing[6],
+	marginTop: 0,
+	letterSpacing: font.letterSpacing.tight,
+	lineHeight: font.lineHeight.tight,
+};
+
+const formStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[5],
+};
+
+const buttonGroupStyle = {
+	display: "flex",
+	gap: spacing[3],
+	marginTop: spacing[2],
+};
+
+const cancelButtonStyle = {
+	flex: 1,
+	background: "transparent",
+	border: `1px solid ${colors.borderDefault}`,
+	color: colors.textBody,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	boxSizing: "border-box",
+};
+
+const buildingListStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[2],
+	maxHeight: "150px",
+	overflowY: "auto",
+	paddingRight: spacing[1],
+};
+
+const noResultsStyle = {
+	fontSize: font.size.sm,
+	color: colors.textSecondary,
+	padding: spacing[2],
+	textAlign: "center",
+};
+
+const buildingLabelStyle = {
+	display: "flex",
+	alignItems: "center",
+	gap: spacing[2],
+	fontSize: font.size.sm,
+	color: colors.textBody,
+	cursor: "pointer",
+	padding: spacing[1],
+	borderRadius: radius.sm,
+	transition: "background 0.15s",
+};
+
+const passwordToggleButtonStyle = {
+	position: "absolute",
+	right: spacing[3],
+	background: "none",
+	border: "none",
+	cursor: "pointer",
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	color: colors.textSecondary,
+	padding: 0,
+	letterSpacing: font.letterSpacing.wide,
+	textTransform: "uppercase",
+	transition: "color 0.15s",
+};
+
+const submitButtonBaseStyle = {
+	...components.primaryButton,
+	flex: 2,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	transition:
+		"background 0.15s, opacity 0.15s, transform 0.1s",
+	boxSizing: "border-box",
+};
 
 const inputStyle = (hasError, isFocused) => ({
 	...components.input,
@@ -67,36 +308,10 @@ export default function UserModal({
 	const loginRef = useRef(null);
 	const isEdit = !!user;
 
-	const [formData, setFormData] = useState({
-		login: user?.login || "",
-		password: "",
-		first_name: user?.first_name || "",
-		last_name: user?.last_name || "",
-		role: user?.role || "manager",
-		assignedBuildings:
-			user?.assignedBuildings || [],
-	});
-
-	const [errors, setErrors] = useState({
-		login: "",
-		password: "",
-		first_name: "",
-		last_name: "",
-	});
-
-	const [focused, setFocused] = useState({
-		login: false,
-		password: false,
-		first_name: false,
-		last_name: false,
-		buildingSearch: false,
-	});
-
-	const [loading, setLoading] = useState(false);
-	const [buildingSearch, setBuildingSearch] =
-		useState("");
-	const [showPassword, setShowPassword] =
-		useState(false);
+	const [state, dispatch] = useReducer(
+		reducer,
+		initialState(user)
+	);
 
 	useEffect(() => {
 		if (loginRef.current) {
@@ -108,34 +323,37 @@ export default function UserModal({
 		const newErrors = {};
 		let valid = true;
 
-		if (!formData.login) {
+		if (!state.formData.login) {
 			newErrors.login = t.required;
 			valid = false;
 		}
 
-		if (!isEdit && !formData.password) {
+		if (!isEdit && !state.formData.password) {
 			newErrors.password = t.required;
 			valid = false;
 		} else if (
-			formData.password &&
-			formData.password.length < 6
+			state.formData.password &&
+			state.formData.password.length < 6
 		) {
 			newErrors.password =
 				t.passwordMinLength;
 			valid = false;
 		}
 
-		if (!formData.first_name) {
+		if (!state.formData.first_name) {
 			newErrors.first_name = t.required;
 			valid = false;
 		}
 
-		if (!formData.last_name) {
+		if (!state.formData.last_name) {
 			newErrors.last_name = t.required;
 			valid = false;
 		}
 
-		setErrors(newErrors);
+		dispatch({
+			type: "SET_ERRORS",
+			payload: newErrors,
+		});
 		return valid;
 	};
 
@@ -143,17 +361,22 @@ export default function UserModal({
 		e.preventDefault();
 		if (!validate()) return;
 
-		setLoading(true);
+		dispatch({
+			type: "SET_LOADING",
+			payload: true,
+		});
 		try {
 			const savedUser = {
-				login: formData.login,
-				first_name: formData.first_name,
-				last_name: formData.last_name,
-				role: formData.role,
+				login: state.formData.login,
+				first_name:
+					state.formData.first_name,
+				last_name:
+					state.formData.last_name,
+				role: state.formData.role,
 			};
 			if (!isEdit) {
 				savedUser.password =
-					formData.password;
+					state.formData.password;
 			} else {
 				savedUser.id = user.id;
 			}
@@ -171,34 +394,26 @@ export default function UserModal({
 				err
 			);
 		} finally {
-			setLoading(false);
+			dispatch({
+				type: "SET_LOADING",
+				payload: false,
+			});
 		}
 	};
 
 	const toggleBuildingAssignment = (
 		building_id
 	) => {
-		setFormData((prev) => ({
-			...prev,
-			assignedBuildings:
-				prev.assignedBuildings.includes(
-					building_id
-				)
-					? prev.assignedBuildings.filter(
-							(id) =>
-								id !== building_id
-						)
-					: [
-							...prev.assignedBuildings,
-							building_id,
-						],
-		}));
+		dispatch({
+			type: "TOGGLE_BUILDING_ASSIGNMENT",
+			payload: building_id,
+		});
 	};
 
 	const filteredBuildings = buildings.filter(
 		(building) => {
 			const search =
-				buildingSearch.toLowerCase();
+				state.buildingSearch.toLowerCase();
 			return (
 				building.city
 					.toLowerCase()
@@ -214,28 +429,15 @@ export default function UserModal({
 	);
 
 	const togglePassword = () =>
-		setShowPassword((v) => !v);
+		dispatch({
+			type: "TOGGLE_SHOW_PASSWORD",
+		});
 
 	return (
 		<div
 			role="button"
 			tabIndex={0}
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				width: "100vw",
-				height: "100vh",
-				background: "rgba(0, 0, 0, 0.4)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: `0 ${spacing[4]}`,
-				boxSizing: "border-box",
-				zIndex: 100,
-			}}
+			style={modalOverlayStyle}
 			onClick={() => onClose?.()}
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
@@ -245,19 +447,7 @@ export default function UserModal({
 			}}
 		>
 			<div
-				style={{
-					width: "100%",
-					maxWidth: "400px",
-					maxHeight: "90vh",
-					overflowY: "auto",
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					border: `0.5px solid ${colors.cardBorder}`,
-					padding: spacing[8],
-					boxShadow: shadow.modal,
-					boxSizing: "border-box",
-					position: "relative",
-				}}
+				style={modalContentStyle}
 				onClick={(e) =>
 					e.stopPropagation()
 				}
@@ -268,19 +458,7 @@ export default function UserModal({
 						e.stopPropagation();
 						onClose?.();
 					}}
-					style={{
-						position: "absolute",
-						top: spacing[4],
-						right: spacing[4],
-						background: "transparent",
-						border: "none",
-						color: colors.textSecondary,
-						cursor: "pointer",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						padding: spacing[1],
-					}}
+					style={closeButtonStyle}
 					aria-label={t.close}
 				>
 					<svg
@@ -306,33 +484,14 @@ export default function UserModal({
 					</svg>
 				</button>
 
-				<h1
-					style={{
-						fontSize:
-							font.size["2xl"],
-						fontWeight:
-							font.weight.medium,
-						color: colors.textHeading,
-						marginBottom: spacing[6],
-						marginTop: 0,
-						letterSpacing:
-							font.letterSpacing
-								.tight,
-						lineHeight:
-							font.lineHeight.tight,
-					}}
-				>
+				<h1 style={headingStyle}>
 					{isEdit
 						? t.editUser
 						: t.createUser}
 				</h1>
 				<form
 					onSubmit={handleSubmit}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[5],
-					}}
+					style={formStyle}
 				>
 					<div>
 						<label style={labelStyle}>
@@ -340,35 +499,51 @@ export default function UserModal({
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.login,
-								focused.login
+								!!state.errors
+									.login,
+								state.focused
+									.login
 							)}
 							ref={loginRef}
 							type="text"
-							value={formData.login}
+							value={
+								state.formData
+									.login
+							}
 							onChange={(e) => {
-								setFormData({
-									...formData,
-									login: e
-										.target
-										.value,
+								dispatch({
+									type: "SET_FORM_DATA",
+									payload: {
+										login: e
+											.target
+											.value,
+									},
 								});
-								if (errors.login)
-									setErrors({
-										...errors,
-										login: "",
+								if (
+									state.errors
+										.login
+								)
+									dispatch({
+										type: "SET_ERRORS",
+										payload: {
+											login: "",
+										},
 									});
 							}}
 							onFocus={() =>
-								setFocused({
-									...focused,
-									login: true,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										login: true,
+									},
 								})
 							}
 							onBlur={() =>
-								setFocused({
-									...focused,
-									login: false,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										login: false,
+									},
 								})
 							}
 							placeholder={
@@ -376,9 +551,12 @@ export default function UserModal({
 							}
 							aria-label={t.login}
 						/>
-						{errors.login && (
+						{state.errors.login && (
 							<p style={errorStyle}>
-								{errors.login}
+								{
+									state.errors
+										.login
+								}
 							</p>
 						)}
 					</div>
@@ -403,58 +581,72 @@ export default function UserModal({
 								<input
 									style={{
 										...inputStyle(
-											!!errors.password,
-											focused.password
+											!!state
+												.errors
+												.password,
+											state
+												.focused
+												.password
 										),
 										paddingRight:
 											spacing[10],
 									}}
 									type={
-										showPassword
+										state.showPassword
 											? "text"
 											: "password"
 									}
 									value={
-										formData.password
+										state
+											.formData
+											.password
 									}
 									onChange={(
 										e
 									) => {
-										setFormData(
-											{
-												...formData,
-												password:
-													e
-														.target
-														.value,
-											}
-										);
-										if (
-											errors.password
-										)
-											setErrors(
+										dispatch({
+											type: "SET_FORM_DATA",
+											payload:
 												{
-													...errors,
 													password:
-														"",
+														e
+															.target
+															.value,
+												},
+										});
+										if (
+											state
+												.errors
+												.password
+										)
+											dispatch(
+												{
+													type: "SET_ERRORS",
+													payload:
+														{
+															password:
+																"",
+														},
 												}
 											);
 									}}
 									onFocus={() =>
-										setFocused(
-											{
-												...focused,
-												password: true,
-											}
-										)
+										dispatch({
+											type: "SET_FOCUSED",
+											payload:
+												{
+													password: true,
+												},
+										})
 									}
 									onBlur={() =>
-										setFocused(
-											{
-												...focused,
-												password: false,
-											}
-										)
+										dispatch({
+											type: "SET_FOCUSED",
+											payload:
+												{
+													password: false,
+												},
+										})
 									}
 									placeholder={
 										t.enterPassword
@@ -468,37 +660,9 @@ export default function UserModal({
 									onClick={
 										togglePassword
 									}
-									style={{
-										position:
-											"absolute",
-										right: spacing[3],
-										background:
-											"none",
-										border: "none",
-										cursor: "pointer",
-										fontSize:
-											font
-												.size
-												.xs,
-										fontFamily:
-											font
-												.family
-												.sans,
-										fontWeight:
-											font
-												.weight
-												.medium,
-										color: colors.textSecondary,
-										padding: 0,
-										letterSpacing:
-											font
-												.letterSpacing
-												.wide,
-										textTransform:
-											"uppercase",
-										transition:
-											"color 0.15s",
-									}}
+									style={
+										passwordToggleButtonStyle
+									}
 									onMouseEnter={(
 										e
 									) =>
@@ -512,24 +676,27 @@ export default function UserModal({
 											colors.textSecondary)
 									}
 									aria-label={
-										showPassword
+										state.showPassword
 											? t.hide
 											: t.show
 									}
 								>
-									{showPassword
+									{state.showPassword
 										? t.hide
 										: t.show}
 								</button>
 							</div>
-							{errors.password && (
+							{state.errors
+								.password && (
 								<p
 									style={
 										errorStyle
 									}
 								>
 									{
-										errors.password
+										state
+											.errors
+											.password
 									}
 								</p>
 							)}
@@ -542,39 +709,52 @@ export default function UserModal({
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.first_name,
-								focused.first_name
+								!!state.errors
+									.first_name,
+								state.focused
+									.first_name
 							)}
 							type="text"
 							value={
-								formData.first_name
+								state.formData
+									.first_name
 							}
 							onChange={(e) => {
-								setFormData({
-									...formData,
-									first_name:
-										e.target
-											.value,
+								dispatch({
+									type: "SET_FORM_DATA",
+									payload: {
+										first_name:
+											e
+												.target
+												.value,
+									},
 								});
 								if (
-									errors.first_name
+									state.errors
+										.first_name
 								)
-									setErrors({
-										...errors,
-										first_name:
-											"",
+									dispatch({
+										type: "SET_ERRORS",
+										payload: {
+											first_name:
+												"",
+										},
 									});
 							}}
 							onFocus={() =>
-								setFocused({
-									...focused,
-									first_name: true,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										first_name: true,
+									},
 								})
 							}
 							onBlur={() =>
-								setFocused({
-									...focused,
-									first_name: false,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										first_name: false,
+									},
 								})
 							}
 							placeholder={
@@ -584,10 +764,12 @@ export default function UserModal({
 								t.first_name
 							}
 						/>
-						{errors.first_name && (
+						{state.errors
+							.first_name && (
 							<p style={errorStyle}>
 								{
-									errors.first_name
+									state.errors
+										.first_name
 								}
 							</p>
 						)}
@@ -599,39 +781,52 @@ export default function UserModal({
 						</label>
 						<input
 							style={inputStyle(
-								!!errors.last_name,
-								focused.last_name
+								!!state.errors
+									.last_name,
+								state.focused
+									.last_name
 							)}
 							type="text"
 							value={
-								formData.last_name
+								state.formData
+									.last_name
 							}
 							onChange={(e) => {
-								setFormData({
-									...formData,
-									last_name:
-										e.target
-											.value,
+								dispatch({
+									type: "SET_FORM_DATA",
+									payload: {
+										last_name:
+											e
+												.target
+												.value,
+									},
 								});
 								if (
-									errors.last_name
+									state.errors
+										.last_name
 								)
-									setErrors({
-										...errors,
-										last_name:
-											"",
+									dispatch({
+										type: "SET_ERRORS",
+										payload: {
+											last_name:
+												"",
+										},
 									});
 							}}
 							onFocus={() =>
-								setFocused({
-									...focused,
-									last_name: true,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										last_name: true,
+									},
 								})
 							}
 							onBlur={() =>
-								setFocused({
-									...focused,
-									last_name: false,
+								dispatch({
+									type: "SET_FOCUSED",
+									payload: {
+										last_name: false,
+									},
 								})
 							}
 							placeholder={
@@ -641,9 +836,13 @@ export default function UserModal({
 								t.last_name
 							}
 						/>
-						{errors.last_name && (
+						{state.errors
+							.last_name && (
 							<p style={errorStyle}>
-								{errors.last_name}
+								{
+									state.errors
+										.last_name
+								}
 							</p>
 						)}
 					</div>
@@ -657,12 +856,18 @@ export default function UserModal({
 								false,
 								false
 							)}
-							value={formData.role}
+							value={
+								state.formData
+									.role
+							}
 							onChange={(e) =>
-								setFormData({
-									...formData,
-									role: e.target
-										.value,
+								dispatch({
+									type: "SET_FORM_DATA",
+									payload: {
+										role: e
+											.target
+											.value,
+									},
 								})
 							}
 							aria-label={t.role}
@@ -694,7 +899,7 @@ export default function UserModal({
 						</select>
 					</div>
 
-					{formData.role ===
+					{state.formData.role ===
 						"manager" && (
 						<div>
 							<label
@@ -708,31 +913,40 @@ export default function UserModal({
 								style={{
 									...inputStyle(
 										false,
-										focused.buildingSearch
+										state
+											.focused
+											.buildingSearch
 									),
 									marginBottom:
 										spacing[2],
 								}}
 								type="text"
 								value={
-									buildingSearch
+									state.buildingSearch
 								}
 								onChange={(e) =>
-									setBuildingSearch(
-										e.target
-											.value
-									)
+									dispatch({
+										type: "SET_BUILDING_SEARCH",
+										payload:
+											e
+												.target
+												.value,
+									})
 								}
 								onFocus={() =>
-									setFocused({
-										...focused,
-										buildingSearch: true,
+									dispatch({
+										type: "SET_FOCUSED",
+										payload: {
+											buildingSearch: true,
+										},
 									})
 								}
 								onBlur={() =>
-									setFocused({
-										...focused,
-										buildingSearch: false,
+									dispatch({
+										type: "SET_FOCUSED",
+										payload: {
+											buildingSearch: false,
+										},
 									})
 								}
 								placeholder={
@@ -743,19 +957,9 @@ export default function UserModal({
 								}
 							/>
 							<div
-								style={{
-									display:
-										"flex",
-									flexDirection:
-										"column",
-									gap: spacing[2],
-									maxHeight:
-										"150px",
-									overflowY:
-										"auto",
-									paddingRight:
-										spacing[1],
-								}}
+								style={
+									buildingListStyle
+								}
 							>
 								{filteredBuildings.length >
 								0 ? (
@@ -767,25 +971,9 @@ export default function UserModal({
 												key={
 													building.id
 												}
-												style={{
-													display:
-														"flex",
-													alignItems:
-														"center",
-													gap: spacing[2],
-													fontSize:
-														font
-															.size
-															.sm,
-													color: colors.textBody,
-													cursor: "pointer",
-													padding:
-														spacing[1],
-													borderRadius:
-														radius.sm,
-													transition:
-														"background 0.15s",
-												}}
+												style={
+													buildingLabelStyle
+												}
 												onMouseEnter={(
 													e
 												) => {
@@ -801,7 +989,7 @@ export default function UserModal({
 											>
 												<input
 													type="checkbox"
-													checked={formData.assignedBuildings.includes(
+													checked={state.formData.assignedBuildings.includes(
 														building.id
 													)}
 													onChange={() =>
@@ -838,17 +1026,9 @@ export default function UserModal({
 									)
 								) : (
 									<div
-										style={{
-											fontSize:
-												font
-													.size
-													.sm,
-											color: colors.textSecondary,
-											padding:
-												spacing[2],
-											textAlign:
-												"center",
-										}}
+										style={
+											noResultsStyle
+										}
 									>
 										{
 											t.noResults
@@ -859,41 +1039,16 @@ export default function UserModal({
 						</div>
 					)}
 
-					<div
-						style={{
-							display: "flex",
-							gap: spacing[3],
-							marginTop: spacing[2],
-						}}
-					>
+					<div style={buttonGroupStyle}>
 						<button
 							type="button"
 							onClick={(e) => {
 								e.stopPropagation();
 								onClose?.();
 							}}
-							style={{
-								flex: 1,
-								background:
-									"transparent",
-								border: `1px solid ${colors.borderDefault}`,
-								color: colors.textBody,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								cursor: "pointer",
-								boxSizing:
-									"border-box",
-							}}
+							style={
+								cancelButtonStyle
+							}
 							aria-label={t.cancel}
 						>
 							{t.cancel}
@@ -901,39 +1056,23 @@ export default function UserModal({
 
 						<button
 							type="submit"
-							disabled={loading}
+							disabled={
+								state.loading
+							}
 							style={{
-								...components.primaryButton,
-								flex: 2,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size
-										.base,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
-								cursor: loading
+								...submitButtonBaseStyle,
+								cursor: state.loading
 									? "not-allowed"
 									: "pointer",
-								opacity: loading
-									? 0.55
-									: 1,
-								transition:
-									"background 0.15s, opacity 0.15s, transform 0.1s",
-								boxSizing:
-									"border-box",
+								opacity:
+									state.loading
+										? 0.55
+										: 1,
 							}}
 							onMouseEnter={(e) => {
-								if (!loading)
+								if (
+									!state.loading
+								)
 									e.currentTarget.style.background =
 										colors.primaryHover;
 							}}
@@ -942,7 +1081,9 @@ export default function UserModal({
 									colors.primary;
 							}}
 							onMouseDown={(e) => {
-								if (!loading)
+								if (
+									!state.loading
+								)
 									e.currentTarget.style.transform =
 										"scale(0.97)";
 							}}
@@ -951,14 +1092,14 @@ export default function UserModal({
 									"scale(1)";
 							}}
 							aria-label={
-								loading
+								state.loading
 									? t.saving
 									: isEdit
 										? t.update
 										: t.create
 							}
 						>
-							{loading
+							{state.loading
 								? t.saving
 								: isEdit
 									? t.update

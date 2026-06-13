@@ -41,6 +41,192 @@ const getRoleBadgeColor = (role) => {
 	}
 };
 
+const modalOverlayStyle = {
+	position: "fixed",
+	top: 0,
+	left: 0,
+	width: "100vw",
+	height: "100vh",
+	background: "rgba(0, 0, 0, 0.4)",
+	backdropFilter: "blur(6px)",
+	WebkitBackdropFilter: "blur(6px)",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: `0 ${spacing[4]}`,
+	boxSizing: "border-box",
+	zIndex: 10000,
+	border: "none",
+	margin: 0,
+};
+
+const modalContentStyle = {
+	width: "100%",
+	maxWidth: "600px",
+	maxHeight: "90vh",
+	overflowY: "auto",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	padding: spacing[8],
+	boxShadow: shadow.modal,
+	boxSizing: "border-box",
+	position: "relative",
+};
+
+const closeButtonStyle = {
+	position: "absolute",
+	top: spacing[4],
+	right: spacing[4],
+	background: "transparent",
+	border: "none",
+	color: colors.textSecondary,
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	padding: spacing[1],
+};
+
+const headingStyle = {
+	fontSize: font.size["2xl"],
+	fontWeight: font.weight.medium,
+	color: colors.textHeading,
+	marginBottom: spacing[6],
+	marginTop: 0,
+	letterSpacing: font.letterSpacing.tight,
+	lineHeight: font.lineHeight.tight,
+};
+
+const buttonGroupStyle = {
+	display: "flex",
+	gap: spacing[3],
+	marginTop: spacing[2],
+};
+
+const cancelButtonStyle = {
+	flex: 1,
+	background: "transparent",
+	border: `1px solid ${colors.borderDefault}`,
+	color: colors.textBody,
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	boxSizing: "border-box",
+};
+
+const usersListStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[3],
+	marginTop: spacing[4],
+};
+
+const userItemStyle = {
+	display: "flex",
+	justifyContent: "space-between",
+	alignItems: "center",
+	padding: `${spacing[3]} ${spacing[4]}`,
+	background: colors.cardBg,
+	border: `0.5px solid ${colors.cardBorder}`,
+	borderRadius: radius.lg,
+	transition:
+		"border-color 0.15s, background 0.15s",
+};
+
+const userInfoStyle = {
+	flex: 1,
+};
+
+const userNameStyle = {
+	fontSize: font.size.base,
+	fontWeight: font.weight.medium,
+	color: colors.textBody,
+	marginBottom: spacing[1],
+};
+
+const userRoleStyle = {
+	fontSize: font.size.sm,
+	color: colors.textSecondary,
+};
+
+const actionButtonsStyle = {
+	display: "flex",
+	gap: spacing[2],
+	flexShrink: 0,
+};
+
+const editButtonStyle = {
+	background: "transparent",
+	border: `1px solid ${colors.borderDefault}`,
+	color: colors.textBody,
+	padding: `${spacing[1]} ${spacing[2]}`,
+	borderRadius: radius.md,
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	transition: "border-color 0.15s, color 0.15s",
+	whiteSpace: "nowrap",
+};
+
+const deleteButtonStyle = {
+	background: "transparent",
+	border: `1px solid ${status.danger.border}`,
+	color: status.danger.text,
+	padding: `${spacing[1]} ${spacing[2]}`,
+	borderRadius: radius.md,
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	cursor: "pointer",
+	transition: "background 0.15s",
+	whiteSpace: "nowrap",
+};
+
+const emptyStateStyle = {
+	textAlign: "center",
+	padding: spacing[8],
+	color: colors.textSecondary,
+};
+
+const addUserButtonStyle = {
+	...components.primaryButton,
+	width: "100%",
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	cursor: "pointer",
+	boxSizing: "border-box",
+	marginBottom: spacing[6],
+};
+
+const usersContainerStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[3],
+	maxHeight: "60vh",
+	overflowY: "auto",
+	paddingRight: spacing[2],
+};
+
+const roleBadgeBaseStyle = {
+	fontSize: font.size.xs,
+	padding: `4px ${spacing[2]}`,
+	borderRadius: radius.sm,
+	fontWeight: font.weight.medium,
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	height: "24px",
+};
+
 export default function UsersManagementModal({
 	onClose,
 	language,
@@ -104,24 +290,7 @@ export default function UsersManagementModal({
 	return (
 		<>
 			<div
-				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					width: "100vw",
-					height: "100vh",
-					background:
-						"rgba(0, 0, 0, 0.4)",
-					backdropFilter: "blur(6px)",
-					WebkitBackdropFilter:
-						"blur(6px)",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					padding: `0 ${spacing[4]}`,
-					boxSizing: "border-box",
-					zIndex: 100,
-				}}
+				style={modalOverlayStyle}
 				onClick={() => onClose?.()}
 				onKeyDown={(e) => {
 					if (e.key === "Escape") {
@@ -129,21 +298,10 @@ export default function UsersManagementModal({
 						onClose?.();
 					}
 				}}
+				role="presentation"
 			>
 				<div
-					style={{
-						width: "100%",
-						maxWidth: "550px",
-						maxHeight: "90vh",
-						overflowY: "auto",
-						background: colors.cardBg,
-						borderRadius: radius.xl,
-						border: `0.5px solid ${colors.cardBorder}`,
-						padding: spacing[8],
-						boxShadow: shadow.modal,
-						boxSizing: "border-box",
-						position: "relative",
-					}}
+					style={modalContentStyle}
 					onClick={(e) =>
 						e.stopPropagation()
 					}
@@ -154,21 +312,7 @@ export default function UsersManagementModal({
 							e.stopPropagation();
 							onClose?.();
 						}}
-						style={{
-							position: "absolute",
-							top: spacing[4],
-							right: spacing[4],
-							background:
-								"transparent",
-							border: "none",
-							color: colors.textSecondary,
-							cursor: "pointer",
-							display: "flex",
-							alignItems: "center",
-							justifyContent:
-								"center",
-							padding: spacing[1],
-						}}
+						style={closeButtonStyle}
 						aria-label={t.close}
 					>
 						<svg
@@ -194,25 +338,7 @@ export default function UsersManagementModal({
 						</svg>
 					</button>
 
-					<h1
-						style={{
-							fontSize:
-								font.size["2xl"],
-							fontWeight:
-								font.weight
-									.medium,
-							color: colors.textHeading,
-							marginBottom:
-								spacing[6],
-							marginTop: 0,
-							letterSpacing:
-								font.letterSpacing
-									.tight,
-							lineHeight:
-								font.lineHeight
-									.tight,
-						}}
-					>
+					<h1 style={headingStyle}>
 						{t.addUser}
 					</h1>
 
@@ -221,28 +347,7 @@ export default function UsersManagementModal({
 						onClick={() =>
 							setEditingUser({})
 						}
-						style={{
-							...components.primaryButton,
-							width: "100%",
-							padding: `${spacing[3]} ${spacing[4]}`,
-							borderRadius:
-								radius.lg,
-							fontSize:
-								font.size.base,
-							fontFamily:
-								font.family.sans,
-							fontWeight:
-								font.weight
-									.medium,
-							letterSpacing:
-								font.letterSpacing
-									.wide,
-							cursor: "pointer",
-							boxSizing:
-								"border-box",
-							marginBottom:
-								spacing[6],
-						}}
+						style={addUserButtonStyle}
 						onMouseEnter={(e) =>
 							(e.currentTarget.style.background =
 								colors.primaryHover)
@@ -259,16 +364,9 @@ export default function UsersManagementModal({
 					</button>
 
 					<div
-						style={{
-							display: "flex",
-							flexDirection:
-								"column",
-							gap: spacing[3],
-							maxHeight: "60vh",
-							overflowY: "auto",
-							paddingRight:
-								spacing[2],
-						}}
+						style={
+							usersContainerStyle
+						}
 					>
 						{users.map((user) => {
 							const badgeColor =
@@ -278,30 +376,14 @@ export default function UsersManagementModal({
 							return (
 								<div
 									key={user.id}
-									style={{
-										display:
-											"flex",
-										justifyContent:
-											"space-between",
-										alignItems:
-											"center",
-										padding: `${spacing[3]} ${spacing[4]}`,
-										background:
-											colors.pageBg,
-										borderRadius:
-											radius.lg,
-										border: `0.5px solid ${colors.cardBorder}`,
-										gap: spacing[2],
-									}}
+									style={
+										userItemStyle
+									}
 								>
 									<div
-										style={{
-											display:
-												"flex",
-											flexDirection:
-												"column",
-											gap: spacing[1],
-										}}
+										style={
+											userInfoStyle
+										}
 									>
 										<div
 											style={{
@@ -313,17 +395,9 @@ export default function UsersManagementModal({
 											}}
 										>
 											<span
-												style={{
-													fontSize:
-														font
-															.size
-															.base,
-													fontWeight:
-														font
-															.weight
-															.medium,
-													color: colors.textHeading,
-												}}
+												style={
+													userNameStyle
+												}
 											>
 												{
 													user.first_name
@@ -334,28 +408,11 @@ export default function UsersManagementModal({
 											</span>
 											<span
 												style={{
-													fontSize:
-														font
-															.size
-															.xs,
-													padding: `4px ${spacing[2]}`,
-													borderRadius:
-														radius.sm,
+													...roleBadgeBaseStyle,
 													background:
 														badgeColor.bg,
 													border: `0.5px solid ${badgeColor.border}`,
 													color: badgeColor.text,
-													fontWeight:
-														font
-															.weight
-															.medium,
-													display:
-														"inline-flex",
-													alignItems:
-														"center",
-													justifyContent:
-														"center",
-													height: "24px",
 												}}
 											>
 												{
@@ -368,12 +425,9 @@ export default function UsersManagementModal({
 										</div>
 									</div>
 									<div
-										style={{
-											display:
-												"flex",
-											gap: spacing[2],
-											flexShrink: 0,
-										}}
+										style={
+											actionButtonsStyle
+										}
 									>
 										<button
 											type="button"
@@ -382,32 +436,9 @@ export default function UsersManagementModal({
 													user
 												)
 											}
-											style={{
-												background:
-													"transparent",
-												border: `1px solid ${colors.borderDefault}`,
-												color: colors.textBody,
-												padding: `${spacing[1]} ${spacing[2]}`,
-												borderRadius:
-													radius.md,
-												fontSize:
-													font
-														.size
-														.xs,
-												fontFamily:
-													font
-														.family
-														.sans,
-												fontWeight:
-													font
-														.weight
-														.medium,
-												cursor: "pointer",
-												transition:
-													"border-color 0.15s, color 0.15s",
-												whiteSpace:
-													"nowrap",
-											}}
+											style={
+												editButtonStyle
+											}
 											onMouseEnter={(
 												e
 											) => {
@@ -439,34 +470,9 @@ export default function UsersManagementModal({
 													user.id
 												)
 											}
-											style={{
-												background:
-													"transparent",
-												border: `1px solid ${status.danger.border}`,
-												color: status
-													.danger
-													.text,
-												padding: `${spacing[1]} ${spacing[2]}`,
-												borderRadius:
-													radius.md,
-												fontSize:
-													font
-														.size
-														.xs,
-												fontFamily:
-													font
-														.family
-														.sans,
-												fontWeight:
-													font
-														.weight
-														.medium,
-												cursor: "pointer",
-												transition:
-													"background 0.15s",
-												whiteSpace:
-													"nowrap",
-											}}
+											style={
+												deleteButtonStyle
+											}
 											onMouseEnter={(
 												e
 											) => {
