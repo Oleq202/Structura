@@ -5,6 +5,27 @@ import {
 	radius,
 } from "../theme";
 
+const buttonStyle = {
+	background: "transparent",
+	border: `1px solid ${colors.borderSubtle}`,
+	borderRadius: radius.md,
+	padding: `${spacing[1]} ${spacing[3]}`,
+	fontSize: font.size.sm,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	color: colors.textSecondary,
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+	gap: spacing[2],
+	transition: "border-color 0.15s, color 0.15s",
+};
+
+const spanStyle = {
+	fontSize: font.size.sm,
+	fontWeight: font.weight.bold,
+};
+
 export default function LanguageSwitcher({
 	language,
 	onLanguageChange,
@@ -13,22 +34,7 @@ export default function LanguageSwitcher({
 		<button
 			type="button"
 			onClick={onLanguageChange}
-			style={{
-				background: "transparent",
-				border: `1px solid ${colors.borderSubtle}`,
-				borderRadius: radius.md,
-				padding: `${spacing[1]} ${spacing[3]}`,
-				fontSize: font.size.sm,
-				fontFamily: font.family.sans,
-				fontWeight: font.weight.medium,
-				color: colors.textSecondary,
-				cursor: "pointer",
-				display: "flex",
-				alignItems: "center",
-				gap: spacing[2],
-				transition:
-					"border-color 0.15s, color 0.15s",
-			}}
+			style={buttonStyle}
 			onMouseEnter={(e) => {
 				e.currentTarget.style.borderColor =
 					colors.borderDefault;
@@ -42,12 +48,7 @@ export default function LanguageSwitcher({
 					colors.textSecondary;
 			}}
 		>
-			<span
-				style={{
-					fontSize: font.size.sm,
-					fontWeight: font.weight.bold,
-				}}
-			>
+			<span style={spanStyle}>
 				{language === "pl" ? "PL" : "EN"}
 			</span>
 			<svg

@@ -19,6 +19,27 @@ const staticFilters = [
 	},
 ];
 
+const navbarStyle = {
+	...components.topBar,
+};
+
+const filterButtonBaseStyle = {
+	display: "inline-flex",
+	alignItems: "center",
+	gap: spacing[1],
+	whiteSpace: "nowrap",
+	flexShrink: 0,
+	cursor: "pointer",
+	fontFamily: font.family.sans,
+	fontSize: font.size.s,
+	letterSpacing: font.letterSpacing.wide,
+	borderRadius: radius.full,
+	padding: `${spacing[2]} ${spacing[4]}`,
+	transition:
+		"background 0.15s, color 0.15s, box-shadow 0.15s",
+	outline: "none",
+};
+
 export default function Navbar({
 	activeFilter = "all",
 	onFilterChange = () => {},
@@ -31,7 +52,7 @@ export default function Navbar({
 		...buildings,
 	];
 	return (
-		<nav style={{ ...components.topBar }}>
+		<nav style={navbarStyle}>
 			{filters.map(
 				({ key, label, labelKey }) => {
 					const isActive =
@@ -55,23 +76,10 @@ export default function Navbar({
 								)
 							}
 							style={{
-								display:
-									"inline-flex",
-								alignItems:
-									"center",
-								gap: spacing[1],
-								whiteSpace:
-									"nowrap",
-								flexShrink: 0,
+								...filterButtonBaseStyle,
 								border: isActive
 									? "none"
 									: `1px solid ${colors.shellTextMuted}`,
-								cursor: "pointer",
-								fontFamily:
-									font.family
-										.sans,
-								fontSize:
-									font.size.s,
 								fontWeight:
 									isActive
 										? font
@@ -80,15 +88,6 @@ export default function Navbar({
 										: font
 												.weight
 												.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
-								borderRadius:
-									radius.full,
-								padding: `${spacing[2]} ${spacing[4]}`,
-								transition:
-									"background 0.15s, color 0.15s, box-shadow 0.15s",
 								background:
 									isActive
 										? colors.primary
@@ -96,12 +95,10 @@ export default function Navbar({
 								color: isActive
 									? colors.primaryText
 									: colors.shellTextMuted,
-
 								boxShadow:
 									isActive
 										? shadow.card
 										: "none",
-								outline: "none",
 							}}
 							onMouseEnter={(e) => {
 								if (!isActive) {

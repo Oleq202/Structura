@@ -15,6 +15,23 @@ const STATUS_BADGE = {
 	completed: "done",
 };
 
+const taskCardStyle = {
+	width: "100%",
+	maxWidth: "420px",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	boxShadow: shadow.modal,
+	overflow: "hidden",
+	cursor: "pointer",
+	padding: 0,
+};
+
+const unassignedTextStyle = {
+	color: colors.textMuted,
+	fontStyle: "italic",
+};
+
 function Avatar({ first_name, last_name }) {
 	const initials =
 		[first_name, last_name]
@@ -31,12 +48,7 @@ function Avatar({ first_name, last_name }) {
 function UserCell({ user, t }) {
 	if (!user) {
 		return (
-			<span
-				style={{
-					color: colors.textMuted,
-					fontStyle: "italic",
-				}}
-			>
+			<span style={unassignedTextStyle}>
 				{t.unassigned}
 			</span>
 		);
@@ -127,29 +139,10 @@ export default function Task({
 		task.building?.street_address ?? null;
 
 	return (
-		<div
-			role="button"
-			tabIndex={0}
-			style={{
-				width: "100%",
-				maxWidth: "420px",
-				background: colors.cardBg,
-				borderRadius: radius.xl,
-				border: `0.5px solid ${colors.cardBorder}`,
-				boxShadow: shadow.modal,
-				overflow: "hidden",
-				cursor: "pointer",
-			}}
+		<button
+			type="button"
+			style={taskCardStyle}
 			onClick={onToggle}
-			onKeyDown={(e) => {
-				if (
-					e.key === "Enter" ||
-					e.key === " "
-				) {
-					e.preventDefault();
-					onToggle();
-				}
-			}}
 		>
 			<div
 				style={{
@@ -398,6 +391,6 @@ export default function Task({
 					</div>
 				</div>
 			</div>
-		</div>
+		</button>
 	);
 }

@@ -136,6 +136,27 @@ const links = [
 	},
 ];
 
+const bottombarStyle = {
+	...components.bottomNav,
+	zIndex: 2000,
+};
+
+const navLinkBaseStyle = {
+	display: "flex",
+	flexDirection: "column",
+	alignItems: "center",
+	gap: "4px",
+	textDecoration: "none",
+	fontFamily: font.family.sans,
+	fontSize: font.size.s,
+	fontWeight: font.weight.big,
+	letterSpacing: font.letterSpacing.wide,
+	padding: `${spacing[1]} ${spacing[3]}`,
+	borderRadius: radius.md,
+	transition: "color 0.15s, background 0.15s",
+	position: "relative",
+};
+
 export default function Bottombar({
 	language = "pl",
 }) {
@@ -154,12 +175,7 @@ export default function Bottombar({
 						: "tasks";
 
 	return (
-		<nav
-			style={{
-				...components.bottomNav,
-				zIndex: 2000,
-			}}
-		>
+		<nav style={bottombarStyle}>
 			{links.map(
 				({ key, to, labelKey }) => {
 					const isActive =
@@ -169,26 +185,7 @@ export default function Bottombar({
 							key={key}
 							to={to}
 							style={{
-								display: "flex",
-								flexDirection:
-									"column",
-								alignItems:
-									"center",
-								gap: "4px",
-								textDecoration:
-									"none",
-								fontFamily:
-									font.family
-										.sans,
-								fontSize:
-									font.size.s,
-								fontWeight:
-									font.weight
-										.big,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
+								...navLinkBaseStyle,
 								color: isActive
 									? colors.shellDeep
 									: colors.shellTextMuted,
@@ -196,13 +193,6 @@ export default function Bottombar({
 									isActive
 										? colors.pageBg
 										: "transparent",
-								padding: `${spacing[1]} ${spacing[3]}`,
-								borderRadius:
-									radius.md,
-								transition:
-									"color 0.15s, background 0.15s",
-								position:
-									"relative",
 							}}
 							onMouseEnter={(e) => {
 								if (!isActive) {
