@@ -2,6 +2,7 @@ import {
 	useState,
 	useRef,
 	useEffect,
+	useReducer,
 } from "react";
 import {
 	colors,
@@ -54,26 +55,171 @@ const errorStyle = {
 	paddingLeft: spacing[1],
 };
 
+const cardContainerStyle = {
+	width: "100%",
+	maxWidth: "360px",
+	background: colors.cardBg,
+	borderRadius: radius.xl,
+	border: `0.5px solid ${colors.cardBorder}`,
+	padding: spacing[8],
+	boxShadow: shadow.modal,
+};
+
+const headingStyle = {
+	fontSize: font.size["2xl"],
+	fontWeight: font.weight.medium,
+	color: colors.textHeading,
+	marginBottom: spacing[6],
+	marginTop: 0,
+	letterSpacing: font.letterSpacing.tight,
+	lineHeight: font.lineHeight.tight,
+};
+
+const formStyle = {
+	display: "flex",
+	flexDirection: "column",
+	gap: spacing[5],
+};
+
+const formFieldStyle = {
+	display: "flex",
+	flexDirection: "column",
+};
+
+const passwordInputContainerStyle = {
+	position: "relative",
+	display: "flex",
+	alignItems: "center",
+};
+
+const passwordInputStyle = (
+	hasError,
+	isFocused
+) => ({
+	...inputStyle(hasError, isFocused),
+	paddingRight: spacing[10],
+});
+
+const togglePasswordButtonStyle = {
+	position: "absolute",
+	right: spacing[3],
+	background: "none",
+	border: "none",
+	cursor: "pointer",
+	fontSize: font.size.xs,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	color: colors.textSecondary,
+	padding: 0,
+	letterSpacing: font.letterSpacing.wide,
+	textTransform: "uppercase",
+	transition: "color 0.15s",
+};
+
+const errorMessageStyle = {
+	...errorStyle,
+	background: status.danger.bg,
+	border: `0.5px solid ${status.danger.border}`,
+	borderRadius: radius.md,
+	padding: `${spacing[2]} ${spacing[3]}`,
+	margin: 0,
+};
+
+const submitButtonStyle = (loading) => ({
+	...components.primaryButton,
+	width: "100%",
+	padding: `${spacing[3]} ${spacing[4]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.base,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	cursor: loading ? "not-allowed" : "pointer",
+	opacity: loading ? 0.55 : 1,
+	transition:
+		"background 0.15s, opacity 0.15s, transform 0.1s",
+	boxSizing: "border-box",
+});
+
+const initialState = {
+	login: "",
+	loginError: "",
+	passwordError: "",
+	password: "",
+	error: "",
+	loading: false,
+	showPassword: false,
+	loginFocused: false,
+	passwordFocused: false,
+};
+
+function reducer(state, action) {
+	switch (action.type) {
+		case "SET_LOGIN":
+			return {
+				...state,
+				login: action.payload,
+			};
+		case "SET_LOGIN_ERROR":
+			return {
+				...state,
+				loginError: action.payload,
+			};
+		case "SET_PASSWORD_ERROR":
+			return {
+				...state,
+				passwordError: action.payload,
+			};
+		case "SET_PASSWORD":
+			return {
+				...state,
+				password: action.payload,
+			};
+		case "SET_ERROR":
+			return {
+				...state,
+				error: action.payload,
+			};
+		case "SET_LOADING":
+			return {
+				...state,
+				loading: action.payload,
+			};
+		case "SET_SHOW_PASSWORD":
+			return {
+				...state,
+				showPassword: action.payload,
+			};
+		case "TOGGLE_SHOW_PASSWORD":
+			return {
+				...state,
+				showPassword: !state.showPassword,
+			};
+		case "SET_LOGIN_FOCUSED":
+			return {
+				...state,
+				loginFocused: action.payload,
+			};
+		case "SET_PASSWORD_FOCUSED":
+			return {
+				...state,
+				passwordFocused: action.payload,
+			};
+		default:
+			return state;
+	}
+}
+
 export default function LoginPage({
 	onLoginSuccess,
 	language = "pl",
 }) {
 	const t = translations[language];
 	const loginRef = useRef(null);
-	const [login, setLogin] = useState("");
-	const [loginError, setLoginError] =
-		useState("");
-	const [passwordError, setPasswordError] =
-		useState("");
-	const [password, setPassword] = useState("");
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(false);
-	const [showPassword, setShowPassword] =
-		useState(false);
-	const [loginFocused, setLoginFocused] =
-		useState(false);
-	const [passwordFocused, setPasswordFocused] =
-		useState(false);
+	const [state, dispatch] = useReducer(
+		reducer,
+		initialState
+	);
 
 	useEffect(() => {
 		loginRef.current.focus();
@@ -82,42 +228,74 @@ export default function LoginPage({
 	const validate = () => {
 		let valid = true;
 
-		if (!login) {
-			setLoginError(t.loginRequired);
+		if (!state.login) {
+			dispatch({
+				type: "SET_LOGIN_ERROR",
+				payload: t.loginRequired,
+			});
 			valid = false;
 		} else {
-			setLoginError("");
+			dispatch({
+				type: "SET_LOGIN_ERROR",
+				payload: "",
+			});
 		}
 
-		if (!password) {
-			setPasswordError(t.passwordRequired);
+		if (!state.password) {
+			dispatch({
+				type: "SET_PASSWORD_ERROR",
+				payload: t.passwordRequired,
+			});
 			valid = false;
-		} else if (password.length < 5) {
-			setPasswordError(t.passwordMinLength);
+		} else if (state.password.length < 5) {
+			dispatch({
+				type: "SET_PASSWORD_ERROR",
+				payload: t.passwordMinLength,
+			});
 			valid = false;
 		} else {
-			setPasswordError("");
+			dispatch({
+				type: "SET_PASSWORD_ERROR",
+				payload: "",
+			});
 		}
 		return valid;
 	};
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		setError("");
+		dispatch({
+			type: "SET_ERROR",
+			payload: "",
+		});
 		if (!validate()) return;
 
-		setLoading(true);
+		dispatch({
+			type: "SET_LOADING",
+			payload: true,
+		});
 		try {
-			onLoginSuccess(login, password);
+			onLoginSuccess(
+				state.login,
+				state.password
+			);
 		} catch (err) {
-			setError(t.wrongEmailOrPassword);
+			dispatch({
+				type: "SET_ERROR",
+				payload: t.wrongEmailOrPassword,
+			});
 		} finally {
-			setLoading(false);
+			dispatch({
+				type: "SET_LOADING",
+				payload: false,
+			});
 		}
 	};
 
 	const togglePassword = () =>
-		setShowPassword((v) => !v);
+		dispatch({
+			type: "TOGGLE_SHOW_PASSWORD",
+		});
 
 	return (
 		<div
@@ -131,148 +309,117 @@ export default function LoginPage({
 				fontFamily: font.family.sans,
 			}}
 		>
-			<div
-				style={{
-					width: "100%",
-					maxWidth: "360px",
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					border: `0.5px solid ${colors.cardBorder}`,
-					padding: spacing[8],
-					boxShadow: shadow.modal,
-				}}
-			>
-				<h1
-					style={{
-						fontSize:
-							font.size["2xl"],
-						fontWeight:
-							font.weight.medium,
-						color: colors.textHeading,
-						marginBottom: spacing[6],
-						marginTop: 0,
-						letterSpacing:
-							font.letterSpacing
-								.tight,
-						lineHeight:
-							font.lineHeight.tight,
-					}}
-				>
+			<div style={cardContainerStyle}>
+				<h1 style={headingStyle}>
 					{t.signIn}
 				</h1>
 
 				<form
 					onSubmit={handleSubmit}
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[5],
-					}}
+					style={formStyle}
 				>
-					<div
-						style={{
-							display: "flex",
-							flexDirection:
-								"column",
-						}}
-					>
+					<div style={formFieldStyle}>
 						<label style={labelStyle}>
 							{t.login}
 						</label>
 						<input
 							style={inputStyle(
-								!!loginError,
-								loginFocused
+								!!state.loginError,
+								state.loginFocused
 							)}
 							ref={loginRef}
 							type="text"
-							value={login}
+							value={state.login}
 							onChange={(e) => {
-								setLogin(
-									e.target.value
-								);
-								if (loginError)
-									setLoginError(
-										""
-									);
+								dispatch({
+									type: "SET_LOGIN",
+									payload:
+										e.target
+											.value,
+								});
+								if (
+									state.loginError
+								)
+									dispatch({
+										type: "SET_LOGIN_ERROR",
+										payload:
+											"",
+									});
 							}}
 							onFocus={() =>
-								setLoginFocused(
-									true
-								)
+								dispatch({
+									type: "SET_LOGIN_FOCUSED",
+									payload: true,
+								})
 							}
 							onBlur={() =>
-								setLoginFocused(
-									false
-								)
+								dispatch({
+									type: "SET_LOGIN_FOCUSED",
+									payload: false,
+								})
 							}
 							placeholder={
 								t.yourUsername
 							}
 							aria-label={t.login}
 						/>
-						{loginError && (
+						{state.loginError && (
 							<p style={errorStyle}>
-								{loginError}
+								{state.loginError}
 							</p>
 						)}
 					</div>
 
-					<div
-						style={{
-							display: "flex",
-							flexDirection:
-								"column",
-						}}
-					>
+					<div style={formFieldStyle}>
 						<label style={labelStyle}>
 							{t.password}
 						</label>
 						<div
-							style={{
-								position:
-									"relative",
-								display: "flex",
-								alignItems:
-									"center",
-							}}
+							style={
+								passwordInputContainerStyle
+							}
 						>
 							<input
-								style={{
-									...inputStyle(
-										!!passwordError,
-										passwordFocused
-									),
-									paddingRight:
-										spacing[10],
-								}}
+								style={passwordInputStyle(
+									!!state.passwordError,
+									state.passwordFocused
+								)}
 								type={
-									showPassword
+									state.showPassword
 										? "text"
 										: "password"
 								}
-								value={password}
+								value={
+									state.password
+								}
 								onChange={(e) => {
-									setPassword(
-										e.target
-											.value
-									);
+									dispatch({
+										type: "SET_PASSWORD",
+										payload:
+											e
+												.target
+												.value,
+									});
 									if (
-										passwordError
+										state.passwordError
 									)
-										setPasswordError(
-											""
-										);
+										dispatch({
+											type: "SET_PASSWORD_ERROR",
+											payload:
+												"",
+										});
 								}}
 								onFocus={() =>
-									setPasswordFocused(
-										true
-									)
+									dispatch({
+										type: "SET_PASSWORD_FOCUSED",
+										payload: true,
+									})
 								}
 								onBlur={() =>
-									setPasswordFocused(
-										false
-									)
+									dispatch({
+										type: "SET_PASSWORD_FOCUSED",
+										payload: false,
+									})
 								}
 								placeholder={
 									t.atLeast5Chars
@@ -286,36 +433,9 @@ export default function LoginPage({
 								onClick={
 									togglePassword
 								}
-								style={{
-									position:
-										"absolute",
-									right: spacing[3],
-									background:
-										"none",
-									border: "none",
-									cursor: "pointer",
-									fontSize:
-										font.size
-											.xs,
-									fontFamily:
-										font
-											.family
-											.sans,
-									fontWeight:
-										font
-											.weight
-											.medium,
-									color: colors.textSecondary,
-									padding: 0,
-									letterSpacing:
-										font
-											.letterSpacing
-											.wide,
-									textTransform:
-										"uppercase",
-									transition:
-										"color 0.15s",
-								}}
+								style={
+									togglePasswordButtonStyle
+								}
 								onMouseEnter={(
 									e
 								) =>
@@ -329,73 +449,43 @@ export default function LoginPage({
 										colors.textSecondary)
 								}
 								aria-label={
-									showPassword
+									state.showPassword
 										? t.hidePassword
 										: t.showPassword
 								}
 							>
-								{showPassword
+								{state.showPassword
 									? t.hide
 									: t.show}
 							</button>
 						</div>
-						{passwordError && (
+						{state.passwordError && (
 							<p style={errorStyle}>
-								{passwordError}
+								{
+									state.passwordError
+								}
 							</p>
 						)}
 					</div>
 
-					{error && (
+					{state.error && (
 						<p
-							style={{
-								...errorStyle,
-								background:
-									status.danger
-										.bg,
-								border: `0.5px solid ${status.danger.border}`,
-								borderRadius:
-									radius.md,
-								padding: `${spacing[2]} ${spacing[3]}`,
-								margin: 0,
-							}}
+							style={
+								errorMessageStyle
+							}
 						>
-							{error}
+							{state.error}
 						</p>
 					)}
 
 					<button
 						type="submit"
-						disabled={loading}
-						style={{
-							...components.primaryButton,
-							width: "100%",
-							padding: `${spacing[3]} ${spacing[4]}`,
-							borderRadius:
-								radius.lg,
-							fontSize:
-								font.size.base,
-							fontFamily:
-								font.family.sans,
-							fontWeight:
-								font.weight
-									.medium,
-							letterSpacing:
-								font.letterSpacing
-									.wide,
-							cursor: loading
-								? "not-allowed"
-								: "pointer",
-							opacity: loading
-								? 0.55
-								: 1,
-							transition:
-								"background 0.15s, opacity 0.15s, transform 0.1s",
-							boxSizing:
-								"border-box",
-						}}
+						disabled={state.loading}
+						style={submitButtonStyle(
+							state.loading
+						)}
 						onMouseEnter={(e) => {
-							if (!loading)
+							if (!state.loading)
 								e.currentTarget.style.background =
 									colors.primaryHover;
 						}}
@@ -404,7 +494,7 @@ export default function LoginPage({
 								colors.primary;
 						}}
 						onMouseDown={(e) => {
-							if (!loading)
+							if (!state.loading)
 								e.currentTarget.style.transform =
 									"scale(0.97)";
 						}}
@@ -414,7 +504,7 @@ export default function LoginPage({
 						}}
 						aria-label={t.signIn}
 					>
-						{loading
+						{state.loading
 							? t.signingIn
 							: t.signIn}
 					</button>

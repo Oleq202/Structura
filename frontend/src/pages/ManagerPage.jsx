@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+import {
+	useState,
+	useEffect,
+	useReducer,
+} from "react";
 import Task from "../components/Task";
 import Navbar from "../components/Navbar";
 import CreateTask from "../components/CreateTask";
@@ -38,43 +42,124 @@ const groupTasksByBuilding = (tasksToGroup) => {
 	});
 };
 
+const handleReassign = async (taskId) => {
+	console.log("Reassign task:", taskId);
+};
+
+const floatingButtonStyle = {
+	...components.primaryButton,
+	position: "fixed",
+	bottom: spacing[24],
+	right: spacing[4],
+	padding: `${spacing[1]} ${spacing[1]}`,
+	borderRadius: radius.full,
+	fontFamily: font.family.sans,
+	boxSizing: "border-box",
+	zIndex: 200,
+	width: "64px",
+	height: "64px",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+};
+
+const initialState = {
+	activeFilter: "all",
+	isCreateTaskOpen: false,
+	expandedTaskId: null,
+	tasks: [],
+	buildings: [],
+	contractors: [],
+};
+
+function reducer(state, action) {
+	switch (action.type) {
+		case "SET_ACTIVE_FILTER":
+			return {
+				...state,
+				activeFilter: action.payload,
+			};
+		case "SET_CREATE_TASK_OPEN":
+			return {
+				...state,
+				isCreateTaskOpen: action.payload,
+			};
+		case "SET_EXPANDED_TASK_ID":
+			return {
+				...state,
+				expandedTaskId: action.payload,
+			};
+		case "SET_TASKS":
+			return {
+				...state,
+				tasks: action.payload,
+			};
+		case "SET_BUILDINGS":
+			return {
+				...state,
+				buildings: action.payload,
+			};
+		case "SET_CONTRACTORS":
+			return {
+				...state,
+				contractors: action.payload,
+			};
+		case "TOGGLE_CREATE_TASK":
+			return {
+				...state,
+				isCreateTaskOpen:
+					!state.isCreateTaskOpen,
+			};
+		case "TOGGLE_TASK_EXPANDED":
+			return {
+				...state,
+				expandedTaskId:
+					state.expandedTaskId ===
+					action.payload
+						? null
+						: action.payload,
+			};
+		default:
+			return state;
+	}
+}
+
 export default function ManagerPage({
 	currentUser,
 	language = "pl",
 }) {
 	const t = translations[language];
-	const [activeFilter, setActiveFilter] =
-		useState("all");
-	const [isCreateTaskOpen, setCreateTaskOpen] =
-		useState(false);
-	const [expandedTaskId, setExpandedTaskId] =
-		useState(null);
-	const [tasks, setTasks] = useState([]);
-	const [buildings, setBuildings] = useState(
-		[]
+	const [state, dispatch] = useReducer(
+		reducer,
+		initialState
 	);
-	const [contractors, setContractors] =
-		useState([]);
+
 	const openCreateTask = () =>
-		setCreateTaskOpen(true);
+		dispatch({
+			type: "SET_CREATE_TASK_OPEN",
+			payload: true,
+		});
 	const closeCreateTask = () =>
-		setCreateTaskOpen(false);
+		dispatch({
+			type: "SET_CREATE_TASK_OPEN",
+			payload: false,
+		});
 	const toggleCreateTask = () =>
-		setCreateTaskOpen((v) => !v);
-	const toggleTaskExpanded = (taskId) => {
-		setExpandedTaskId((prev) =>
-			prev === taskId ? null : taskId
-		);
-	};
+		dispatch({ type: "TOGGLE_CREATE_TASK" });
+	const toggleTaskExpanded = (taskId) =>
+		dispatch({
+			type: "TOGGLE_TASK_EXPANDED",
+			payload: taskId,
+		});
 
 	const getFilteredTasks = () => {
-		switch (activeFilter) {
+		switch (state.activeFilter) {
 			case "pending":
-				return tasks.filter(
+				return state.tasks.filter(
 					(t) => t.status === "pending"
 				);
 			case "completed":
-				return tasks.filter(
+				return state.tasks.filter(
 					(t) =>
 						t.status === "completed"
 				);
@@ -84,21 +169,28 @@ export default function ManagerPage({
 						"all",
 						"pending",
 						"completed",
-					].includes(activeFilter)
+					].includes(state.activeFilter)
 				) {
-					return tasks.filter(
+					return state.tasks.filter(
 						(t) =>
 							t.building_id ===
-							parseInt(activeFilter)
+							parseInt(
+								state.activeFilter
+							)
 					);
 				}
-				return tasks;
+				return state.tasks;
 		}
 	};
 
 	const refreshTasks = () => {
 		api.getTasks()
-			.then(setTasks)
+			.then((tasks) =>
+				dispatch({
+					type: "SET_TASKS",
+					payload: tasks,
+				})
+			)
 			.catch(console.error);
 	};
 
@@ -114,9 +206,18 @@ export default function ManagerPage({
 					buildings,
 					contractors,
 				]) => {
-					setTasks(tasks);
-					setBuildings(buildings);
-					setContractors(contractors);
+					dispatch({
+						type: "SET_TASKS",
+						payload: tasks,
+					});
+					dispatch({
+						type: "SET_BUILDINGS",
+						payload: buildings,
+					});
+					dispatch({
+						type: "SET_CONTRACTORS",
+						payload: contractors,
+					});
 				}
 			)
 			.catch(console.error);
@@ -138,10 +239,6 @@ export default function ManagerPage({
 		}
 	};
 
-	const handleReassign = async (taskId) => {
-		console.log("Reassign task:", taskId);
-	};
-
 	const filteredTasks = getFilteredTasks();
 
 	return (
@@ -155,8 +252,13 @@ export default function ManagerPage({
 			}}
 		>
 			<Navbar
-				activeFilter={activeFilter}
-				onFilterChange={setActiveFilter}
+				activeFilter={state.activeFilter}
+				onFilterChange={(filter) =>
+					dispatch({
+						type: "SET_ACTIVE_FILTER",
+						payload: filter,
+					})
+				}
 				language={language}
 			/>
 			<div
@@ -168,11 +270,11 @@ export default function ManagerPage({
 					alignItems: "center",
 				}}
 			>
-				{activeFilter === "all" ? (
+				{state.activeFilter === "all" ? (
 					<>
 						{(() => {
 							const pendingTasks =
-								tasks.filter(
+								state.tasks.filter(
 									(t) =>
 										t.status ===
 										"pending"
@@ -283,7 +385,7 @@ export default function ManagerPage({
 																	task
 																}
 																expanded={
-																	expandedTaskId ===
+																	state.expandedTaskId ===
 																	task.id
 																}
 																onToggle={() =>
@@ -316,7 +418,7 @@ export default function ManagerPage({
 						})()}
 						{(() => {
 							const completedTasks =
-								tasks.filter(
+								state.tasks.filter(
 									(t) =>
 										t.status ===
 										"completed"
@@ -427,7 +529,7 @@ export default function ManagerPage({
 																	task
 																}
 																expanded={
-																	expandedTaskId ===
+																	state.expandedTaskId ===
 																	task.id
 																}
 																onToggle={() =>
@@ -531,7 +633,7 @@ export default function ManagerPage({
 													task
 												}
 												expanded={
-													expandedTaskId ===
+													state.expandedTaskId ===
 													task.id
 												}
 												onToggle={() =>
@@ -563,22 +665,7 @@ export default function ManagerPage({
 			</div>
 			<button
 				type="button"
-				style={{
-					...components.primaryButton,
-					position: "fixed",
-					bottom: spacing[24],
-					right: spacing[4],
-					padding: `${spacing[1]} ${spacing[1]}`,
-					borderRadius: radius.full,
-					fontFamily: font.family.sans,
-					boxSizing: "border-box",
-					zIndex: 200,
-					width: "64px",
-					height: "64px",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-				}}
+				style={floatingButtonStyle}
 				onMouseEnter={(e) =>
 					(e.currentTarget.style.background =
 						colors.primaryHover)
@@ -614,10 +701,12 @@ export default function ManagerPage({
 					/>
 				</svg>
 			</button>
-			{isCreateTaskOpen && (
+			{state.isCreateTaskOpen && (
 				<CreateTask
-					buildings={buildings}
-					contractors={contractors}
+					buildings={state.buildings}
+					contractors={
+						state.contractors
+					}
 					currentUser={currentUser}
 					onClose={closeCreateTask}
 					onTaskCreated={refreshTasks}

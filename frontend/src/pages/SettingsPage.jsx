@@ -12,6 +12,26 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import UsersManagementModal from "../components/UsersManagementModal";
 import BuildingsManagementModal from "../components/BuildingsManagementModal";
 
+const unassignedTextStyle = {
+	color: colors.textMuted,
+	fontStyle: "italic",
+};
+
+const primaryButtonStyle = {
+	...components.primaryButton,
+	width: "100%",
+	padding: `${spacing[4]} ${spacing[6]}`,
+	borderRadius: radius.lg,
+	fontSize: font.size.md,
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	cursor: "pointer",
+	boxSizing: "border-box",
+	transition:
+		"background 0.15s, transform 0.1s",
+};
+
 function Avatar({ first_name, last_name }) {
 	const initials =
 		[first_name, last_name]
@@ -28,12 +48,7 @@ function Avatar({ first_name, last_name }) {
 function UserCell({ user, t }) {
 	if (!user) {
 		return (
-			<span
-				style={{
-					color: colors.textMuted,
-					fontStyle: "italic",
-				}}
-			>
+			<span style={unassignedTextStyle}>
 				{t.unassigned}
 			</span>
 		);
@@ -133,30 +148,9 @@ export default function SettingsPage({
 									true
 								)
 							}
-							style={{
-								...components.primaryButton,
-								width: "100%",
-								padding: `${spacing[4]} ${spacing[6]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size.md,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
-								cursor: "pointer",
-								boxSizing:
-									"border-box",
-								transition:
-									"background 0.15s, transform 0.1s",
-							}}
+							style={
+								primaryButtonStyle
+							}
 							onMouseEnter={(e) =>
 								(e.currentTarget.style.background =
 									colors.primaryHover)
@@ -184,30 +178,9 @@ export default function SettingsPage({
 									true
 								)
 							}
-							style={{
-								...components.primaryButton,
-								width: "100%",
-								padding: `${spacing[4]} ${spacing[6]}`,
-								borderRadius:
-									radius.lg,
-								fontSize:
-									font.size.md,
-								fontFamily:
-									font.family
-										.sans,
-								fontWeight:
-									font.weight
-										.medium,
-								letterSpacing:
-									font
-										.letterSpacing
-										.wide,
-								cursor: "pointer",
-								boxSizing:
-									"border-box",
-								transition:
-									"background 0.15s, transform 0.1s",
-							}}
+							style={
+								primaryButtonStyle
+							}
 							onMouseEnter={(e) =>
 								(e.currentTarget.style.background =
 									colors.primaryHover)
