@@ -76,8 +76,18 @@ async def delete_user(user_id: int):
 
 
 async def update_user(
-    user_id: int, login: str, password: str, first_name: str, last_name: str, role: str
+    user_id: int,
+    login: str,
+    password: str | None,
+    first_name: str,
+    last_name: str,
+    role: str,
 ):
+    if password is None:
+        query = "update users set login = $2, first_name = $3, last_name = $4, role = $5 where id = $1"
+        await _execute(query, user_id, login, first_name, last_name, role)
+        return
+
     query = "update users set login = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6 where id = $1"
     await _execute(query, user_id, login, password, first_name, last_name, role)
 
@@ -200,32 +210,32 @@ async def update_task(
     updates = []
     params = [task_id]
     param_index = 2
-    
+
     if title is not None:
         updates.append(f"title = ${param_index}")
         params.append(title)
         param_index += 1
-    
+
     if description is not None:
         updates.append(f"description = ${param_index}")
         params.append(description)
         param_index += 1
-    
+
     if building_id is not None:
         updates.append(f"building_id = ${param_index}")
         params.append(building_id)
         param_index += 1
-    
+
     if created_by is not None:
         updates.append(f"created_by = ${param_index}")
         params.append(created_by)
         param_index += 1
-    
+
     if assigned_to is not None:
         updates.append(f"assigned_to = ${param_index}")
         params.append(assigned_to)
         param_index += 1
-    
+
     if updates:
         query = f"update tasks set {', '.join(updates)} where id = $1"
         await _execute(query, *params)

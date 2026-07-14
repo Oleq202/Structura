@@ -13,6 +13,7 @@ from .db.queries import (
     get_building_by_address,
     get_building,
     get_all_buildings,
+    get_buildings_by_manager,
     add_building,
     update_building,
     delete_building,
@@ -73,6 +74,7 @@ async def login(request: LoginRequest):
 async def get_users(role: Optional[str] = None):
     if role == "contractor":
         from .db.queries import get_contractors
+
         users = await get_contractors()
     else:
         users = await get_all_users()
@@ -115,6 +117,12 @@ async def delete_user_endpoint(user_id: int):
     return {"message": "User deleted successfully"}
 
 
+@app.get("/users/{user_id}/buildings", response_model=List[Building])
+async def get_user_buildings(user_id: int):
+    buildings = await get_buildings_by_manager(user_id)
+    return [Building(**building) for building in buildings]
+
+
 # Building endpoints
 @app.get("/buildings", response_model=List[Building])
 async def get_buildings():
@@ -147,13 +155,13 @@ async def delete_building_endpoint(building_id: int):
 
 
 # Building manager endpoints
-@app.post("/buildings/{building_id}/managers/{user_id}")
+@app.post("/building-managers")
 async def add_building_manager_endpoint(manager: BuildingManager):
     await add_building_manager(manager.building_id, manager.user_id)
     return {"message": "Building manager added successfully"}
 
 
-@app.delete("/buildings/{building_id}/managers/{user_id}")
+@app.delete("/building-managers")
 async def delete_building_manager_endpoint(manager: BuildingManager):
     await delete_building_manager(manager.building_id, manager.user_id)
     return {"message": "Building manager deleted successfully"}
@@ -163,6 +171,7 @@ async def delete_building_manager_endpoint(manager: BuildingManager):
 @app.get("/tasks")
 async def get_tasks():
     from .db.queries import get_all_tasks
+
     tasks = await get_all_tasks()
     result = []
     for task in tasks:
@@ -175,26 +184,38 @@ async def get_tasks():
             "assigned_to": task["assigned_to"],
             "status": task["status"],
             "created_at": task["created_at"],
-            "created_by_user": {
-                "id": task["created_by_id"],
-                "login": task["created_by_login"],
-                "first_name": task["created_by_first_name"],
-                "last_name": task["created_by_last_name"],
-                "role": task["created_by_role"],
-            } if task["created_by_id"] else None,
-            "assigned_to_user": {
-                "id": task["assigned_to_id"],
-                "login": task["assigned_to_login"],
-                "first_name": task["assigned_to_first_name"],
-                "last_name": task["assigned_to_last_name"],
-                "role": task["assigned_to_role"],
-            } if task["assigned_to_id"] else None,
-            "building": {
-                "id": task["building_id"],
-                "city": task["building_city"],
-                "district": task["building_district"],
-                "street_address": task["building_street_address"],
-            } if task["building_city"] else None,
+            "created_by_user": (
+                {
+                    "id": task["created_by_id"],
+                    "login": task["created_by_login"],
+                    "first_name": task["created_by_first_name"],
+                    "last_name": task["created_by_last_name"],
+                    "role": task["created_by_role"],
+                }
+                if task["created_by_id"]
+                else None
+            ),
+            "assigned_to_user": (
+                {
+                    "id": task["assigned_to_id"],
+                    "login": task["assigned_to_login"],
+                    "first_name": task["assigned_to_first_name"],
+                    "last_name": task["assigned_to_last_name"],
+                    "role": task["assigned_to_role"],
+                }
+                if task["assigned_to_id"]
+                else None
+            ),
+            "building": (
+                {
+                    "id": task["building_id"],
+                    "city": task["building_city"],
+                    "district": task["building_district"],
+                    "street_address": task["building_street_address"],
+                }
+                if task["building_city"]
+                else None
+            ),
         }
         result.append(task_obj)
     return result
@@ -244,26 +265,38 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
         "assigned_to": updated_task["assigned_to"],
         "status": updated_task["status"],
         "created_at": updated_task["created_at"],
-        "created_by_user": {
-            "id": updated_task["created_by_id"],
-            "login": updated_task["created_by_login"],
-            "first_name": updated_task["created_by_first_name"],
-            "last_name": updated_task["created_by_last_name"],
-            "role": updated_task["created_by_role"],
-        } if updated_task["created_by_id"] else None,
-        "assigned_to_user": {
-            "id": updated_task["assigned_to_id"],
-            "login": updated_task["assigned_to_login"],
-            "first_name": updated_task["assigned_to_first_name"],
-            "last_name": updated_task["assigned_to_last_name"],
-            "role": updated_task["assigned_to_role"],
-        } if updated_task["assigned_to_id"] else None,
-        "building": {
-            "id": updated_task["building_id"],
-            "city": updated_task["building_city"],
-            "district": updated_task["building_district"],
-            "street_address": updated_task["building_street_address"],
-        } if updated_task["building_city"] else None,
+        "created_by_user": (
+            {
+                "id": updated_task["created_by_id"],
+                "login": updated_task["created_by_login"],
+                "first_name": updated_task["created_by_first_name"],
+                "last_name": updated_task["created_by_last_name"],
+                "role": updated_task["created_by_role"],
+            }
+            if updated_task["created_by_id"]
+            else None
+        ),
+        "assigned_to_user": (
+            {
+                "id": updated_task["assigned_to_id"],
+                "login": updated_task["assigned_to_login"],
+                "first_name": updated_task["assigned_to_first_name"],
+                "last_name": updated_task["assigned_to_last_name"],
+                "role": updated_task["assigned_to_role"],
+            }
+            if updated_task["assigned_to_id"]
+            else None
+        ),
+        "building": (
+            {
+                "id": updated_task["building_id"],
+                "city": updated_task["building_city"],
+                "district": updated_task["building_district"],
+                "street_address": updated_task["building_street_address"],
+            }
+            if updated_task["building_city"]
+            else None
+        ),
     }
     return task_obj
 
