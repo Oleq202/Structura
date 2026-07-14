@@ -116,8 +116,10 @@ export default function Task({
 	initialData,
 	expanded,
 	onToggle,
+	onEdit,
 	onMarkCompleted,
-	onReassign,
+	onRevertCompleted,
+	onDeleteTask,
 	language = "pl",
 }) {
 	const t = translations[language];
@@ -139,8 +141,7 @@ export default function Task({
 		task.building?.street_address ?? null;
 
 	return (
-		<button
-			type="button"
+		<div
 			style={taskCardStyle}
 			onClick={onToggle}
 		>
@@ -325,7 +326,7 @@ export default function Task({
 								</MetaRow>
 							)}
 
-						{isPending && (
+						{isPending ? (
 							<div
 								style={{
 									display:
@@ -348,9 +349,12 @@ export default function Task({
 										boxSizing:
 											"border-box",
 									}}
-									onClick={
-										onMarkCompleted
-									}
+									onClick={(
+										e
+									) => {
+										e.stopPropagation();
+										onMarkCompleted?.();
+									}}
 									onMouseEnter={(
 										e
 									) =>
@@ -380,17 +384,74 @@ export default function Task({
 												.family
 												.sans,
 									}}
-									onClick={
-										onReassign
-									}
+									onClick={(
+										e
+									) => {
+										e.stopPropagation();
+										onEdit?.();
+									}}
 								>
-									{t.reassign}
+									{t.edit}
+								</button>
+							</div>
+						) : (
+							<div
+								style={{
+									display:
+										"flex",
+									gap: spacing[3],
+								}}
+							>
+								<button
+									type="button"
+									style={{
+										...components.ghostButton,
+										padding: `${spacing[3]} ${spacing[4]}`,
+										borderRadius:
+											radius.lg,
+										fontFamily:
+											font
+												.family
+												.sans,
+										flex: 1,
+									}}
+									onClick={(
+										e
+									) => {
+										e.stopPropagation();
+										onRevertCompleted?.();
+									}}
+								>
+									{
+										t.revertCompletion
+									}
+								</button>
+								<button
+									type="button"
+									style={{
+										...components.primaryButton,
+										padding: `${spacing[3]} ${spacing[4]}`,
+										borderRadius:
+											radius.lg,
+										fontFamily:
+											font
+												.family
+												.sans,
+									}}
+									onClick={(
+										e
+									) => {
+										e.stopPropagation();
+										onDeleteTask?.();
+									}}
+								>
+									{t.delete}
 								</button>
 							</div>
 						)}
 					</div>
 				</div>
 			</div>
-		</button>
+		</div>
 	);
 }

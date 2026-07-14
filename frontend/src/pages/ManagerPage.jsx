@@ -5,7 +5,7 @@ import {
 } from "react";
 import Task from "../components/Task";
 import Navbar from "../components/Navbar";
-import CreateTask from "../components/CreateTask";
+import TaskModal from "../components/TaskModal";
 import {
 	colors,
 	font,
@@ -65,7 +65,7 @@ const floatingButtonStyle = {
 
 const initialState = {
 	activeFilter: "all",
-	isCreateTaskOpen: false,
+	isTaskModalOpen: false,
 	expandedTaskId: null,
 	tasks: [],
 	buildings: [],
@@ -82,7 +82,7 @@ function reducer(state, action) {
 		case "SET_CREATE_TASK_OPEN":
 			return {
 				...state,
-				isCreateTaskOpen: action.payload,
+				isTaskModalOpen: action.payload,
 			};
 		case "SET_EXPANDED_TASK_ID":
 			return {
@@ -107,8 +107,8 @@ function reducer(state, action) {
 		case "TOGGLE_CREATE_TASK":
 			return {
 				...state,
-				isCreateTaskOpen:
-					!state.isCreateTaskOpen,
+				isTaskModalOpen:
+					!state.isTaskModalOpen,
 			};
 		case "TOGGLE_TASK_EXPANDED":
 			return {
@@ -134,17 +134,17 @@ export default function ManagerPage({
 		initialState
 	);
 
-	const openCreateTask = () =>
+	const openTaskModal = () =>
 		dispatch({
 			type: "SET_CREATE_TASK_OPEN",
 			payload: true,
 		});
-	const closeCreateTask = () =>
+	const closeTaskModal = () =>
 		dispatch({
 			type: "SET_CREATE_TASK_OPEN",
 			payload: false,
 		});
-	const toggleCreateTask = () =>
+	const toggleTaskModal = () =>
 		dispatch({ type: "TOGGLE_CREATE_TASK" });
 	const toggleTaskExpanded = (taskId) =>
 		dispatch({
@@ -237,6 +237,50 @@ export default function ManagerPage({
 				err
 			);
 		}
+	};
+
+	const handleRevertCompleted = async (
+		taskId
+	) => {
+		try {
+			await api.updateTask(taskId, {
+				status: "pending",
+			});
+			refreshTasks();
+		} catch (err) {
+			console.error(
+				"Error reverting task completion",
+				err
+			);
+		}
+	};
+
+	const handleDeleteTask = async (taskId) => {
+		if (
+			!window.confirm(t.deleteTaskConfirm)
+		) {
+			return;
+		}
+		try {
+			await api.deleteTask(taskId);
+			refreshTasks();
+		} catch (err) {
+			console.error(
+				"Error deleting task",
+				err
+			);
+		}
+	};
+
+	const [editingTask, setEditingTask] =
+		useState(null);
+
+	const openTaskEditor = (task) => {
+		setEditingTask(task);
+	};
+
+	const closeTaskEditor = () => {
+		setEditingTask(null);
 	};
 
 	const filteredTasks = getFilteredTasks();
@@ -403,6 +447,21 @@ export default function ManagerPage({
 																		task.id
 																	)
 																}
+																onEdit={() =>
+																	openTaskEditor(
+																		task
+																	)
+																}
+																onRevertCompleted={() =>
+																	handleRevertCompleted(
+																		task.id
+																	)
+																}
+																onDeleteTask={() =>
+																	handleDeleteTask(
+																		task.id
+																	)
+																}
 																language={
 																	language
 																}
@@ -547,6 +606,21 @@ export default function ManagerPage({
 																		task.id
 																	)
 																}
+																onEdit={() =>
+																	openTaskEditor(
+																		task
+																	)
+																}
+																onRevertCompleted={() =>
+																	handleRevertCompleted(
+																		task.id
+																	)
+																}
+																onDeleteTask={() =>
+																	handleDeleteTask(
+																		task.id
+																	)
+																}
 																language={
 																	language
 																}
@@ -651,6 +725,21 @@ export default function ManagerPage({
 														task.id
 													)
 												}
+												onEdit={() =>
+													openTaskEditor(
+														task
+													)
+												}
+												onRevertCompleted={() =>
+													handleRevertCompleted(
+														task.id
+													)
+												}
+												onDeleteTask={() =>
+													handleDeleteTask(
+														task.id
+													)
+												}
 												language={
 													language
 												}
@@ -674,8 +763,8 @@ export default function ManagerPage({
 					(e.currentTarget.style.background =
 						colors.primary)
 				}
-				onClick={toggleCreateTask}
-				aria-label={t.createTask}
+				onClick={toggleTaskModal}
+				aria-label={t.createNewTask}
 			>
 				<svg
 					width="32"
@@ -701,15 +790,23 @@ export default function ManagerPage({
 					/>
 				</svg>
 			</button>
-			{state.isCreateTaskOpen && (
-				<CreateTask
+			{(state.isTaskModalOpen ||
+				editingTask) && (
+				<TaskModal
 					buildings={state.buildings}
 					contractors={
 						state.contractors
 					}
 					currentUser={currentUser}
-					onClose={closeCreateTask}
-					onTaskCreated={refreshTasks}
+					onClose={() => {
+						closeTaskModal();
+						closeTaskEditor();
+					}}
+					onTaskCreated={() => {
+						refreshTasks();
+						closeTaskEditor();
+					}}
+					task={editingTask}
 					language={language}
 				/>
 			)}
