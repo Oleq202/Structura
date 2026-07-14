@@ -34,6 +34,21 @@ export async function getUsers() {
 	return response.json();
 }
 
+export async function getUserBuildings(userId) {
+	const response = await fetch(
+		`${API_BASE}/users/${userId}/buildings`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			"Failed to fetch user buildings"
+		);
+	}
+	return response.json();
+}
+
 export async function createUser(userData) {
 	const response = await fetch(
 		`${API_BASE}/users`,
