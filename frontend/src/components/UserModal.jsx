@@ -27,11 +27,19 @@ const initialState = (user) => ({
 		assignedBuildings:
 			user?.assignedBuildings || [],
 	},
+	passwordChange: {
+		currentPassword: "",
+		newPassword: "",
+		confirmPassword: "",
+	},
 	errors: {
 		login: "",
 		password: "",
 		first_name: "",
 		last_name: "",
+		currentPassword: "",
+		newPassword: "",
+		confirmPassword: "",
 	},
 	focused: {
 		login: false,
@@ -39,10 +47,17 @@ const initialState = (user) => ({
 		first_name: false,
 		last_name: false,
 		buildingSearch: false,
+		currentPassword: false,
+		newPassword: false,
+		confirmPassword: false,
 	},
 	loading: false,
 	buildingSearch: "",
 	showPassword: false,
+	showCurrentPassword: false,
+	showNewPassword: false,
+	showConfirmPassword: false,
+	isChangingPassword: false,
 });
 
 function reducer(state, action) {
@@ -52,6 +67,14 @@ function reducer(state, action) {
 				...state,
 				formData: {
 					...state.formData,
+					...action.payload,
+				},
+			};
+		case "SET_PASSWORD_CHANGE":
+			return {
+				...state,
+				passwordChange: {
+					...state.passwordChange,
 					...action.payload,
 				},
 			};
@@ -86,10 +109,51 @@ function reducer(state, action) {
 				...state,
 				showPassword: action.payload,
 			};
+		case "SET_SHOW_CURRENT_PASSWORD":
+			return {
+				...state,
+				showCurrentPassword:
+					action.payload,
+			};
+		case "SET_SHOW_NEW_PASSWORD":
+			return {
+				...state,
+				showNewPassword: action.payload,
+			};
+		case "SET_SHOW_CONFIRM_PASSWORD":
+			return {
+				...state,
+				showConfirmPassword:
+					action.payload,
+			};
 		case "TOGGLE_SHOW_PASSWORD":
 			return {
 				...state,
 				showPassword: !state.showPassword,
+			};
+		case "TOGGLE_SHOW_CURRENT_PASSWORD":
+			return {
+				...state,
+				showCurrentPassword:
+					!state.showCurrentPassword,
+			};
+		case "TOGGLE_SHOW_NEW_PASSWORD":
+			return {
+				...state,
+				showNewPassword:
+					!state.showNewPassword,
+			};
+		case "TOGGLE_SHOW_CONFIRM_PASSWORD":
+			return {
+				...state,
+				showConfirmPassword:
+					!state.showConfirmPassword,
+			};
+		case "TOGGLE_CHANGING_PASSWORD":
+			return {
+				...state,
+				isChangingPassword:
+					!state.isChangingPassword,
 			};
 		case "TOGGLE_BUILDING_ASSIGNMENT":
 			const buildingId = action.payload;
@@ -332,12 +396,48 @@ export default function UserModal({
 			newErrors.password = t.required;
 			valid = false;
 		} else if (
+			!isEdit &&
 			state.formData.password &&
-			state.formData.password.length < 6
+			state.formData.password.length < 5
 		) {
 			newErrors.password =
 				t.passwordMinLength;
 			valid = false;
+		}
+
+		if (isEdit && state.isChangingPassword) {
+			if (
+				!state.passwordChange
+					.currentPassword
+			) {
+				newErrors.currentPassword =
+					t.required;
+				valid = false;
+			}
+			if (
+				!state.passwordChange.newPassword
+			) {
+				newErrors.newPassword =
+					t.required;
+				valid = false;
+			} else if (
+				state.passwordChange.newPassword
+					.length < 5
+			) {
+				newErrors.newPassword =
+					t.passwordMinLength;
+				valid = false;
+			}
+			if (
+				state.passwordChange
+					.newPassword !==
+				state.passwordChange
+					.confirmPassword
+			) {
+				newErrors.confirmPassword =
+					"Passwords do not match";
+				valid = false;
+			}
 		}
 
 		if (!state.formData.first_name) {
@@ -373,19 +473,22 @@ export default function UserModal({
 				last_name:
 					state.formData.last_name,
 				role: state.formData.role,
+				assignedBuildings:
+					state.formData
+						.assignedBuildings,
 			};
 			if (!isEdit) {
 				savedUser.password =
 					state.formData.password;
 			} else {
 				savedUser.id = user.id;
+				if (state.isChangingPassword) {
+					savedUser.currentPassword =
+						state.passwordChange.currentPassword;
+					savedUser.password =
+						state.passwordChange.newPassword;
+				}
 			}
-			console.log(
-				isEdit
-					? "Updating user:"
-					: "Creating user:",
-				savedUser
-			);
 			if (onSave) onSave(savedUser);
 			if (onClose) onClose();
 		} catch (err) {
@@ -431,6 +534,26 @@ export default function UserModal({
 	const togglePassword = () =>
 		dispatch({
 			type: "TOGGLE_SHOW_PASSWORD",
+		});
+
+	const toggleCurrentPassword = () =>
+		dispatch({
+			type: "TOGGLE_SHOW_CURRENT_PASSWORD",
+		});
+
+	const toggleNewPassword = () =>
+		dispatch({
+			type: "TOGGLE_SHOW_NEW_PASSWORD",
+		});
+
+	const toggleConfirmPassword = () =>
+		dispatch({
+			type: "TOGGLE_SHOW_CONFIRM_PASSWORD",
+		});
+
+	const toggleChangingPassword = () =>
+		dispatch({
+			type: "TOGGLE_CHANGING_PASSWORD",
 		});
 
 	return (
@@ -561,13 +684,11 @@ export default function UserModal({
 						)}
 					</div>
 
-					{!isEdit && (
-						<div>
-							<label
-								style={labelStyle}
-							>
-								{t.password}
-							</label>
+					<div>
+						<label style={labelStyle}>
+							{t.password}
+						</label>
+						{!isEdit ? (
 							<div
 								style={{
 									position:
@@ -686,7 +807,558 @@ export default function UserModal({
 										: t.show}
 								</button>
 							</div>
-							{state.errors
+						) : (
+							<div>
+								<div
+									style={{
+										display:
+											"flex",
+										alignItems:
+											"center",
+										gap: spacing[2],
+										marginBottom:
+											spacing[2],
+									}}
+								>
+									<input
+										style={{
+											...inputStyle(
+												false,
+												false
+											),
+											flex: 1,
+											background:
+												colors.pageBg,
+											cursor: "not-allowed",
+										}}
+										type="password"
+										value="********"
+										disabled
+										readOnly
+									/>
+									<button
+										type="button"
+										onClick={
+											toggleChangingPassword
+										}
+										style={{
+											...components.ghostButton,
+											padding: `${spacing[2]} ${spacing[3]}`,
+											borderRadius:
+												radius.lg,
+											fontSize:
+												font
+													.size
+													.sm,
+											fontFamily:
+												font
+													.family
+													.sans,
+										}}
+									>
+										{state.isChangingPassword
+											? t.cancel
+											: t.change ||
+												"Change"}
+									</button>
+								</div>
+								{state.isChangingPassword && (
+									<>
+										<div
+											style={{
+												marginTop:
+													spacing[3],
+											}}
+										>
+											<label
+												style={{
+													...labelStyle,
+													fontSize:
+														font
+															.size
+															.xs,
+												}}
+											>
+												{t.current ||
+													"Current"}{" "}
+												{
+													t.password
+												}
+											</label>
+											<div
+												style={{
+													position:
+														"relative",
+													display:
+														"flex",
+													alignItems:
+														"center",
+												}}
+											>
+												<input
+													style={{
+														...inputStyle(
+															!!state
+																.errors
+																.currentPassword,
+															state
+																.focused
+																.currentPassword
+														),
+														paddingRight:
+															spacing[10],
+													}}
+													type={
+														state.showCurrentPassword
+															? "text"
+															: "password"
+													}
+													value={
+														state
+															.passwordChange
+															.currentPassword
+													}
+													onChange={(
+														e
+													) => {
+														dispatch(
+															{
+																type: "SET_PASSWORD_CHANGE",
+																payload:
+																	{
+																		currentPassword:
+																			e
+																				.target
+																				.value,
+																	},
+															}
+														);
+														if (
+															state
+																.errors
+																.currentPassword
+														)
+															dispatch(
+																{
+																	type: "SET_ERRORS",
+																	payload:
+																		{
+																			currentPassword:
+																				"",
+																		},
+																}
+															);
+													}}
+													onFocus={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		currentPassword: true,
+																	},
+															}
+														)
+													}
+													onBlur={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		currentPassword: false,
+																	},
+															}
+														)
+													}
+													placeholder={
+														t.enterPassword
+													}
+													aria-label={
+														t.current +
+														" " +
+														t.password
+													}
+												/>
+												<button
+													type="button"
+													onClick={
+														toggleCurrentPassword
+													}
+													style={
+														passwordToggleButtonStyle
+													}
+													onMouseEnter={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.primary)
+													}
+													onMouseLeave={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.textSecondary)
+													}
+													aria-label={
+														state.showCurrentPassword
+															? t.hide
+															: t.show
+													}
+												>
+													{state.showCurrentPassword
+														? t.hide
+														: t.show}
+												</button>
+											</div>
+											{state
+												.errors
+												.currentPassword && (
+												<p
+													style={
+														errorStyle
+													}
+												>
+													{
+														state
+															.errors
+															.currentPassword
+													}
+												</p>
+											)}
+										</div>
+										<div
+											style={{
+												marginTop:
+													spacing[3],
+											}}
+										>
+											<label
+												style={{
+													...labelStyle,
+													fontSize:
+														font
+															.size
+															.xs,
+												}}
+											>
+												{t.new ||
+													"New"}{" "}
+												{
+													t.password
+												}
+											</label>
+											<div
+												style={{
+													position:
+														"relative",
+													display:
+														"flex",
+													alignItems:
+														"center",
+												}}
+											>
+												<input
+													style={{
+														...inputStyle(
+															!!state
+																.errors
+																.newPassword,
+															state
+																.focused
+																.newPassword
+														),
+														paddingRight:
+															spacing[10],
+													}}
+													type={
+														state.showNewPassword
+															? "text"
+															: "password"
+													}
+													value={
+														state
+															.passwordChange
+															.newPassword
+													}
+													onChange={(
+														e
+													) => {
+														dispatch(
+															{
+																type: "SET_PASSWORD_CHANGE",
+																payload:
+																	{
+																		newPassword:
+																			e
+																				.target
+																				.value,
+																	},
+															}
+														);
+														if (
+															state
+																.errors
+																.newPassword
+														)
+															dispatch(
+																{
+																	type: "SET_ERRORS",
+																	payload:
+																		{
+																			newPassword:
+																				"",
+																		},
+																}
+															);
+													}}
+													onFocus={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		newPassword: true,
+																	},
+															}
+														)
+													}
+													onBlur={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		newPassword: false,
+																	},
+															}
+														)
+													}
+													placeholder={
+														t.enterPassword
+													}
+													aria-label={
+														t.new +
+														" " +
+														t.password
+													}
+												/>
+												<button
+													type="button"
+													onClick={
+														toggleNewPassword
+													}
+													style={
+														passwordToggleButtonStyle
+													}
+													onMouseEnter={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.primary)
+													}
+													onMouseLeave={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.textSecondary)
+													}
+													aria-label={
+														state.showNewPassword
+															? t.hide
+															: t.show
+													}
+												>
+													{state.showNewPassword
+														? t.hide
+														: t.show}
+												</button>
+											</div>
+											{state
+												.errors
+												.newPassword && (
+												<p
+													style={
+														errorStyle
+													}
+												>
+													{
+														state
+															.errors
+															.newPassword
+													}
+												</p>
+											)}
+										</div>
+										<div
+											style={{
+												marginTop:
+													spacing[3],
+											}}
+										>
+											<label
+												style={{
+													...labelStyle,
+													fontSize:
+														font
+															.size
+															.xs,
+												}}
+											>
+												{t.confirm ||
+													"Confirm"}{" "}
+												{
+													t.password
+												}
+											</label>
+											<div
+												style={{
+													position:
+														"relative",
+													display:
+														"flex",
+													alignItems:
+														"center",
+												}}
+											>
+												<input
+													style={{
+														...inputStyle(
+															!!state
+																.errors
+																.confirmPassword,
+															state
+																.focused
+																.confirmPassword
+														),
+														paddingRight:
+															spacing[10],
+													}}
+													type={
+														state.showConfirmPassword
+															? "text"
+															: "password"
+													}
+													value={
+														state
+															.passwordChange
+															.confirmPassword
+													}
+													onChange={(
+														e
+													) => {
+														dispatch(
+															{
+																type: "SET_PASSWORD_CHANGE",
+																payload:
+																	{
+																		confirmPassword:
+																			e
+																				.target
+																				.value,
+																	},
+															}
+														);
+														if (
+															state
+																.errors
+																.confirmPassword
+														)
+															dispatch(
+																{
+																	type: "SET_ERRORS",
+																	payload:
+																		{
+																			confirmPassword:
+																				"",
+																		},
+																}
+															);
+													}}
+													onFocus={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		confirmPassword: true,
+																	},
+															}
+														)
+													}
+													onBlur={() =>
+														dispatch(
+															{
+																type: "SET_FOCUSED",
+																payload:
+																	{
+																		confirmPassword: false,
+																	},
+															}
+														)
+													}
+													placeholder={
+														t.enterPassword
+													}
+													aria-label={
+														t.confirm +
+														" " +
+														t.password
+													}
+												/>
+												<button
+													type="button"
+													onClick={
+														toggleConfirmPassword
+													}
+													style={
+														passwordToggleButtonStyle
+													}
+													onMouseEnter={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.primary)
+													}
+													onMouseLeave={(
+														e
+													) =>
+														(e.currentTarget.style.color =
+															colors.textSecondary)
+													}
+													aria-label={
+														state.showConfirmPassword
+															? t.hide
+															: t.show
+													}
+												>
+													{state.showConfirmPassword
+														? t.hide
+														: t.show}
+												</button>
+											</div>
+											{state
+												.errors
+												.confirmPassword && (
+												<p
+													style={
+														errorStyle
+													}
+												>
+													{
+														state
+															.errors
+															.confirmPassword
+													}
+												</p>
+											)}
+										</div>
+									</>
+								)}
+							</div>
+						)}
+						{!isEdit &&
+							state.errors
 								.password && (
 								<p
 									style={
@@ -700,8 +1372,7 @@ export default function UserModal({
 									}
 								</p>
 							)}
-						</div>
-					)}
+					</div>
 
 					<div>
 						<label style={labelStyle}>
