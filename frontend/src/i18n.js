@@ -28,7 +28,7 @@ export const translations = {
 		editBuilding: "Edytuj budynek",
 		required: "Pole wymagane",
 		passwordMinLength:
-			"Hasło musi mieć co najmniej 6 znaków",
+			"Hasło musi mieć co najmniej 5 znaków",
 		tasks: "Zadania",
 		calendar: "Kalendarz",
 		logs: "Logi",
@@ -39,7 +39,7 @@ export const translations = {
 		signingIn: "Logowanie...",
 		yourUsername: "Twoja nazwa użytkownika",
 		atLeast6Chars:
-			"Musi mieć co najmniej 6 znaków",
+			"Musi mieć co najmniej 5 znaków",
 		show: "Pokaż",
 		hide: "Ukryj",
 		showPassword: "Pokaż hasło",
@@ -80,7 +80,8 @@ export const translations = {
 		created: "Utworzone",
 		lastUpdated: "Ostatnio zaktualizowane",
 		markCompleted: "Oznacz jako ukończone",
-		reassign: "Zmień przypisanie",
+		revertCompletion:
+			"Przywróć do oczekujących",
 		createNewTask: "Utwórz nowe zadanie",
 		title: "Tytuł",
 		description: "Opis",
@@ -92,9 +93,13 @@ export const translations = {
 			"Wprowadź opis zadania",
 		creating: "Tworzenie...",
 		createTask: "Utwórz zadanie",
+		editTask: "Edytuj zadanie",
 		pendingTasks: "Zadania oczekujące",
 		completedTasks: "Zadania ukończone",
 		searchContractors: "Szukaj wykonawców...",
+		deleteTaskConfirm:
+			"Czy na pewno chcesz usunąć to zadanie?",
+		change: "Edytuj",
 	},
 	en: {
 		settings: "Settings",
@@ -125,7 +130,7 @@ export const translations = {
 		editBuilding: "Edit Building",
 		required: "Required field",
 		passwordMinLength:
-			"Password must be at least 6 characters",
+			"Password must be at least 5 characters",
 		tasks: "Tasks",
 		calendar: "Calendar",
 		logs: "Logs",
@@ -136,7 +141,7 @@ export const translations = {
 		signingIn: "Signing in…",
 		yourUsername: "Your username",
 		atLeast6Chars:
-			"Must be at least 6 characters long",
+			"Must be at least 5 characters long",
 		show: "Show",
 		hide: "Hide",
 		showPassword: "Show password",
@@ -178,6 +183,7 @@ export const translations = {
 		created: "Created",
 		lastUpdated: "Last updated",
 		markCompleted: "Mark completed",
+		revertCompletion: "Revert to pending",
 		reassign: "Reassign",
 		createNewTask: "Create new task",
 		title: "Title",
@@ -190,10 +196,14 @@ export const translations = {
 			"Enter task description",
 		creating: "Creating…",
 		createTask: "Create task",
+		editTask: "Edit task",
 		pendingTasks: "Pending Tasks",
 		completedTasks: "Completed Tasks",
 		searchContractors:
 			"Search contractors...",
+		deleteTaskConfirm:
+			"Are you sure you want to delete this task?",
+		change: "Change",
 	},
 };
 
