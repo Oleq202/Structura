@@ -251,8 +251,26 @@ export default function UsersManagementModal({
 	const [editingUser, setEditingUser] =
 		useState(null);
 
-	const handleEdit = (user) => {
-		setEditingUser(user);
+	const handleEdit = async (user) => {
+		try {
+			const assignedBuildings =
+				await api.getUserBuildings(
+					user.id
+				);
+			setEditingUser({
+				...user,
+				assignedBuildings:
+					assignedBuildings.map(
+						(building) => building.id
+					),
+			});
+		} catch (err) {
+			console.error(
+				"Error fetching user buildings",
+				err
+			);
+			setEditingUser(user);
+		}
 	};
 
 	const handleDelete = async (user_id) => {
@@ -267,22 +285,86 @@ export default function UsersManagementModal({
 	};
 
 	const handleUserSaved = async (savedUser) => {
-		if (editingUser?.id) {
-			const updated = await api.updateUser(
-				savedUser.id,
-				savedUser
+		const selectedBuildingIds = (
+			savedUser.assignedBuildings || []
+		).map(Number);
+		const previousBuildingIds = (
+			editingUser?.assignedBuildings || []
+		).map(Number);
+
+		try {
+			if (editingUser?.id) {
+				const updated =
+					await api.updateUser(
+						savedUser.id,
+						savedUser
+					);
+				if (
+					savedUser.role === "manager"
+				) {
+					const toAdd =
+						selectedBuildingIds.filter(
+							(id) =>
+								!previousBuildingIds.includes(
+									id
+								)
+						);
+					const toRemove =
+						previousBuildingIds.filter(
+							(id) =>
+								!selectedBuildingIds.includes(
+									id
+								)
+						);
+					await Promise.all([
+						...toAdd.map(
+							(buildingId) =>
+								api.assignBuildingManager(
+									savedUser.id,
+									buildingId
+								)
+						),
+						...toRemove.map(
+							(buildingId) =>
+								api.removeBuildingManager(
+									savedUser.id,
+									buildingId
+								)
+						),
+					]);
+				}
+				setUsers(
+					users.map((u) =>
+						u.id === updated.id
+							? updated
+							: u
+					)
+				);
+			} else {
+				const created =
+					await api.createUser(
+						savedUser
+					);
+				if (
+					savedUser.role === "manager"
+				) {
+					await Promise.all(
+						selectedBuildingIds.map(
+							(buildingId) =>
+								api.assignBuildingManager(
+									created.id,
+									buildingId
+								)
+						)
+					);
+				}
+				setUsers([...users, created]);
+			}
+		} catch (err) {
+			console.error(
+				"Error saving user",
+				err
 			);
-			setUsers(
-				users.map((u) =>
-					u.id === updated.id
-						? updated
-						: u
-				)
-			);
-		} else {
-			const created =
-				await api.createUser(savedUser);
-			setUsers([...users, created]);
 		}
 		setEditingUser(null);
 	};
