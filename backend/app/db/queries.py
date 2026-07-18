@@ -255,18 +255,72 @@ async def delete_task(task_id: int):
 
 
 async def get_activity_logs(limit: int = 10):
-    query = "select * from activity_logs order by timestamp desc limit $1"
+    query = """select al.*,
+        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+        t.title as task_title, t.status as task_status,
+        b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        from activity_logs al
+        left join users u on al.user_id = u.id
+        left join tasks t on al.task_id = t.id
+        left join buildings b on t.building_id = b.id
+        order by al.timestamp desc limit $1"""
     return await _fetch_rows(query, limit)
 
 
 async def get_activity_logs_by_task(task_id: int):
-    query = "select * from activity_logs where task_id = $1 order by timestamp asc"
+    query = """select al.*,
+        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+        t.title as task_title, t.status as task_status,
+        b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        from activity_logs al
+        left join users u on al.user_id = u.id
+        left join tasks t on al.task_id = t.id
+        left join buildings b on t.building_id = b.id
+        where al.task_id = $1 order by al.timestamp asc"""
     return await _fetch_rows(query, task_id)
 
 
-async def add_activity_log(task_id: int, user_id: int | None, action: str):
-    query = "insert into activity_logs (task_id, user_id, action) values ($1, $2, $3)"
-    await _execute(query, task_id, user_id, action)
+async def get_activity_logs_filtered(user_id: int | None = None, start_date: str | None = None, end_date: str | None = None, limit: int = 50):
+    conditions = []
+    params = []
+    param_index = 1
+
+    if user_id is not None:
+        conditions.append(f"al.user_id = ${param_index}")
+        params.append(user_id)
+        param_index += 1
+
+    if start_date is not None:
+        conditions.append(f"al.timestamp >= ${param_index}")
+        params.append(start_date)
+        param_index += 1
+
+    if end_date is not None:
+        conditions.append(f"al.timestamp <= ${param_index}")
+        params.append(end_date)
+        param_index += 1
+
+    where_clause = f"where {' and '.join(conditions)}" if conditions else ""
+    params.append(limit)
+
+    query = f"""select al.*,
+        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+        t.title as task_title, t.status as task_status,
+        b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        from activity_logs al
+        left join users u on al.user_id = u.id
+        left join tasks t on al.task_id = t.id
+        left join buildings b on t.building_id = b.id
+        {where_clause}
+        order by al.timestamp desc limit ${param_index}"""
+    return await _fetch_rows(query, *params)
+
+
+async def add_activity_log(task_id: int, user_id: int | None, operation_type: str, action: str, changes_json: dict | None = None):
+    import json
+    query = "insert into activity_logs (task_id, user_id, operation_type, action, changes_json) values ($1, $2, $3, $4, $5)"
+    changes_json_str = json.dumps(changes_json) if changes_json else None
+    await _execute(query, task_id, user_id, operation_type, action, changes_json_str)
 
 
 # Building managers

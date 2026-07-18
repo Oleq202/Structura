@@ -4,6 +4,9 @@ CREATE TYPE user_role AS ENUM ('admin', 'manager', 'contractor');
 -- Create task status enum
 CREATE TYPE task_status AS ENUM ('pending', 'completed');
 
+-- Create operation type enum for activity logs
+CREATE TYPE operation_type AS ENUM ('create', 'update', 'delete', 'status_change');
+
 -- 1. USERS TABLE
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -42,7 +45,9 @@ CREATE TABLE activity_logs (
     id SERIAL PRIMARY KEY,
     task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    operation_type operation_type NOT NULL,
     action VARCHAR(255) NOT NULL,
+    changes_json JSONB,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -63,6 +68,12 @@ CREATE INDEX idx_buildings_city_district ON buildings(city, district);
 
 -- Optimizes loading the history feed for a particular task
 CREATE INDEX idx_activity_logs_task_id ON activity_logs(task_id);
+
+-- Optimizes filtering logs by user
+CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
+
+-- Optimizes filtering logs by timestamp
+CREATE INDEX idx_activity_logs_timestamp ON activity_logs(timestamp);
 
 -- Index for lightning-fast lookups when a manager logs in
 CREATE INDEX idx_building_managers_user ON building_managers(user_id);
