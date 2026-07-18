@@ -100,6 +100,33 @@ export const translations = {
 		deleteTaskConfirm:
 			"Czy na pewno chcesz usunąć to zadanie?",
 		change: "Edytuj",
+		filterByUser:
+			"Filtruj według użytkownika",
+		filterByDate: "Filtruj według daty",
+		applyFilters: "Zastosuj filtry",
+		resetFilters: "Resetuj filtry",
+		createdTask: "Utworzono zadanie",
+		updatedTask: "Zaktualizowano zadanie",
+		deletedTask: "Usunięto zadanie",
+		changedStatus: "Zmieniono status",
+		changedToCompleted:
+			"Zmieniono zadanie na ukończone",
+		revertedToPending:
+			"Przywrócono zadanie do oczekujących",
+		changedDetails:
+			"Zmieniono szczegóły zadania",
+		oldValue: "Stara wartość",
+		newValue: "Nowa wartość",
+		changes: "Zmiany",
+		noChanges: "Brak zmian",
+		allUsers: "Wszyscy użytkownicy",
+		startDate: "Data początkowa",
+		endDate: "Data końcowa",
+		loading: "Ładowanie...",
+		noLogs: "Brak logów",
+		unknown: "Nieznany",
+		performedBy: "Wykonał",
+		timestamp: "Znacznik czasu",
 	},
 	en: {
 		settings: "Settings",
@@ -204,6 +231,31 @@ export const translations = {
 		deleteTaskConfirm:
 			"Are you sure you want to delete this task?",
 		change: "Change",
+		filterByUser: "Filter by user",
+		filterByDate: "Filter by date",
+		applyFilters: "Apply filters",
+		resetFilters: "Reset filters",
+		createdTask: "Created task",
+		updatedTask: "Updated task",
+		deletedTask: "Deleted task",
+		changedStatus: "Changed status",
+		changedToCompleted:
+			"Changed task to completed",
+		revertedToPending:
+			"Reverted task to pending",
+		changedDetails: "Changed task details",
+		oldValue: "Old value",
+		newValue: "New value",
+		changes: "Changes",
+		noChanges: "No changes",
+		allUsers: "All users",
+		startDate: "Start date",
+		endDate: "End date",
+		loading: "Loading...",
+		noLogs: "No logs found",
+		unknown: "Unknown",
+		performedBy: "Performed by",
+		timestamp: "Timestamp",
 	},
 };
 
