@@ -109,6 +109,11 @@ export const colors = {
 
 	avatarBg: navy[500],
 	avatarText: blue[200],
+
+	success: "#97c459",
+	warning: "#ef9f27",
+	danger: "#f09595",
+	info: "#85b7eb",
 } as const;
 
 export const font = {
