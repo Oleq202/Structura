@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
 from datetime import datetime
 
 
@@ -173,6 +173,64 @@ class Task(BaseModel):
                 "city": self.building_city,
                 "district": self.building_district,
                 "street_address": self.building_street_address,
+            }
+        return None
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+
+class ActivityLogBase(BaseModel):
+    task_id: int
+    user_id: Optional[int] = None
+    operation_type: Literal["create", "update", "delete", "status_change"]
+    action: str
+    changes_json: Optional[Dict[str, Any]] = None
+
+
+class ActivityLogCreate(ActivityLogBase):
+    pass
+
+
+class ActivityLog(ActivityLogBase):
+    id: int
+    timestamp: datetime
+    user_id: Optional[int] = None
+    user_login: Optional[str] = None
+    user_first_name: Optional[str] = None
+    user_last_name: Optional[str] = None
+    user_role: Optional[str] = None
+    task_title: Optional[str] = None
+    task_status: Optional[str] = None
+    building_city: Optional[str] = None
+    building_district: Optional[str] = None
+    building_street_address: Optional[str] = None
+
+    @property
+    def user(self):
+        if self.user_id:
+            return {
+                "id": self.user_id,
+                "login": self.user_login,
+                "first_name": self.user_first_name,
+                "last_name": self.user_last_name,
+                "role": self.user_role,
+            }
+        return None
+
+    @property
+    def task(self):
+        if self.task_title:
+            return {
+                "id": self.task_id,
+                "title": self.task_title,
+                "status": self.task_status,
+                "building": {
+                    "city": self.building_city,
+                    "district": self.building_district,
+                    "street_address": self.building_street_address,
+                } if self.building_city else None,
             }
         return None
 

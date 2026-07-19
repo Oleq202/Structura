@@ -20,10 +20,13 @@ from .db.queries import (
     add_building_manager,
     delete_building_manager,
     get_task,
+    get_all_tasks,
     add_task,
     update_task,
     update_task_status,
     delete_task,
+    get_activity_logs_filtered,
+    add_activity_log,
 )
 from .auth import hash_password, verify_password
 from .models import (
@@ -39,6 +42,7 @@ from .models import (
     TaskCreate,
     TaskUpdate,
     Task,
+    ActivityLog,
 )
 
 app = FastAPI(title="Structura API")
@@ -238,11 +242,32 @@ async def create_task(task: TaskCreate):
         task.created_by,
         task.assigned_to,
     )
+    # Log the creation - get the created task by querying for the latest task by this user
+    try:
+        created_tasks = await get_all_tasks()
+        if created_tasks:
+            latest_task = created_tasks[0]
+            await add_activity_log(
+                latest_task["id"],
+                task.created_by,
+                "create",
+                "Created task",
+                {"title": task.title, "description": task.description, "building_id": task.building_id, "assigned_to": task.assigned_to}
+            )
+    except Exception as e:
+        # Log failure shouldn't break task creation
+        print(f"Failed to log task creation: {e}")
     return {"message": "Task created successfully"}
 
 
 @app.put("/tasks/{task_id}")
 async def update_task_endpoint(task_id: int, task: TaskUpdate):
+    # Get old task state for logging
+    old_task = await get_task(task_id)
+    
+    # Store the user who is making the change for logging
+    user_performing_action = task.created_by or (old_task["created_by"] if old_task else None)
+    
     await update_task(
         task_id,
         task.title,
@@ -251,11 +276,51 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
         task.created_by,
         task.assigned_to,
     )
+    
+    # Handle status changes separately
     if task.status:
         await update_task_status(task_id, task.status)
+    
     updated_task = await get_task(task_id)
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Log the update
+    try:
+        changes = {}
+        if old_task:
+            if task.title and task.title != old_task["title"]:
+                changes["title"] = {"old": old_task["title"], "new": task.title}
+            if task.description is not None and task.description != old_task["description"]:
+                changes["description"] = {"old": old_task["description"], "new": task.description}
+            if task.building_id and task.building_id != old_task["building_id"]:
+                changes["building_id"] = {"old": old_task["building_id"], "new": task.building_id}
+            if task.assigned_to and task.assigned_to != old_task["assigned_to"]:
+                changes["assigned_to"] = {"old": old_task["assigned_to"], "new": task.assigned_to}
+        
+        # Determine operation type and action
+        if task.status:
+            operation_type = "status_change"
+            action = f"Changed status to {task.status}"
+            changes["status"] = {"old": old_task["status"] if old_task else None, "new": task.status}
+        elif changes:
+            operation_type = "update"
+            action = "Updated task details"
+        else:
+            operation_type = "update"
+            action = "Updated task"
+        
+        await add_activity_log(
+            task_id,
+            user_performing_action,
+            operation_type,
+            action,
+            changes if changes else None
+        )
+    except Exception as e:
+        # Log failure shouldn't break task update
+        print(f"Failed to log task update: {e}")
+    
     task_obj = {
         "id": updated_task["id"],
         "title": updated_task["title"],
@@ -303,8 +368,48 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
 
 @app.delete("/tasks/{task_id}")
 async def delete_task_endpoint(task_id: int):
+    # Get task info before deletion for logging
+    task_to_delete = await get_task(task_id)
     await delete_task(task_id)
+    
+    # Log the deletion
+    try:
+        if task_to_delete:
+            await add_activity_log(
+                task_id,
+                task_to_delete.get("created_by"),
+                "delete",
+                "Deleted task",
+                {"title": task_to_delete.get("title"), "status": task_to_delete.get("status")}
+            )
+    except Exception as e:
+        # Log failure shouldn't break task deletion
+        print(f"Failed to log task deletion: {e}")
+    
     return {"message": "Task deleted successfully"}
+
+
+# Activity logs endpoints (admin only)
+@app.get("/activity-logs")
+async def get_activity_logs_endpoint(
+    user_id: Optional[int] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 50
+):
+    import json
+    logs = await get_activity_logs_filtered(user_id, start_date, end_date, limit)
+    # Parse changes_json from string to dict
+    parsed_logs = []
+    for log in logs:
+        log_dict = dict(log)
+        if log_dict.get("changes_json") and isinstance(log_dict["changes_json"], str):
+            try:
+                log_dict["changes_json"] = json.loads(log_dict["changes_json"])
+            except (json.JSONDecodeError, TypeError):
+                log_dict["changes_json"] = None
+        parsed_logs.append(ActivityLog(**log_dict))
+    return parsed_logs
 
 
 if __name__ == "__main__":

@@ -305,3 +305,34 @@ export async function getContractors() {
 	}
 	return response.json();
 }
+
+export async function getActivityLogs(
+	filters = {}
+) {
+	const {
+		userId,
+		startDate,
+		endDate,
+		limit = 50,
+	} = filters;
+	const params = new URLSearchParams();
+	if (userId) params.append("user_id", userId);
+	if (startDate)
+		params.append("start_date", startDate);
+	if (endDate)
+		params.append("end_date", endDate);
+	if (limit) params.append("limit", limit);
+
+	const response = await fetch(
+		`${API_BASE}/activity-logs?${params.toString()}`,
+		{
+			method: "GET",
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			"Failed to fetch activity logs"
+		);
+	}
+	return response.json();
+}
