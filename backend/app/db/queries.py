@@ -303,8 +303,8 @@ async def get_activity_logs_filtered(user_id: int | None = None, start_date: str
     where_clause = f"where {' and '.join(conditions)}" if conditions else ""
     params.append(limit)
 
-    query = f"""select al.*,
-        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+    query = f"""select al.id, al.task_id, al.user_id, al.operation_type, al.action, al.changes_json, al.timestamp,
+        u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
         t.title as task_title, t.status as task_status,
         b.city as building_city, b.district as building_district, b.street_address as building_street_address
         from activity_logs al

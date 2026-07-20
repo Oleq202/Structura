@@ -209,7 +209,7 @@ class ActivityLog(ActivityLogBase):
 
     @property
     def user(self):
-        if self.user_id:
+        if self.user_login:
             return {
                 "id": self.user_id,
                 "login": self.user_login,

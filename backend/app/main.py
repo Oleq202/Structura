@@ -252,7 +252,7 @@ async def create_task(task: TaskCreate):
                 task.created_by,
                 "create",
                 "Created task",
-                {"title": task.title, "description": task.description, "building_id": task.building_id, "assigned_to": task.assigned_to}
+                {"title": {"new": task.title}, "description": {"new": task.description}, "building_id": {"new": task.building_id}, "assigned_to": {"new": task.assigned_to}}
             )
     except Exception as e:
         # Log failure shouldn't break task creation
@@ -367,7 +367,7 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
 
 
 @app.delete("/tasks/{task_id}")
-async def delete_task_endpoint(task_id: int):
+async def delete_task_endpoint(task_id: int, user_id: Optional[int] = None):
     # Get task info before deletion for logging
     task_to_delete = await get_task(task_id)
     await delete_task(task_id)
@@ -377,10 +377,10 @@ async def delete_task_endpoint(task_id: int):
         if task_to_delete:
             await add_activity_log(
                 task_id,
-                task_to_delete.get("created_by"),
+                user_id or task_to_delete.get("created_by"),
                 "delete",
                 "Deleted task",
-                {"title": task_to_delete.get("title"), "status": task_to_delete.get("status")}
+                {"title": {"old": task_to_delete.get("title")}, "status": {"old": task_to_delete.get("status")}}
             )
     except Exception as e:
         # Log failure shouldn't break task deletion
