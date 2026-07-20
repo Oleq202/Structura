@@ -26,7 +26,6 @@ const OPERATION_COLORS = {
 
 const logCardStyle = {
 	width: "100%",
-	maxWidth: "420px",
 	background: colors.cardBg,
 	borderRadius: radius.xl,
 	border: `0.5px solid ${colors.cardBorder}`,
@@ -121,13 +120,30 @@ function formatTimestamp(iso, language) {
 	});
 }
 
-function getActionText(operation_type, action, changes_json, t) {
+function getActionText(
+	operation_type,
+	action,
+	changes_json,
+	t
+) {
 	if (operation_type === "status_change") {
-		if (changes_json?.status?.new === "completed") {
-			return t.changedToCompleted || "Changed task to completed";
+		if (
+			changes_json?.status?.new ===
+			"completed"
+		) {
+			return (
+				t.changedToCompleted ||
+				"Changed task to completed"
+			);
 		}
-		if (changes_json?.status?.new === "pending") {
-			return t.revertedToPending || "Reverted task to pending";
+		if (
+			changes_json?.status?.new ===
+			"pending"
+		) {
+			return (
+				t.revertedToPending ||
+				"Reverted task to pending"
+			);
 		}
 		return action;
 	}
@@ -138,13 +154,19 @@ function getActionText(operation_type, action, changes_json, t) {
 		return t.deletedTask || "Deleted task";
 	}
 	if (operation_type === "update") {
-		return t.changedDetails || "Changed task details";
+		return (
+			t.changedDetails ||
+			"Changed task details"
+		);
 	}
 	return action;
 }
 
 function renderChanges(changes_json, t) {
-	if (!changes_json || Object.keys(changes_json).length === 0) {
+	if (
+		!changes_json ||
+		Object.keys(changes_json).length === 0
+	) {
 		return null;
 	}
 
@@ -173,14 +195,17 @@ function renderChanges(changes_json, t) {
 					<div
 						key={field}
 						style={{
-							marginBottom: spacing[2],
-							fontSize: font.size.sm,
+							marginBottom:
+								spacing[2],
+							fontSize:
+								font.size.sm,
 						}}
 					>
 						<span
 							style={{
 								fontWeight:
-									font.weight.medium,
+									font.weight
+										.medium,
 								color: colors.textSecondary,
 							}}
 						>
@@ -188,13 +213,16 @@ function renderChanges(changes_json, t) {
 						</span>
 						<div
 							style={{
-								marginTop: spacing[1],
+								marginTop:
+									spacing[1],
 								display: "flex",
-								flexDirection: "column",
+								flexDirection:
+									"column",
 								gap: spacing[1],
 							}}
 						>
-							{change.old !== undefined && (
+							{change.old !==
+								undefined && (
 								<div>
 									<span
 										style={{
@@ -202,7 +230,8 @@ function renderChanges(changes_json, t) {
 										}}
 									>
 										{t.oldValue ||
-											"Old"}:
+											"Old"}
+										:
 									</span>{" "}
 									<span
 										style={{
@@ -215,7 +244,8 @@ function renderChanges(changes_json, t) {
 									</span>
 								</div>
 							)}
-							{change.new !== undefined && (
+							{change.new !==
+								undefined && (
 								<div>
 									<span
 										style={{
@@ -223,7 +253,8 @@ function renderChanges(changes_json, t) {
 										}}
 									>
 										{t.newValue ||
-											"New"}:
+											"New"}
+										:
 									</span>{" "}
 									<span
 										style={{
@@ -249,9 +280,16 @@ export default function LogEntry({
 	expanded,
 	onToggle,
 	language = "pl",
+	users = [],
 }) {
 	const t = translations[language];
 	const [log] = useState(initialData);
+
+	// Find user from users array (same approach as filtering)
+	const user =
+		users.find((u) => u.id === log.user_id) ||
+		log.user;
+
 	const badgeKey =
 		OPERATION_BADGE[log.operation_type] ??
 		"info";
@@ -271,6 +309,32 @@ export default function LogEntry({
 	const buildingAddress =
 		log.task?.building?.street_address ??
 		null;
+
+	// For deleted tasks, use changes_json to get task info
+	const isDeleted =
+		log.operation_type === "delete";
+	const isCreated =
+		log.operation_type === "create";
+
+	let taskTitle;
+	if (isDeleted) {
+		taskTitle =
+			log.changes_json?.title?.old ||
+			log.task?.title ||
+			t.deletedTask ||
+			"Deleted task";
+	} else if (isCreated) {
+		taskTitle =
+			log.changes_json?.title?.new ||
+			log.task?.title ||
+			t.createdTask ||
+			"Created task";
+	} else {
+		taskTitle =
+			log.task?.title ||
+			t.deletedTask ||
+			"Deleted task";
+	}
 
 	const actionText = getActionText(
 		log.operation_type,
@@ -294,28 +358,30 @@ export default function LogEntry({
 					style={{
 						display: "flex",
 						alignItems: "center",
-						justifyContent: "space-between",
+						justifyContent:
+							"space-between",
 						marginBottom: spacing[3],
 					}}
 				>
 					<h2
 						style={{
-							fontSize: font.size.lg,
+							fontSize:
+								font.size.lg,
 							fontWeight:
-								font.weight.medium,
+								font.weight
+									.medium,
 							color: colors.textHeading,
 							letterSpacing:
 								font.letterSpacing
 									.tight,
 							lineHeight:
-								font.lineHeight.tight,
+								font.lineHeight
+									.tight,
 							margin: 0,
 							flex: 1,
 						}}
 					>
-						{log.task?.title ||
-							t.deletedTask ||
-							"Deleted task"}
+						{taskTitle}
 					</h2>
 					<div style={badge}>
 						{log.operation_type}
@@ -328,7 +394,8 @@ export default function LogEntry({
 						color: colors.textBody,
 						margin: `0 0 ${spacing[3]} 0`,
 						lineHeight:
-							font.lineHeight.normal,
+							font.lineHeight
+								.normal,
 					}}
 				>
 					{actionText}
@@ -413,16 +480,22 @@ export default function LogEntry({
 						}
 					>
 						<MetaRow
-							label={t.performedBy || "Performed by"}
+							label={
+								t.performedBy ||
+								"Performed by"
+							}
 						>
 							<UserCell
-								user={log.user}
+								user={user}
 								t={t}
 							/>
 						</MetaRow>
 
 						<MetaRow
-							label={t.timestamp || "Timestamp"}
+							label={
+								t.timestamp ||
+								"Timestamp"
+							}
 						>
 							<span
 								style={{

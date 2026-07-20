@@ -156,7 +156,7 @@ export default function LogsPage({
 		<div
 			style={{
 				padding: `${spacing[6]} ${spacing[8]}`,
-				maxWidth: "1200px",
+				width: "80%",
 				margin: "0 auto",
 			}}
 		>
@@ -346,9 +346,8 @@ export default function LogsPage({
 			) : (
 				<div
 					style={{
-						display: "grid",
-						gridTemplateColumns:
-							"repeat(auto-fill, minmax(400px, 1fr))",
+						display: "flex",
+						flexDirection: "column",
 						gap: spacing[4],
 					}}
 				>
@@ -366,6 +365,7 @@ export default function LogsPage({
 								)
 							}
 							language={language}
+							users={users}
 						/>
 					))}
 				</div>
