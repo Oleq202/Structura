@@ -229,6 +229,7 @@ export default function ManagerPage({
 		try {
 			await api.updateTask(taskId, {
 				status: "completed",
+				created_by: currentUser.id,
 			});
 			refreshTasks();
 		} catch (err) {
@@ -245,6 +246,7 @@ export default function ManagerPage({
 		try {
 			await api.updateTask(taskId, {
 				status: "pending",
+				created_by: currentUser.id,
 			});
 			refreshTasks();
 		} catch (err) {
@@ -262,7 +264,10 @@ export default function ManagerPage({
 			return;
 		}
 		try {
-			await api.deleteTask(taskId);
+			await api.deleteTask(
+				taskId,
+				currentUser.id
+			);
 			refreshTasks();
 		} catch (err) {
 			console.error(
@@ -312,6 +317,8 @@ export default function ManagerPage({
 					gap: "24px",
 					padding: "16px",
 					alignItems: "center",
+					width: "80%",
+					margin: "0 auto",
 				}}
 			>
 				{state.activeFilter === "all" ? (
