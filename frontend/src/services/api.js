@@ -278,9 +278,9 @@ export async function updateTask(
 	return response.json();
 }
 
-export async function deleteTask(taskId) {
+export async function deleteTask(taskId, userId) {
 	const response = await fetch(
-		`${API_BASE}/tasks/${taskId}`,
+		`${API_BASE}/tasks/${taskId}?user_id=${userId}`,
 		{
 			method: "DELETE",
 		}

@@ -146,6 +146,9 @@ export default function App() {
 									path="/logs"
 									element={
 										<LogsPage
+											currentUser={
+												currentUser
+											}
 											language={
 												language
 											}
