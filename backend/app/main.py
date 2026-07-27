@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -28,7 +29,7 @@ from .db.queries import (
     get_activity_logs_filtered,
     add_activity_log,
 )
-from .auth import hash_password, verify_password
+from .auth import hash_password, verify_password, create_access_token, verify_token
 from .models import (
     UserCreate,
     UserUpdate,
@@ -55,6 +56,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    payload = verify_token(token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return payload
+
+def require_role(*allowed_roles):
+    def role_checker(current_user = Depends(get_current_user)):
+        if current_user.get("role") not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return current_user
+    return role_checker
+
 
 # Login endpoint
 @app.post("/login", response_model=LoginResponse)
@@ -64,12 +81,16 @@ async def login(request: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid login or password")
     if not verify_password(request.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid login or password")
+    access_token = create_access_token(
+        data={"sub": user["login"], "id": user["id"], "role": user["role"]}
+    )
     return LoginResponse(
         id=user["id"],
         login=user["login"],
         first_name=user["first_name"],
         last_name=user["last_name"],
         role=user["role"],
+        access_token=access_token,
     )
 
 
@@ -173,12 +194,16 @@ async def delete_building_manager_endpoint(manager: BuildingManager):
 
 # Task endpoints
 @app.get("/tasks")
-async def get_tasks():
+async def get_tasks(current_user = Depends(get_current_user)):
     from .db.queries import get_all_tasks
 
     tasks = await get_all_tasks()
     result = []
     for task in tasks:
+        # Contractors only see tasks assigned to them
+        if current_user.get("role") == "contractor" and task["assigned_to"] != current_user.get("id"):
+            continue
+        
         task_obj = {
             "id": task["id"],
             "title": task["title"],
@@ -234,7 +259,7 @@ async def get_task_endpoint(task_id: int):
 
 
 @app.post("/tasks")
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate, current_user = Depends(require_role("admin", "manager"))):
     await add_task(
         task.title,
         task.description,
@@ -261,7 +286,7 @@ async def create_task(task: TaskCreate):
 
 
 @app.put("/tasks/{task_id}")
-async def update_task_endpoint(task_id: int, task: TaskUpdate):
+async def update_task_endpoint(task_id: int, task: TaskUpdate, current_user = Depends(require_role("admin", "manager"))):
     # Get old task state for logging
     old_task = await get_task(task_id)
     
@@ -367,7 +392,7 @@ async def update_task_endpoint(task_id: int, task: TaskUpdate):
 
 
 @app.delete("/tasks/{task_id}")
-async def delete_task_endpoint(task_id: int, user_id: Optional[int] = None):
+async def delete_task_endpoint(task_id: int, user_id: Optional[int] = None, current_user = Depends(require_role("admin"))):
     # Get task info before deletion for logging
     task_to_delete = await get_task(task_id)
     await delete_task(task_id)
@@ -389,13 +414,43 @@ async def delete_task_endpoint(task_id: int, user_id: Optional[int] = None):
     return {"message": "Task deleted successfully"}
 
 
+@app.put("/tasks/{task_id}/status")
+async def update_task_status_endpoint(task_id: int, status_data: dict, current_user = Depends(get_current_user)):
+    status = status_data.get("status")
+    # Verify the task exists and is assigned to the contractor (if contractor)
+    task = await get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Contractors can only update status of tasks assigned to them
+    if current_user.get("role") == "contractor" and task["assigned_to"] != current_user.get("id"):
+        raise HTTPException(status_code=403, detail="You can only update status of tasks assigned to you")
+    
+    await update_task_status(task_id, status)
+    
+    # Log the status change
+    try:
+        await add_activity_log(
+            task_id,
+            current_user.get("id"),
+            "status_change",
+            f"Changed status to {status}",
+            {"status": {"old": task["status"], "new": status}}
+        )
+    except Exception as e:
+        print(f"Failed to log status change: {e}")
+    
+    return {"message": "Task status updated successfully"}
+
+
 # Activity logs endpoints (admin only)
 @app.get("/activity-logs")
 async def get_activity_logs_endpoint(
     user_id: Optional[int] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    limit: int = 50
+    limit: int = 50,
+    current_user = Depends(require_role("admin"))
 ):
     import json
     logs = await get_activity_logs_filtered(user_id, start_date, end_date, limit)

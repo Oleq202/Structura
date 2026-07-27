@@ -69,6 +69,7 @@ class LoginResponse(BaseModel):
     first_name: str
     last_name: str
     role: str
+    access_token: str
 
     class Config:
         populate_by_name = True
