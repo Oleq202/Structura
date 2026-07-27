@@ -227,10 +227,20 @@ export default function ManagerPage({
 		taskId
 	) => {
 		try {
-			await api.updateTask(taskId, {
-				status: "completed",
-				created_by: currentUser.id,
-			});
+			// Contractors use the status endpoint, managers/admins use updateTask
+			if (
+				currentUser.role === "contractor"
+			) {
+				await api.updateTaskStatus(
+					taskId,
+					"completed"
+				);
+			} else {
+				await api.updateTask(taskId, {
+					status: "completed",
+					created_by: currentUser.id,
+				});
+			}
 			refreshTasks();
 		} catch (err) {
 			console.error(
@@ -244,10 +254,20 @@ export default function ManagerPage({
 		taskId
 	) => {
 		try {
-			await api.updateTask(taskId, {
-				status: "pending",
-				created_by: currentUser.id,
-			});
+			// Contractors use the status endpoint, managers/admins use updateTask
+			if (
+				currentUser.role === "contractor"
+			) {
+				await api.updateTaskStatus(
+					taskId,
+					"pending"
+				);
+			} else {
+				await api.updateTask(taskId, {
+					status: "pending",
+					created_by: currentUser.id,
+				});
+			}
 			refreshTasks();
 		} catch (err) {
 			console.error(
@@ -472,6 +492,9 @@ export default function ManagerPage({
 																language={
 																	language
 																}
+																userRole={
+																	currentUser.role
+																}
 															/>
 														)
 													)}
@@ -631,6 +654,9 @@ export default function ManagerPage({
 																language={
 																	language
 																}
+																userRole={
+																	currentUser.role
+																}
 															/>
 														)
 													)}
@@ -759,44 +785,47 @@ export default function ManagerPage({
 					</>
 				)}
 			</div>
-			<button
-				type="button"
-				style={floatingButtonStyle}
-				onMouseEnter={(e) =>
-					(e.currentTarget.style.background =
-						colors.primaryHover)
-				}
-				onMouseLeave={(e) =>
-					(e.currentTarget.style.background =
-						colors.primary)
-				}
-				onClick={toggleTaskModal}
-				aria-label={t.createNewTask}
-			>
-				<svg
-					width="32"
-					height="32"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="3"
-					strokeLinecap="round"
-					strokeLinejoin="round"
+			{currentUser.role !==
+				"contractor" && (
+				<button
+					type="button"
+					style={floatingButtonStyle}
+					onMouseEnter={(e) =>
+						(e.currentTarget.style.background =
+							colors.primaryHover)
+					}
+					onMouseLeave={(e) =>
+						(e.currentTarget.style.background =
+							colors.primary)
+					}
+					onClick={toggleTaskModal}
+					aria-label={t.createNewTask}
 				>
-					<line
-						x1="12"
-						y1="5"
-						x2="12"
-						y2="19"
-					/>
-					<line
-						x1="5"
-						y1="12"
-						x2="19"
-						y2="12"
-					/>
-				</svg>
-			</button>
+					<svg
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="3"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<line
+							x1="12"
+							y1="5"
+							x2="12"
+							y2="19"
+						/>
+						<line
+							x1="5"
+							y1="12"
+							x2="19"
+							y2="12"
+						/>
+					</svg>
+				</button>
+			)}
 			{(state.isTaskModalOpen ||
 				editingTask) && (
 				<TaskModal

@@ -121,6 +121,7 @@ export default function Task({
 	onRevertCompleted,
 	onDeleteTask,
 	language = "pl",
+	userRole = "manager",
 }) {
 	const t = translations[language];
 	const [task] = useState(initialData);
@@ -128,6 +129,9 @@ export default function Task({
 	const badgeKey =
 		STATUS_BADGE[task.status] ?? "new";
 	const badge = badgeStyle(badgeKey);
+
+	const canEdit = userRole !== "contractor";
+	const canDelete = userRole === "admin";
 
 	const buildingLabel = task.building
 		? [
@@ -372,27 +376,29 @@ export default function Task({
 										t.markCompleted
 									}
 								</button>
-								<button
-									type="button"
-									style={{
-										...components.ghostButton,
-										padding: `${spacing[3]} ${spacing[4]}`,
-										borderRadius:
-											radius.lg,
-										fontFamily:
-											font
-												.family
-												.sans,
-									}}
-									onClick={(
-										e
-									) => {
-										e.stopPropagation();
-										onEdit?.();
-									}}
-								>
-									{t.edit}
-								</button>
+								{canEdit && (
+									<button
+										type="button"
+										style={{
+											...components.ghostButton,
+											padding: `${spacing[3]} ${spacing[4]}`,
+											borderRadius:
+												radius.lg,
+											fontFamily:
+												font
+													.family
+													.sans,
+										}}
+										onClick={(
+											e
+										) => {
+											e.stopPropagation();
+											onEdit?.();
+										}}
+									>
+										{t.edit}
+									</button>
+								)}
 							</div>
 						) : (
 							<div
@@ -426,27 +432,29 @@ export default function Task({
 										t.revertCompletion
 									}
 								</button>
-								<button
-									type="button"
-									style={{
-										...components.primaryButton,
-										padding: `${spacing[3]} ${spacing[4]}`,
-										borderRadius:
-											radius.lg,
-										fontFamily:
-											font
-												.family
-												.sans,
-									}}
-									onClick={(
-										e
-									) => {
-										e.stopPropagation();
-										onDeleteTask?.();
-									}}
-								>
-									{t.delete}
-								</button>
+								{canDelete && (
+									<button
+										type="button"
+										style={{
+											...components.primaryButton,
+											padding: `${spacing[3]} ${spacing[4]}`,
+											borderRadius:
+												radius.lg,
+											fontFamily:
+												font
+													.family
+													.sans,
+										}}
+										onClick={(
+											e
+										) => {
+											e.stopPropagation();
+											onDeleteTask?.();
+										}}
+									>
+										{t.delete}
+									</button>
+								)}
 							</div>
 						)}
 					</div>
