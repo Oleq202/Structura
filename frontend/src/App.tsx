@@ -62,6 +62,7 @@ export default function App() {
 
 	const handleLogout = () => {
 		localStorage.removeItem("currentUser:v1");
+		localStorage.removeItem("accessToken");
 		setCurrentUser(null);
 		setIsLoggedIn(false);
 	};
@@ -78,6 +79,10 @@ export default function App() {
 			localStorage.setItem(
 				"currentUser:v1",
 				JSON.stringify(user)
+			);
+			localStorage.setItem(
+				"accessToken",
+				user.access_token
 			);
 			setCurrentUser(user);
 			setIsLoggedIn(true);

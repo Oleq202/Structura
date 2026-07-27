@@ -1,5 +1,20 @@
 const API_BASE = "http://localhost:8000";
 
+function getAuthHeaders() {
+	const token = localStorage.getItem(
+		"accessToken"
+	);
+	if (token) {
+		return {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${token}`,
+		};
+	}
+	return {
+		"Content-Type": "application/json",
+	};
+}
+
 export async function login(login, password) {
 	const response = await fetch(
 		`${API_BASE}/login`,
@@ -26,6 +41,7 @@ export async function getUsers() {
 		`${API_BASE}/users`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -39,6 +55,7 @@ export async function getUserBuildings(userId) {
 		`${API_BASE}/users/${userId}/buildings`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -54,10 +71,7 @@ export async function createUser(userData) {
 		`${API_BASE}/users`,
 		{
 			method: "POST",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(userData),
 		}
 	);
@@ -75,10 +89,7 @@ export async function updateUser(
 		`${API_BASE}/users/${userId}`,
 		{
 			method: "PUT",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(userData),
 		}
 	);
@@ -93,6 +104,7 @@ export async function deleteUser(userId) {
 		`${API_BASE}/users/${userId}`,
 		{
 			method: "DELETE",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -106,6 +118,7 @@ export async function getBuildings() {
 		`${API_BASE}/buildings`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -123,10 +136,7 @@ export async function createBuilding(
 		`${API_BASE}/buildings`,
 		{
 			method: "POST",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(buildingData),
 		}
 	);
@@ -146,10 +156,7 @@ export async function updateBuilding(
 		`${API_BASE}/buildings/${buildingId}`,
 		{
 			method: "PUT",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(buildingData),
 		}
 	);
@@ -166,6 +173,7 @@ export async function deleteBuilding(buildingId) {
 		`${API_BASE}/buildings/${buildingId}`,
 		{
 			method: "DELETE",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -184,10 +192,7 @@ export async function assignBuildingManager(
 		`${API_BASE}/building-managers`,
 		{
 			method: "POST",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify({
 				user_id: userId,
 				building_id: buildingId,
@@ -209,10 +214,7 @@ export async function removeBuildingManager(
 		`${API_BASE}/building-managers`,
 		{
 			method: "DELETE",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify({
 				user_id: userId,
 				building_id: buildingId,
@@ -231,6 +233,7 @@ export async function getTasks() {
 		`${API_BASE}/tasks`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -244,10 +247,7 @@ export async function createTask(taskData) {
 		`${API_BASE}/tasks`,
 		{
 			method: "POST",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(taskData),
 		}
 	);
@@ -265,10 +265,7 @@ export async function updateTask(
 		`${API_BASE}/tasks/${taskId}`,
 		{
 			method: "PUT",
-			headers: {
-				"Content-Type":
-					"application/json",
-			},
+			headers: getAuthHeaders(),
 			body: JSON.stringify(taskData),
 		}
 	);
@@ -283,10 +280,31 @@ export async function deleteTask(taskId, userId) {
 		`${API_BASE}/tasks/${taskId}?user_id=${userId}`,
 		{
 			method: "DELETE",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
 		throw new Error("Failed to delete task");
+	}
+	return response.json();
+}
+
+export async function updateTaskStatus(
+	taskId,
+	status
+) {
+	const response = await fetch(
+		`${API_BASE}/tasks/${taskId}/status`,
+		{
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify({ status }),
+		}
+	);
+	if (!response.ok) {
+		throw new Error(
+			"Failed to update task status"
+		);
 	}
 	return response.json();
 }
@@ -296,6 +314,7 @@ export async function getContractors() {
 		`${API_BASE}/users?role=contractor`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
@@ -327,6 +346,7 @@ export async function getActivityLogs(
 		`${API_BASE}/activity-logs?${params.toString()}`,
 		{
 			method: "GET",
+			headers: getAuthHeaders(),
 		}
 	);
 	if (!response.ok) {
