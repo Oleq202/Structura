@@ -1,6 +1,14 @@
 # Structura
 
-A modern Field Service Management (FSM) system for property maintenance. Enables building administrators to assign work orders and contractors to resolve them on-site. Built as a high-performance web app using React, FastAPI, and PostgreSQL.
+**Full-stack Field Service Management System** - A modern web application for property maintenance that enables building administrators to assign work orders and contractors to resolve them on-site.
+
+## Key Highlights
+
+- **RBAC Implementation**: Three-tier role-based access control (Admin, Manager, Contractor) with scoped permissions
+- **Complete Audit Trail**: Activity logging system tracking all task modifications and system events
+- **Geographic Organization**: Buildings organized by city/district for efficient regional management
+- **Multi-Building Support**: Flexible manager-to-building mapping for overseeing multiple properties
+- **Modern Tech Stack**: React 19 + FastAPI + PostgreSQL with JWT authentication
 
 ## Features
 
@@ -8,23 +16,23 @@ A modern Field Service Management (FSM) system for property maintenance. Enables
 - **Task Management**: Create, assign, and track maintenance tasks across multiple buildings
 - **Building Management**: Manage properties with detailed location information (city, district, street address)
 - **Activity Logging**: Complete audit trail of all task modifications and system events
-- **Real-Time Updates**: WebSocket support for live task status updates
 - **Multi-Building Support**: Managers can oversee multiple properties through flexible mapping
 - **Geographic Organization**: Buildings organized by city and district for efficient regional management
 
 ## Tech Stack
 
 ### Backend
+
 - **FastAPI** (0.115.12) - Modern, fast web framework for building APIs
 - **PostgreSQL** - Relational database with asyncpg driver
 - **JWT Authentication** - Secure token-based authentication with python-jose
 - **bcrypt** - Password hashing for security
-- **WebSockets** - Real-time communication support
 - **Pydantic** - Data validation and settings management
 
 ### Frontend
+
 - **React 19** - UI library with modern hooks and concurrent features
-- **TypeScript** - Type-safe JavaScript
+- **JavaScript** - Core programming language
 - **Vite** - Fast build tool and dev server
 - **TailwindCSS** - Utility-first CSS framework
 - **React Router** - Client-side routing
@@ -47,7 +55,7 @@ Structura/
 │   │   ├── components/ # React components
 │   │   ├── hooks/      # Custom React hooks
 │   │   ├── assets/     # Source assets
-│   │   ├── App.tsx     # Main application component
+│   │   ├── App.jsx     # Main application component
 │   │   └── i18n.js     # Internationalization setup
 │   ├── package.json    # Node.js dependencies
 │   └── vite.config.js  # Vite configuration
@@ -70,6 +78,7 @@ For detailed schema information, see [database.md](database.md).
 ## Setup Instructions
 
 ### Prerequisites
+
 - Python 3.9+
 - Node.js 18+
 - PostgreSQL 14+
@@ -77,16 +86,19 @@ For detailed schema information, see [database.md](database.md).
 ### Backend Setup
 
 1. Navigate to the backend directory:
+
 ```bash
 cd backend
 ```
 
 2. Create a virtual environment:
+
 ```bash
 python -m venv venv
 ```
 
 3. Activate the virtual environment:
+
 ```bash
 # Windows
 venv\Scripts\activate
@@ -95,17 +107,20 @@ source venv/bin/activate
 ```
 
 4. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 5. Set up environment variables (create `.env` file):
+
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/structura
 SECRET_KEY=your-secret-key-here
 ```
 
 6. Run the backend server:
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -115,16 +130,19 @@ The backend API will be available at `http://localhost:8000`
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
+
 ```bash
 cd frontend
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -134,12 +152,14 @@ The frontend will be available at `http://localhost:5173`
 ## Running Tests
 
 ### Backend Tests
+
 ```bash
 cd backend
 pytest
 ```
 
 ### Frontend Linting
+
 ```bash
 cd frontend
 npm run lint
@@ -148,6 +168,7 @@ npm run lint
 ## API Documentation
 
 Once the backend is running, access the interactive API documentation at:
+
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
@@ -160,11 +181,13 @@ Once the backend is running, access the interactive API documentation at:
 ## Development
 
 ### Adding New Features
+
 1. Backend: Add endpoints in `backend/app/main.py`
 2. Frontend: Create components in `frontend/src/components/`
 3. Database: Update schema in `database.md` and migrate accordingly
 
 ### Code Style
+
 - Backend: Follow PEP 8 guidelines
 - Frontend: Use ESLint configuration provided
 - Commit messages: Use clear, descriptive messages
