@@ -9,7 +9,7 @@ const navy = {
 	700: "#122844",
 	800: "#0e1f38",
 	900: "#09152a",
-} as const;
+};
 
 const blue = {
 	50: "#e0f0fd",
@@ -22,7 +22,7 @@ const blue = {
 	700: "#0e4d8a",
 	800: "#0a3a6b",
 	900: "#062849",
-} as const;
+};
 
 const neutral = {
 	0: "#ffffff",
@@ -36,7 +36,7 @@ const neutral = {
 	700: "#213545",
 	800: "#0f2030",
 	900: "#080f18",
-} as const;
+};
 
 export const status = {
 	urgent: {
@@ -79,7 +79,7 @@ export const status = {
 		border: "#85b7eb",
 		text: "#0c447c",
 	},
-} as const;
+};
 
 export const colors = {
 	shellLight: navy[400],
@@ -114,7 +114,7 @@ export const colors = {
 	warning: "#ef9f27",
 	danger: "#f09595",
 	info: "#85b7eb",
-} as const;
+};
 
 export const font = {
 	family: {
@@ -148,7 +148,7 @@ export const font = {
 		wide: "0.04em",
 		caps: "0.08em",
 	},
-} as const;
+};
 
 export const spacing = {
 	0: "0px",
@@ -164,7 +164,7 @@ export const spacing = {
 	16: "64px",
 	24: "96px",
 	32: "128px",
-} as const;
+};
 
 export const radius = {
 	sm: "4px",
@@ -172,14 +172,14 @@ export const radius = {
 	lg: "12px",
 	xl: "16px",
 	full: "9999px",
-} as const;
+};
 
 export const shadow = {
 	none: "none",
 	card: "0 1px 3px rgba(9, 21, 42, 0.08)",
 	modal: "0 8px 32px rgba(9, 21, 42, 0.16)",
 	focus: `0 0 0 3px ${blue[200]}`,
-} as const;
+};
 
 export const components = {
 	topBar: {
@@ -191,7 +191,7 @@ export const components = {
 		justifyContent: "space-around",
 		alignItems: "center",
 		flexShrink: 0,
-		position: "sticky" as const,
+		position: "sticky",
 		top: 0,
 		zIndex: 10,
 	},
@@ -259,7 +259,7 @@ export const components = {
 		fontSize: font.size.xs,
 		fontWeight: font.weight.medium,
 		color: colors.textSecondary,
-		textTransform: "uppercase" as const,
+		textTransform: "uppercase",
 		letterSpacing: font.letterSpacing.caps,
 	},
 
@@ -275,13 +275,9 @@ export const components = {
 		alignItems: "center",
 		justifyContent: "center",
 	},
-} as const;
+};
 
-export type StatusKey = keyof typeof status;
-
-export function badgeStyle(
-	key: StatusKey
-): React.CSSProperties {
+export function badgeStyle(key) {
 	const s = status[key];
 	return {
 		background: s.bg,

@@ -5,32 +5,15 @@ import {
 	Route,
 	Navigate,
 } from "react-router-dom";
-// @ts-expect-error - JSX import without type declaration
 import LoginPage from "./pages/LoginPage";
-// @ts-expect-error - JSX import without type declaration
 import ManagerPage from "./pages/ManagerPage";
-// @ts-expect-error - JSX import without type declaration
 import CalendarPage from "./pages/CalendarPage";
-// @ts-expect-error - JSX import without type declaration
 import LogsPage from "./pages/LogsPage";
-// @ts-expect-error - JSX import without type declaration
 import SettingsPage from "./pages/SettingsPage";
-// @ts-expect-error - JSX import without type declaration
 import Bottombar from "./components/Bottombar";
-// @ts-expect-error - JSX import without type declaration
 import AppHeader from "./components/AppHeader";
-// @ts-expect-error - JS import without type declaration
 import { defaultLanguage } from "./i18n";
-// @ts-expect-error - JS import without type declaration
 import * as api from "./services/api";
-
-interface User {
-	id: number;
-	login: string;
-	first_name: string;
-	last_name: string;
-	role: string;
-}
 
 export default function App() {
 	const [isLoggedIn, setIsLoggedIn] =
@@ -39,7 +22,7 @@ export default function App() {
 		defaultLanguage
 	);
 	const [currentUser, setCurrentUser] =
-		useState<User | null>(() => {
+		useState(() => {
 			const stored = localStorage.getItem(
 				"currentUser:v1"
 			);
@@ -68,8 +51,8 @@ export default function App() {
 	};
 
 	const handleLoginSuccess = async (
-		loginInput: string,
-		passwordInput: string
+		loginInput,
+		passwordInput
 	) => {
 		try {
 			const user = await api.login(
