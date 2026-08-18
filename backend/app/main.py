@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -48,9 +49,22 @@ from .models import (
 
 app = FastAPI(title="Structura API")
 
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+]
+
+env_origins = os.getenv("ALLOWED_ORIGINS") or os.getenv("FRONTEND_URL")
+if env_origins:
+    origins = [origin.strip() for origin in env_origins.split(",") if origin.strip()] + default_origins
+else:
+    origins = default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins=origins if env_origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,6 +85,16 @@ def require_role(*allowed_roles):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return current_user
     return role_checker
+
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "service": "Structura API",
+        "docs": "/docs"
+    }
 
 
 # Login endpoint

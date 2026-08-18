@@ -7,7 +7,6 @@ import {
 } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import ManagerPage from "./pages/ManagerPage";
-import CalendarPage from "./pages/CalendarPage";
 import LogsPage from "./pages/LogsPage";
 import SettingsPage from "./pages/SettingsPage";
 import Bottombar from "./components/Bottombar";
@@ -116,16 +115,6 @@ export default function App() {
 											}
 											onLogout={
 												handleLogout
-											}
-										/>
-									}
-								/>
-								<Route
-									path="/calendar"
-									element={
-										<CalendarPage
-											language={
-												language
 											}
 										/>
 									}
