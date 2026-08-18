@@ -2,6 +2,14 @@
 
 **Full-stack Field Service Management System** - A modern web application for property maintenance that enables building administrators to assign work orders and contractors to resolve them on-site.
 
+[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Frontend](https://img.shields.io/badge/Frontend-React_19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![Styling](https://img.shields.io/badge/Styling-TailwindCSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Auth](https://img.shields.io/badge/Auth-JWT-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+
+---
+
 ## Key Highlights
 
 - **RBAC Implementation**: Three-tier role-based access control (Admin, Manager, Contractor) with scoped permissions
