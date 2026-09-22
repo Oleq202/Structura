@@ -1,8 +1,7 @@
 from __future__ import annotations
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
 from .pool import get_pool
-
-# Internal helper functions
-
 
 async def _fetch_row(query: str, *args):
     pool = await get_pool()
@@ -12,7 +11,6 @@ async def _fetch_row(query: str, *args):
         row = await conn.fetchrow(query, *args)
         return dict(row) if row else None
 
-
 async def _fetch_rows(query: str, *args):
     pool = await get_pool()
     if pool is None:
@@ -21,14 +19,12 @@ async def _fetch_rows(query: str, *args):
         rows = await conn.fetch(query, *args)
         return [dict(row) for row in rows]
 
-
 async def _execute(query: str, *args):
     pool = await get_pool()
     if pool is None:
         raise RuntimeError("Database pool not initialized")
     async with pool.acquire() as conn:
         await conn.execute(query, *args)
-
 
 async def _execute_many(query: str, args_list: list[tuple]):
     pool = await get_pool()
@@ -37,43 +33,106 @@ async def _execute_many(query: str, args_list: list[tuple]):
     async with pool.acquire() as conn:
         await conn.executemany(query, args_list)
 
-
-# Users
-
+async def init_db_schema():
+    """Ensure newly required tables, soft delete columns, audit fields, and performance indexes exist."""
+    queries = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;",
+        "ALTER TABLE buildings ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;",
+        "ALTER TABLE buildings ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;",
+        "ALTER TABLE tasks ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;",
+        "ALTER TABLE activity_logs ALTER COLUMN task_id DROP NOT NULL;",
+        "ALTER TABLE activity_logs ALTER COLUMN operation_type TYPE VARCHAR(50);",
+        "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS changes_json TEXT DEFAULT NULL;",
+        "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) DEFAULT NULL;",
+        "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS user_agent TEXT DEFAULT NULL;",
+        "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50) DEFAULT 'task';",
+        "ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS entity_id INTEGER DEFAULT NULL;",
+        """
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            language VARCHAR(10) NOT NULL DEFAULT 'pl',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        """,
+        "ALTER TABLE user_preferences ALTER COLUMN language SET DEFAULT 'pl';",
+        """
+        CREATE TABLE IF NOT EXISTS user_selected_buildings (
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+            PRIMARY KEY (user_id, building_id)
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_tasks_active ON tasks(status, created_at DESC) WHERE deleted_at IS NULL;",
+        "CREATE INDEX IF NOT EXISTS idx_tasks_building_active ON tasks(building_id) WHERE deleted_at IS NULL;",
+        "CREATE INDEX IF NOT EXISTS idx_buildings_active ON buildings(city, district) WHERE deleted_at IS NULL AND is_active = TRUE;",
+        "CREATE INDEX IF NOT EXISTS idx_users_active ON users(role) WHERE deleted_at IS NULL AND is_active = TRUE;",
+        "CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id);",
+    ]
+    for q in queries:
+        try:
+            await _execute(q)
+        except Exception as e:
+            print(f"[SCHEMA INIT ERROR] {e} on query: {q}")
 
 async def get_user(user_id: int):
-    query = "select * from users where id = $1"
+    query = "SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE"
     return await _fetch_row(query, user_id)
 
-
 async def get_user_by_login(login: str):
-    query = "select * from users where login = $1"
+    query = "SELECT * FROM users WHERE login = $1 AND deleted_at IS NULL AND is_active = TRUE"
     return await _fetch_row(query, login)
 
+async def get_all_users(limit: int = 100, offset: int = 0, search: Optional[str] = None):
+    if search:
+        query = """
+            SELECT * FROM users
+            WHERE deleted_at IS NULL AND is_active = TRUE
+              AND (login ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1)
+            ORDER BY last_name, first_name
+            LIMIT $2 OFFSET $3
+        """
+        return await _fetch_rows(query, f"%{search}%", limit, offset)
 
-async def get_all_users():
-    query = "select * from users order by last_name, first_name"
-    return await _fetch_rows(query)
-
+    query = """
+        SELECT * FROM users
+        WHERE deleted_at IS NULL AND is_active = TRUE
+        ORDER BY last_name, first_name
+        LIMIT $1 OFFSET $2
+    """
+    return await _fetch_rows(query, limit, offset)
 
 async def get_contractors():
-    query = (
-        "select * from users where role = 'contractor' order by last_name, first_name"
-    )
+    query = """
+        SELECT * FROM users
+        WHERE role = 'contractor' AND deleted_at IS NULL AND is_active = TRUE
+        ORDER BY last_name, first_name
+    """
     return await _fetch_rows(query)
-
 
 async def add_user(
     login: str, password: str, first_name: str, last_name: str, role: str
-):
-    query = "insert into users (login, password_hash, first_name, last_name, role) values ($1, $2, $3, $4, $5)"
-    await _execute(query, login, password, first_name, last_name, role)
-
+) -> int | None:
+    query = """
+        INSERT INTO users (login, password_hash, first_name, last_name, role)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+    """
+    row = await _fetch_row(query, login, password, first_name, last_name, role)
+    if row:
+        user_id = row["id"]
+        await _execute(
+            "INSERT INTO user_preferences (user_id, language) VALUES ($1, 'pl') ON CONFLICT (user_id) DO NOTHING",
+            user_id,
+        )
+        return user_id
+    return None
 
 async def delete_user(user_id: int):
-    query = "delete from users where id = $1"
-    await _execute(query, user_id)
 
+    query = "UPDATE users SET is_active = FALSE, deleted_at = NOW() WHERE id = $1"
+    await _execute(query, user_id)
 
 async def update_user(
     user_id: int,
@@ -84,109 +143,222 @@ async def update_user(
     role: str,
 ):
     if password is None:
-        query = "update users set login = $2, first_name = $3, last_name = $4, role = $5 where id = $1"
+        query = """
+            UPDATE users
+            SET login = $2, first_name = $3, last_name = $4, role = $5
+            WHERE id = $1 AND deleted_at IS NULL
+        """
         await _execute(query, user_id, login, first_name, last_name, role)
         return
 
-    query = "update users set login = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6 where id = $1"
+    query = """
+        UPDATE users
+        SET login = $2, password_hash = $3, first_name = $4, last_name = $5, role = $6
+        WHERE id = $1 AND deleted_at IS NULL
+    """
     await _execute(query, user_id, login, password, first_name, last_name, role)
 
-
-# Buildings
-
-
 async def get_building(building_id: int):
-    query = "select * from buildings where id = $1"
+    query = "SELECT * FROM buildings WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE"
     return await _fetch_row(query, building_id)
 
-
 async def get_building_by_address(city: str, district: str | None, street_address: str):
-    query = "select * from buildings where city = $1 and district is not distinct from $2 and street_address = $3"
+    query = """
+        SELECT * FROM buildings
+        WHERE city = $1 AND district IS NOT DISTINCT FROM $2 AND street_address = $3
+          AND deleted_at IS NULL AND is_active = TRUE
+    """
     return await _fetch_row(query, city, district, street_address)
 
+async def get_all_buildings(limit: int = 100, offset: int = 0, search: Optional[str] = None):
+    if search:
+        query = """
+            SELECT * FROM buildings
+            WHERE deleted_at IS NULL AND is_active = TRUE
+              AND (city ILIKE $1 OR district ILIKE $1 OR street_address ILIKE $1)
+            ORDER BY city, district, street_address
+            LIMIT $2 OFFSET $3
+        """
+        return await _fetch_rows(query, f"%{search}%", limit, offset)
 
-async def get_all_buildings():
-    query = "select * from buildings order by city, district, street_address"
-    return await _fetch_rows(query)
+    query = """
+        SELECT * FROM buildings
+        WHERE deleted_at IS NULL AND is_active = TRUE
+        ORDER BY city, district, street_address
+        LIMIT $1 OFFSET $2
+    """
+    return await _fetch_rows(query, limit, offset)
 
+async def get_buildings_by_manager(
+    user_id: int,
+    search: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    if search:
+        query = """
+            SELECT b.* FROM buildings b
+            JOIN building_managers bm ON b.id = bm.building_id
+            WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
+            AND (b.city ILIKE $2 OR b.district ILIKE $2 OR b.street_address ILIKE $2)
+            ORDER BY city, district, street_address
+            LIMIT $3 OFFSET $4
+        """
+        return await _fetch_rows(query, user_id, f"%{search}%", limit, offset)
 
-async def get_buildings_by_manager(user_id: int):
-    query = "select b.* from buildings b left join building_managers bm on b.id = bm.building_id where bm.user_id = $1 order by city, district, street_address"
-    return await _fetch_rows(query, user_id)
+    query = """
+        SELECT b.* FROM buildings b
+        JOIN building_managers bm ON b.id = bm.building_id
+        WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
+        ORDER BY city, district, street_address
+        LIMIT $2 OFFSET $3
+    """
+    return await _fetch_rows(query, user_id, limit, offset)
 
-
-async def add_building(city: str, district: str | None, street_address: str):
-    query = "insert into buildings (city, district, street_address) values ($1, $2, $3)"
-    await _execute(query, city, district, street_address)
-
+async def add_building(city: str, district: str | None, street_address: str) -> int | None:
+    query = """
+        INSERT INTO buildings (city, district, street_address)
+        VALUES ($1, $2, $3)
+        RETURNING id
+    """
+    row = await _fetch_row(query, city, district, street_address)
+    return row["id"] if row else None
 
 async def update_building(
     building_id: int, city: str, district: str | None, street_address: str
 ):
-    query = "update buildings set city = $2, district = $3, street_address = $4 where id = $1"
+    query = """
+        UPDATE buildings
+        SET city = $2, district = $3, street_address = $4
+        WHERE id = $1 AND deleted_at IS NULL
+    """
     await _execute(query, building_id, city, district, street_address)
 
-
 async def delete_building(building_id: int):
-    query = "delete from buildings where id = $1"
+
+    query = "UPDATE buildings SET is_active = FALSE, deleted_at = NOW() WHERE id = $1"
     await _execute(query, building_id)
 
-
-# Tasks
-
-
 async def get_task(task_id: int):
-    query = """select t.*, 
-        cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
-        at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
-        b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
-        from tasks t
-        left join users cb on t.created_by = cb.id
-        left join users at on t.assigned_to = at.id
-        left join buildings b on t.building_id = b.id
-        where t.id = $1"""
+    query = """
+        SELECT t.*,
+            cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
+            at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
+            b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM tasks t
+        LEFT JOIN users cb ON t.created_by = cb.id
+        LEFT JOIN users at ON t.assigned_to = at.id
+        LEFT JOIN buildings b ON t.building_id = b.id
+        WHERE t.id = $1 AND t.deleted_at IS NULL
+    """
     return await _fetch_row(query, task_id)
 
+async def get_all_tasks(
+    building_id: Optional[int] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    manager_id: Optional[int] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    conditions = ["t.deleted_at IS NULL"]
+    params = []
+    param_idx = 1
 
-async def get_all_tasks():
-    query = """select t.*, 
-        cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
-        at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
-        b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
-        from tasks t
-        left join users cb on t.created_by = cb.id
-        left join users at on t.assigned_to = at.id
-        left join buildings b on t.building_id = b.id
-        order by t.created_at desc"""
-    return await _fetch_rows(query)
+    if manager_id is not None:
+        conditions.append(f"t.building_id IN (SELECT building_id FROM building_managers WHERE user_id = ${param_idx})")
+        params.append(manager_id)
+        param_idx += 1
 
+    if building_id is not None:
+        conditions.append(f"t.building_id = ${param_idx}")
+        params.append(building_id)
+        param_idx += 1
 
-async def get_task_by_contractor(user_id: int):
-    query = "select * from tasks where assigned_to = $1 order by created_at desc"
-    return await _fetch_rows(query, user_id)
+    if status is not None:
+        conditions.append(f"t.status = ${param_idx}")
+        params.append(status)
+        param_idx += 1
 
+    if search is not None:
+        conditions.append(f"(t.title ILIKE ${param_idx} OR t.description ILIKE ${param_idx})")
+        params.append(f"%{search}%")
+        param_idx += 1
+
+    params.extend([limit, offset])
+
+    query = f"""
+        SELECT t.*,
+            cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
+            at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
+            b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM tasks t
+        LEFT JOIN users cb ON t.created_by = cb.id
+        LEFT JOIN users at ON t.assigned_to = at.id
+        LEFT JOIN buildings b ON t.building_id = b.id
+        WHERE {' AND '.join(conditions)}
+        ORDER BY t.created_at DESC
+        LIMIT ${param_idx} OFFSET ${param_idx + 1}
+    """
+    return await _fetch_rows(query, *params)
+
+async def get_task_by_contractor(
+    user_id: int,
+    status: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    conditions = ["t.assigned_to = $1", "t.deleted_at IS NULL"]
+    params = [user_id]
+    param_idx = 2
+
+    if status is not None:
+        conditions.append(f"t.status = ${param_idx}")
+        params.append(status)
+        param_idx += 1
+
+    params.extend([limit, offset])
+
+    query = f"""
+        SELECT t.*,
+            cb.id as created_by_id, cb.login as created_by_login, cb.first_name as created_by_first_name, cb.last_name as created_by_last_name, cb.role as created_by_role,
+            at.id as assigned_to_id, at.login as assigned_to_login, at.first_name as assigned_to_first_name, at.last_name as assigned_to_last_name, at.role as assigned_to_role,
+            b.id as building_id, b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM tasks t
+        LEFT JOIN users cb ON t.created_by = cb.id
+        LEFT JOIN users at ON t.assigned_to = at.id
+        LEFT JOIN buildings b ON t.building_id = b.id
+        WHERE {' AND '.join(conditions)}
+        ORDER BY t.created_at DESC
+        LIMIT ${param_idx} OFFSET ${param_idx + 1}
+    """
+    return await _fetch_rows(query, *params)
 
 async def get_pending_tasks_by_user(user_id: int, role: str, limit: int = 10):
     if role == "admin":
-        query = "select * from tasks where status = 'pending' order by created_at desc limit $1"
+        query = "SELECT * FROM tasks WHERE status = 'pending' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $1"
         return await _fetch_rows(query, limit)
 
-    query = """select t.* from tasks t
-        join building_managers bm on t.building_id = bm.building_id
-        where bm.user_id = $1 and t.status = 'pending' order by t.created_at desc limit $2"""
+    query = """
+        SELECT t.* FROM tasks t
+        JOIN building_managers bm ON t.building_id = bm.building_id
+        WHERE bm.user_id = $1 AND t.status = 'pending' AND t.deleted_at IS NULL
+        ORDER BY t.created_at DESC LIMIT $2
+    """
     return await _fetch_rows(query, user_id, limit)
-
 
 async def get_completed_tasks_by_user(user_id: int, role: str, limit: int = 10):
     if role == "admin":
-        query = "select * from tasks where status = 'completed' order by created_at desc limit $1"
+        query = "SELECT * FROM tasks WHERE status = 'completed' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $1"
         return await _fetch_rows(query, limit)
 
-    query = """select t.* from tasks t
-        join building_managers bm on t.building_id = bm.building_id
-        where bm.user_id = $1 and t.status = 'completed' order by t.created_at desc limit $2"""
+    query = """
+        SELECT t.* FROM tasks t
+        JOIN building_managers bm ON t.building_id = bm.building_id
+        WHERE bm.user_id = $1 AND t.status = 'completed' AND t.deleted_at IS NULL
+        ORDER BY t.created_at DESC LIMIT $2
+    """
     return await _fetch_rows(query, user_id, limit)
-
 
 async def add_task(
     title: str,
@@ -194,10 +366,14 @@ async def add_task(
     building_id: int,
     created_by: int,
     assigned_to: int,
-):
-    query = "insert into tasks (title, description, building_id, created_by, assigned_to) values ($1, $2, $3, $4, $5)"
-    await _execute(query, title, description, building_id, created_by, assigned_to)
-
+) -> int | None:
+    query = """
+        INSERT INTO tasks (title, description, building_id, created_by, assigned_to)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+    """
+    row = await _fetch_row(query, title, description, building_id, created_by, assigned_to)
+    return row["id"] if row else None
 
 async def update_task(
     task_id: int,
@@ -237,50 +413,55 @@ async def update_task(
         param_index += 1
 
     if updates:
-        query = f"update tasks set {', '.join(updates)} where id = $1"
+        query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = $1 AND deleted_at IS NULL"
         await _execute(query, *params)
 
-
 async def update_task_status(task_id: int, status: str):
-    query = "update tasks set status = $2 where id = $1"
+    query = "UPDATE tasks SET status = $2 WHERE id = $1 AND deleted_at IS NULL"
     await _execute(query, task_id, status)
 
-
 async def delete_task(task_id: int):
-    query = "delete from tasks where id = $1"
+
+    query = "UPDATE tasks SET deleted_at = NOW() WHERE id = $1"
     await _execute(query, task_id)
 
-
-# Activity logs
-
-
 async def get_activity_logs(limit: int = 10):
-    query = """select al.*,
-        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
-        t.title as task_title, t.status as task_status,
-        b.city as building_city, b.district as building_district, b.street_address as building_street_address
-        from activity_logs al
-        left join users u on al.user_id = u.id
-        left join tasks t on al.task_id = t.id
-        left join buildings b on t.building_id = b.id
-        order by al.timestamp desc limit $1"""
+    query = """
+        SELECT al.*,
+            u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+            t.title as task_title, t.status as task_status,
+            b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM activity_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        LEFT JOIN tasks t ON al.task_id = t.id
+        LEFT JOIN buildings b ON t.building_id = b.id
+        ORDER BY al.timestamp DESC LIMIT $1
+    """
     return await _fetch_rows(query, limit)
 
-
 async def get_activity_logs_by_task(task_id: int):
-    query = """select al.*,
-        u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
-        t.title as task_title, t.status as task_status,
-        b.city as building_city, b.district as building_district, b.street_address as building_street_address
-        from activity_logs al
-        left join users u on al.user_id = u.id
-        left join tasks t on al.task_id = t.id
-        left join buildings b on t.building_id = b.id
-        where al.task_id = $1 order by al.timestamp asc"""
+    query = """
+        SELECT al.*,
+            u.id as user_id, u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+            t.title as task_title, t.status as task_status,
+            b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM activity_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        LEFT JOIN tasks t ON al.task_id = t.id
+        LEFT JOIN buildings b ON t.building_id = b.id
+        WHERE al.task_id = $1 ORDER BY al.timestamp ASC
+    """
     return await _fetch_rows(query, task_id)
 
-
-async def get_activity_logs_filtered(user_id: int | None = None, start_date: str | None = None, end_date: str | None = None, limit: int = 50):
+async def get_activity_logs_filtered(
+    user_id: int | None = None,
+    entity_type: str | None = None,
+    operation_type: str | None = None,
+    search: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int = 50,
+):
     conditions = []
     params = []
     param_index = 1
@@ -290,61 +471,185 @@ async def get_activity_logs_filtered(user_id: int | None = None, start_date: str
         params.append(user_id)
         param_index += 1
 
-    if start_date is not None:
+    if entity_type is not None and str(entity_type).strip():
+        conditions.append(f"al.entity_type = ${param_index}")
+        params.append(str(entity_type).strip())
+        param_index += 1
+
+    if operation_type is not None and str(operation_type).strip():
+        conditions.append(f"al.operation_type = ${param_index}")
+        params.append(str(operation_type).strip())
+        param_index += 1
+
+    if search is not None and str(search).strip():
+        search_pattern = f"%{str(search).strip()}%"
+        conditions.append(
+            f"(al.action ILIKE ${param_index} OR t.title ILIKE ${param_index} OR u.login ILIKE ${param_index} OR u.first_name ILIKE ${param_index} OR u.last_name ILIKE ${param_index})"
+        )
+        params.append(search_pattern)
+        param_index += 1
+
+    if start_date is not None and str(start_date).strip():
+        val = str(start_date).strip()
+        if len(val) == 10:
+            dt = datetime.strptime(val, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        else:
+            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
         conditions.append(f"al.timestamp >= ${param_index}")
-        params.append(start_date)
+        params.append(dt)
         param_index += 1
 
-    if end_date is not None:
+    if end_date is not None and str(end_date).strip():
+        val = str(end_date).strip()
+        if len(val) == 10:
+            dt = datetime.strptime(val, "%Y-%m-%d").replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc)
+        else:
+            dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
         conditions.append(f"al.timestamp <= ${param_index}")
-        params.append(end_date)
+        params.append(dt)
         param_index += 1
 
-    where_clause = f"where {' and '.join(conditions)}" if conditions else ""
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     params.append(limit)
 
-    query = f"""select al.id, al.task_id, al.user_id, al.operation_type, al.action, al.changes_json, al.timestamp,
-        u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
-        t.title as task_title, t.status as task_status,
-        b.city as building_city, b.district as building_district, b.street_address as building_street_address
-        from activity_logs al
-        left join users u on al.user_id = u.id
-        left join tasks t on al.task_id = t.id
-        left join buildings b on t.building_id = b.id
+    query = f"""
+        SELECT al.id, al.task_id, al.user_id, al.operation_type, al.action, al.changes_json, al.timestamp,
+            al.entity_type, al.entity_id, al.ip_address, al.user_agent,
+            u.login as user_login, u.first_name as user_first_name, u.last_name as user_last_name, u.role as user_role,
+            t.title as task_title, t.status as task_status,
+            b.city as building_city, b.district as building_district, b.street_address as building_street_address
+        FROM activity_logs al
+        LEFT JOIN users u ON al.user_id = u.id
+        LEFT JOIN tasks t ON al.task_id = t.id
+        LEFT JOIN buildings b ON t.building_id = b.id
         {where_clause}
-        order by al.timestamp desc limit ${param_index}"""
+        ORDER BY al.timestamp DESC LIMIT ${param_index}
+    """
     return await _fetch_rows(query, *params)
 
-
-async def add_activity_log(task_id: int, user_id: int | None, operation_type: str, action: str, changes_json: dict | None = None):
+async def add_activity_log(
+    task_id: int | None,
+    user_id: int | None,
+    operation_type: str,
+    action: str,
+    changes_json: dict | None = None,
+    entity_type: str = "task",
+    entity_id: int | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> int | None:
     import json
-    query = "insert into activity_logs (task_id, user_id, operation_type, action, changes_json) values ($1, $2, $3, $4, $5)"
+
+    query = """
+        INSERT INTO activity_logs (task_id, user_id, operation_type, action, changes_json, entity_type, entity_id, ip_address, user_agent)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING id
+    """
     changes_json_str = json.dumps(changes_json) if changes_json else None
-    await _execute(query, task_id, user_id, operation_type, action, changes_json_str)
-
-
-# Building managers
-
+    row = await _fetch_row(
+        query,
+        task_id,
+        user_id,
+        operation_type,
+        action,
+        changes_json_str,
+        entity_type,
+        entity_id,
+        ip_address,
+        user_agent,
+    )
+    return row["id"] if row else None
 
 async def get_manager_for_building(building_id: int):
-    query = """select u.* from users u
-        join building_managers bm on u.id = bm.user_id
-        where bm.building_id = $1"""
+    query = """
+        SELECT u.* FROM users u
+        JOIN building_managers bm ON u.id = bm.user_id
+        WHERE bm.building_id = $1 AND u.deleted_at IS NULL AND u.is_active = TRUE
+    """
     return await _fetch_row(query, building_id)
 
-
 async def get_building_for_manager(user_id: int):
-    query = """select b.* from buildings b
-        join building_managers bm on b.id = bm.building_id
-        where bm.user_id = $1"""
+    query = """
+        SELECT b.* FROM buildings b
+        JOIN building_managers bm ON b.id = bm.building_id
+        WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
+    """
     return await _fetch_row(query, user_id)
 
-
 async def add_building_manager(building_id: int, user_id: int):
-    query = "insert into building_managers (building_id, user_id) values ($1, $2)"
+    query = "INSERT INTO building_managers (building_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
     await _execute(query, building_id, user_id)
-
 
 async def delete_building_manager(building_id: int, user_id: int):
-    query = "delete from building_managers where building_id = $1 and user_id = $2"
+    query = "DELETE FROM building_managers WHERE building_id = $1 AND user_id = $2"
     await _execute(query, building_id, user_id)
+
+async def get_user_preferences(user_id: int) -> dict:
+    """Fetch user language preferences and selected building IDs."""
+    pref_row = await _fetch_row(
+        "SELECT language FROM user_preferences WHERE user_id = $1", user_id
+    )
+    language = pref_row["language"] if pref_row else "pl"
+
+    rows = await _fetch_rows(
+        """
+        SELECT usb.building_id
+        FROM user_selected_buildings usb
+        JOIN buildings b ON usb.building_id = b.id
+        WHERE usb.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
+        """,
+        user_id,
+    )
+    selected_building_ids = [r["building_id"] for r in rows]
+
+    return {
+        "user_id": user_id,
+        "language": language,
+        "selected_building_ids": selected_building_ids,
+    }
+
+async def update_user_preferences(
+    user_id: int,
+    language: str | None = None,
+    selected_building_ids: list[int] | None = None,
+) -> dict:
+    """Update language preference and sync selected building workspace in an atomic transaction."""
+    pool = await get_pool()
+    if pool is None:
+        raise RuntimeError("Database pool not initialized")
+
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if language is not None:
+                await conn.execute(
+                    """
+                    INSERT INTO user_preferences (user_id, language, updated_at)
+                    VALUES ($1, $2, NOW())
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET language = EXCLUDED.language, updated_at = NOW()
+                    """,
+                    user_id,
+                    language,
+                )
+            else:
+                await conn.execute(
+                    """
+                    INSERT INTO user_preferences (user_id, language, updated_at)
+                    VALUES ($1, 'pl', NOW())
+                    ON CONFLICT (user_id) DO NOTHING
+                    """,
+                    user_id,
+                )
+
+            if selected_building_ids is not None:
+                await conn.execute(
+                    "DELETE FROM user_selected_buildings WHERE user_id = $1", user_id
+                )
+                if selected_building_ids:
+                    args_list = [(user_id, b_id) for b_id in selected_building_ids]
+                    await conn.executemany(
+                        "INSERT INTO user_selected_buildings (user_id, building_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                        args_list,
+                    )
+
+    return await get_user_preferences(user_id)
