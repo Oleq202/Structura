@@ -2,13 +2,11 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Literal, Dict, Any
 from datetime import datetime
 
-
 class UserBase(BaseModel):
     login: str
     first_name: str
     last_name: str
     role: Literal["admin", "manager", "contractor"]
-
 
 class UserCreate(UserBase):
     password: str
@@ -16,10 +14,8 @@ class UserCreate(UserBase):
     class Config:
         extra = "allow"
 
-
 class UserUpdate(UserBase):
     password: Optional[str] = None
-
 
 class User(UserBase):
     id: int
@@ -29,20 +25,16 @@ class User(UserBase):
         from_attributes = True
         populate_by_name = True
 
-
 class BuildingBase(BaseModel):
     city: str
     district: Optional[str] = None
     street_address: str
 
-
 class BuildingCreate(BuildingBase):
     pass
 
-
 class BuildingUpdate(BuildingBase):
     pass
-
 
 class Building(BuildingBase):
     id: int
@@ -52,16 +44,13 @@ class Building(BuildingBase):
         from_attributes = True
         populate_by_name = True
 
-
 class BuildingManager(BaseModel):
     user_id: int
     building_id: int
 
-
 class LoginRequest(BaseModel):
     login: str
     password: str
-
 
 class LoginResponse(BaseModel):
     id: int
@@ -70,10 +59,27 @@ class LoginResponse(BaseModel):
     last_name: str
     role: str
     access_token: str
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
 
     class Config:
         populate_by_name = True
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+class UserPreferences(BaseModel):
+    user_id: int
+    language: str = "pl"
+    selected_building_ids: List[int] = []
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+class UserPreferencesUpdate(BaseModel):
+    language: Optional[str] = None
+    selected_building_ids: Optional[List[int]] = None
 
 class UserNested(BaseModel):
     id: int
@@ -86,7 +92,6 @@ class UserNested(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-
 class BuildingNested(BaseModel):
     id: int
     city: str
@@ -97,7 +102,6 @@ class BuildingNested(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-
 class TaskBase(BaseModel):
     title: str
     description: Optional[str] = None
@@ -105,10 +109,8 @@ class TaskBase(BaseModel):
     created_by: int
     assigned_to: int
 
-
 class TaskCreate(TaskBase):
     pass
-
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -117,7 +119,6 @@ class TaskUpdate(BaseModel):
     created_by: Optional[int] = None
     assigned_to: Optional[int] = None
     status: Optional[str] = None
-
 
 class Task(BaseModel):
     id: int
@@ -181,18 +182,19 @@ class Task(BaseModel):
         from_attributes = True
         populate_by_name = True
 
-
 class ActivityLogBase(BaseModel):
-    task_id: int
+    task_id: Optional[int] = None
     user_id: Optional[int] = None
-    operation_type: Literal["create", "update", "delete", "status_change"]
+    operation_type: str
     action: str
     changes_json: Optional[Dict[str, Any]] = None
-
+    entity_type: Optional[str] = "task"
+    entity_id: Optional[int] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
 
 class ActivityLogCreate(ActivityLogBase):
     pass
-
 
 class ActivityLog(ActivityLogBase):
     id: int
@@ -207,6 +209,10 @@ class ActivityLog(ActivityLogBase):
     building_city: Optional[str] = None
     building_district: Optional[str] = None
     building_street_address: Optional[str] = None
+    entity_type: Optional[str] = "task"
+    entity_id: Optional[int] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
 
     @property
     def user(self):
