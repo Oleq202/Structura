@@ -6,6 +6,7 @@ import {
 import Task from "../components/Task";
 import Navbar from "../components/Navbar";
 import TaskModal from "../components/TaskModal";
+import WorkspaceFilterModal from "../components/WorkspaceFilterModal";
 import {
 	colors,
 	font,
@@ -17,6 +18,70 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 import * as api from "../services/api";
+
+const ICONS = {
+	building: (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+			<path d="M9 22v-4h6v4" />
+			<path d="M8 6h.01" />
+			<path d="M16 6h.01" />
+			<path d="M12 6h.01" />
+			<path d="M12 10h.01" />
+			<path d="M12 14h.01" />
+			<path d="M16 10h.01" />
+			<path d="M16 14h.01" />
+			<path d="M8 10h.01" />
+			<path d="M8 14h.01" />
+		</svg>
+	),
+	sliders: (
+		<svg
+			width="15"
+			height="15"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<line x1="4" y1="21" x2="4" y2="14" />
+			<line x1="4" y1="10" x2="4" y2="3" />
+			<line x1="12" y1="21" x2="12" y2="12" />
+			<line x1="12" y1="8" x2="12" y2="3" />
+			<line x1="20" y1="21" x2="20" y2="16" />
+			<line x1="20" y1="12" x2="20" y2="3" />
+			<line x1="1" y1="14" x2="7" y2="14" />
+			<line x1="9" y1="8" x2="15" y2="8" />
+			<line x1="17" y1="16" x2="23" y2="16" />
+		</svg>
+	),
+	empty: (
+		<svg
+			width="40"
+			height="40"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="1.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+			<line x1="9" y1="14" x2="15" y2="14" />
+		</svg>
+	),
+};
 
 const groupTasksByBuilding = (tasksToGroup) => {
 	const groups = {};
@@ -107,15 +172,13 @@ function reducer(state, action) {
 		case "TOGGLE_CREATE_TASK":
 			return {
 				...state,
-				isTaskModalOpen:
-					!state.isTaskModalOpen,
+				isTaskModalOpen: !state.isTaskModalOpen,
 			};
 		case "TOGGLE_TASK_EXPANDED":
 			return {
 				...state,
 				expandedTaskId:
-					state.expandedTaskId ===
-					action.payload
+					state.expandedTaskId === action.payload
 						? null
 						: action.payload,
 			};
@@ -133,6 +196,8 @@ export default function ManagerPage({
 		reducer,
 		initialState
 	);
+	const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
+	const [isWorkspaceModalOpen, setWorkspaceModalOpen] = useState(false);
 
 	const openTaskModal = () =>
 		dispatch({
@@ -152,17 +217,53 @@ export default function ManagerPage({
 			payload: taskId,
 		});
 
+	const handleSaveWorkspace = (newBuildingIds) => {
+		setSelectedBuildingIds(newBuildingIds);
+		api.updateUserPreferences({
+			selected_building_ids: newBuildingIds,
+		}).catch((err) =>
+			console.error("Failed to save workspace preferences:", err)
+		);
+	};
+
+	const isNoBuildingsSelected =
+		currentUser?.role !== "contractor" &&
+		selectedBuildingIds !== null &&
+		Array.isArray(selectedBuildingIds) &&
+		selectedBuildingIds.length === 0 &&
+		state.buildings.length > 0;
+
+	const isWorkspaceFiltered =
+		currentUser?.role !== "contractor" &&
+		selectedBuildingIds !== null &&
+		Array.isArray(selectedBuildingIds) &&
+		selectedBuildingIds.length > 0 &&
+		selectedBuildingIds.length < state.buildings.length;
+
 	const getFilteredTasks = () => {
+		if (isNoBuildingsSelected) {
+			return [];
+		}
+
+		let currentTasks = state.tasks;
+
+		if (isWorkspaceFiltered) {
+			currentTasks = currentTasks.filter((t) =>
+				selectedBuildingIds.includes(t.building_id)
+			);
+		}
+
 		switch (state.activeFilter) {
 			case "pending":
-				return state.tasks.filter(
+				return currentTasks.filter(
 					(t) => t.status === "pending"
 				);
 			case "completed":
-				return state.tasks.filter(
-					(t) =>
-						t.status === "completed"
+				return currentTasks.filter(
+					(t) => t.status === "completed"
 				);
+			case "all":
+				return currentTasks;
 			default:
 				if (
 					![
@@ -171,15 +272,13 @@ export default function ManagerPage({
 						"completed",
 					].includes(state.activeFilter)
 				) {
-					return state.tasks.filter(
+					return currentTasks.filter(
 						(t) =>
 							t.building_id ===
-							parseInt(
-								state.activeFilter
-							)
+							parseInt(state.activeFilter)
 					);
 				}
-				return state.tasks;
+				return currentTasks;
 		}
 	};
 
@@ -199,12 +298,14 @@ export default function ManagerPage({
 			api.getTasks(),
 			api.getBuildings(),
 			api.getContractors(),
+			api.getUserPreferences().catch(() => null),
 		])
 			.then(
 				([
 					tasks,
 					buildings,
 					contractors,
+					prefs,
 				]) => {
 					dispatch({
 						type: "SET_TASKS",
@@ -218,23 +319,23 @@ export default function ManagerPage({
 						type: "SET_CONTRACTORS",
 						payload: contractors,
 					});
+					if (
+						prefs &&
+						Array.isArray(prefs.selected_building_ids)
+					) {
+						setSelectedBuildingIds(prefs.selected_building_ids);
+					} else {
+						setSelectedBuildingIds(null);
+					}
 				}
 			)
 			.catch(console.error);
 	}, []);
 
-	const handleMarkCompleted = async (
-		taskId
-	) => {
+	const handleMarkCompleted = async (taskId) => {
 		try {
-			// Contractors use the status endpoint, managers/admins use updateTask
-			if (
-				currentUser.role === "contractor"
-			) {
-				await api.updateTaskStatus(
-					taskId,
-					"completed"
-				);
+			if (currentUser.role === "contractor") {
+				await api.updateTaskStatus(taskId, "completed");
 			} else {
 				await api.updateTask(taskId, {
 					status: "completed",
@@ -243,25 +344,14 @@ export default function ManagerPage({
 			}
 			refreshTasks();
 		} catch (err) {
-			console.error(
-				"Error marking task as completed",
-				err
-			);
+			console.error("Error marking task as completed", err);
 		}
 	};
 
-	const handleRevertCompleted = async (
-		taskId
-	) => {
+	const handleRevertCompleted = async (taskId) => {
 		try {
-			// Contractors use the status endpoint, managers/admins use updateTask
-			if (
-				currentUser.role === "contractor"
-			) {
-				await api.updateTaskStatus(
-					taskId,
-					"pending"
-				);
+			if (currentUser.role === "contractor") {
+				await api.updateTaskStatus(taskId, "pending");
 			} else {
 				await api.updateTask(taskId, {
 					status: "pending",
@@ -270,35 +360,23 @@ export default function ManagerPage({
 			}
 			refreshTasks();
 		} catch (err) {
-			console.error(
-				"Error reverting task completion",
-				err
-			);
+			console.error("Error reverting task completion", err);
 		}
 	};
 
 	const handleDeleteTask = async (taskId) => {
-		if (
-			!window.confirm(t.deleteTaskConfirm)
-		) {
+		if (!window.confirm(t.deleteTaskConfirm)) {
 			return;
 		}
 		try {
-			await api.deleteTask(
-				taskId,
-				currentUser.id
-			);
+			await api.deleteTask(taskId, currentUser.id);
 			refreshTasks();
 		} catch (err) {
-			console.error(
-				"Error deleting task",
-				err
-			);
+			console.error("Error deleting task", err);
 		}
 	};
 
-	const [editingTask, setEditingTask] =
-		useState(null);
+	const [editingTask, setEditingTask] = useState(null);
 
 	const openTaskEditor = (task) => {
 		setEditingTask(task);
@@ -309,7 +387,6 @@ export default function ManagerPage({
 	};
 
 	const filteredTasks = getFilteredTasks();
-
 	return (
 		<div
 			style={{
@@ -318,6 +395,7 @@ export default function ManagerPage({
 				background: colors.pageBg,
 				fontFamily: font.family.sans,
 				boxSizing: "border-box",
+				minHeight: "100%",
 			}}
 		>
 			<Navbar
@@ -330,476 +408,513 @@ export default function ManagerPage({
 				}
 				language={language}
 			/>
+
 			<div
 				style={{
 					display: "flex",
 					flexDirection: "column",
-					gap: "24px",
-					padding: "16px",
+					gap: spacing[4],
+					padding: `${spacing[3]} ${spacing[4]}`,
 					alignItems: "center",
-					width: "80%",
+					width: "100%",
+					maxWidth: "600px",
 					margin: "0 auto",
+					boxSizing: "border-box",
 				}}
 			>
+				{currentUser?.role !== "contractor" && state.buildings.length > 0 && (
+					<div
+						style={{
+							width: "100%",
+							maxWidth: "420px",
+							display: "flex",
+							justifyContent: "space-between",
+							alignItems: "center",
+							padding: `${spacing[2]} ${spacing[3]}`,
+							background: colors.cardBg,
+							border: `1px solid ${colors.borderSubtle}`,
+							borderRadius: radius.lg,
+							boxShadow: shadow.card,
+							boxSizing: "border-box",
+						}}
+					>
+						<div
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: spacing[2],
+								color: colors.textSecondary,
+								fontSize: font.size.sm,
+							}}
+						>
+							<span style={{ color: colors.primary, display: "flex", alignItems: "center" }}>
+								{ICONS.building}
+							</span>
+							<span style={{ fontWeight: font.weight.medium, color: colors.textHeading }}>
+								{isNoBuildingsSelected
+									? t.noBuildingsSelected || "No buildings selected"
+									: !isWorkspaceFiltered
+										? t.allBuildings || "All Buildings"
+										: `${selectedBuildingIds.length} / ${state.buildings.length} ${t.buildingsCount || "buildings"}`}
+							</span>
+						</div>
+
+						<button
+							type="button"
+							onClick={() => setWorkspaceModalOpen(true)}
+							style={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: "6px",
+								background: (isWorkspaceFiltered || isNoBuildingsSelected) ? `${colors.primary}15` : colors.pageBg,
+								border: `1px solid ${(isWorkspaceFiltered || isNoBuildingsSelected) ? colors.primary : colors.borderDefault}`,
+								color: colors.primary,
+								fontWeight: font.weight.big,
+								cursor: "pointer",
+								fontSize: font.size.xs,
+								padding: `5px 10px`,
+								borderRadius: radius.md,
+								transition: "all 0.15s ease",
+							}}
+						>
+							{ICONS.sliders}
+							<span>{t.workspaceFilter || "Filter"}</span>
+						</button>
+					</div>
+				)}
+
 				{state.activeFilter === "all" ? (
 					<>
 						{(() => {
-							const pendingTasks =
-								state.tasks.filter(
-									(t) =>
-										t.status ===
-										"pending"
-								);
-							const pendingGroups =
-								groupTasksByBuilding(
-									pendingTasks
-								);
-							return pendingGroups.length >
-								0 ? (
-								<>
-									<h2
-										style={{
-											fontSize:
-												font
-													.size
-													.lg,
-											fontWeight:
-												font
-													.weight
-													.medium,
-											color: colors.textHeading,
-											margin: 0,
-											width: "100%",
-											maxWidth:
-												"420px",
-										}}
-									>
-										{
-											translations[
-												language
-											]
-												.pendingTasks
-										}
-									</h2>
-									{pendingGroups.map(
-										(
-											group
-										) => (
+							const pendingTasks = filteredTasks.filter(
+								(t) => t.status === "pending"
+							);
+							const pendingGroups = groupTasksByBuilding(pendingTasks);
+
+							const completedTasks = filteredTasks.filter(
+								(t) => t.status === "completed"
+							);
+							const completedGroups = groupTasksByBuilding(completedTasks);
+
+							if (pendingGroups.length === 0 && completedGroups.length === 0) {
+								if (isNoBuildingsSelected) {
+									return (
+										<div
+											style={{
+												width: "100%",
+												maxWidth: "420px",
+												textAlign: "center",
+												padding: `${spacing[8]} ${spacing[5]}`,
+												color: colors.textSecondary,
+												display: "flex",
+												flexDirection: "column",
+												alignItems: "center",
+												gap: spacing[3],
+												background: colors.cardBg,
+												borderRadius: radius.xl,
+												border: `1px dashed ${colors.borderDefault}`,
+												boxSizing: "border-box",
+												marginTop: spacing[2],
+											}}
+										>
 											<div
-												key={
-													group
-														.building
-														?.id ||
-													group
-														.tasks[0]
-														?.building_id
-												}
 												style={{
-													width: "100%",
-													maxWidth:
-														"420px",
+													width: "44px",
+													height: "44px",
+													borderRadius: radius.full,
+													background: `${colors.primary}15`,
+													color: colors.primary,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
 												}}
 											>
-												<div
-													style={{
-														fontSize:
-															font
-																.size
-																.sm,
-														color: colors.textSecondary,
-														marginBottom:
-															spacing[3],
-														fontWeight:
-															font
-																.weight
-																.medium,
-													}}
-												>
-													{
-														group
-															.building
-															?.street_address
-													}
-
-													,{" "}
-													{
-														group
-															.building
-															?.district
-													}
-
-													,{" "}
-													{
-														group
-															.building
-															?.city
-													}
-												</div>
-												<div
-													style={{
-														display:
-															"flex",
-														flexDirection:
-															"column",
-														gap: spacing[3],
-													}}
-												>
-													{group.tasks.map(
-														(
-															task
-														) => (
-															<Task
-																key={
-																	task.id
-																}
-																initialData={
-																	task
-																}
-																expanded={
-																	state.expandedTaskId ===
-																	task.id
-																}
-																onToggle={() =>
-																	toggleTaskExpanded(
-																		task.id
-																	)
-																}
-																onMarkCompleted={() =>
-																	handleMarkCompleted(
-																		task.id
-																	)
-																}
-																onReassign={() =>
-																	handleReassign(
-																		task.id
-																	)
-																}
-																onEdit={() =>
-																	openTaskEditor(
-																		task
-																	)
-																}
-																onRevertCompleted={() =>
-																	handleRevertCompleted(
-																		task.id
-																	)
-																}
-																onDeleteTask={() =>
-																	handleDeleteTask(
-																		task.id
-																	)
-																}
-																language={
-																	language
-																}
-																userRole={
-																	currentUser.role
-																}
-															/>
-														)
-													)}
-												</div>
+												{ICONS.building}
 											</div>
-										)
-									)}
-								</>
-							) : null;
-						})()}
-						{(() => {
-							const completedTasks =
-								state.tasks.filter(
-									(t) =>
-										t.status ===
-										"completed"
-								);
-							const completedGroups =
-								groupTasksByBuilding(
-									completedTasks
-								);
-							return completedGroups.length >
-								0 ? (
-								<>
-									<h2
-										style={{
-											fontSize:
-												font
-													.size
-													.lg,
-											fontWeight:
-												font
-													.weight
-													.medium,
-											color: colors.textHeading,
-											margin: 0,
-											width: "100%",
-											maxWidth:
-												"420px",
-										}}
-									>
-										{
-											translations[
-												language
-											]
-												.completedTasks
-										}
-									</h2>
-									{completedGroups.map(
-										(
-											group
-										) => (
-											<div
-												key={
-													group
-														.building
-														?.id ||
-													group
-														.tasks[0]
-														?.building_id
-												}
+											<div>
+												<h3
+													style={{
+														margin: `0 0 ${spacing[1]} 0`,
+														fontSize: font.size.md,
+														fontWeight: font.weight.big,
+														color: colors.textHeading,
+													}}
+												>
+													{t.noBuildingsSelected || "No buildings selected"}
+												</h3>
+												<p style={{ margin: 0, fontSize: font.size.sm, color: colors.textSecondary }}>
+													{t.selectBuildingsPrompt || "Select buildings in the workspace filter to view tasks."}
+												</p>
+											</div>
+											<button
+												type="button"
+												onClick={() => setWorkspaceModalOpen(true)}
 												style={{
-													width: "100%",
-													maxWidth:
-														"420px",
+													...components.primaryButton,
+													padding: `${spacing[2]} ${spacing[4]}`,
+													fontSize: font.size.sm,
+													marginTop: spacing[1],
 												}}
 											>
+												{t.workspaceFilter || "Customize Workspace"}
+											</button>
+										</div>
+									);
+								}
+
+								return (
+									<div
+										style={{
+											width: "100%",
+											maxWidth: "420px",
+											textAlign: "center",
+											padding: `${spacing[8]} ${spacing[4]}`,
+											color: colors.textSecondary,
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											gap: spacing[2],
+										}}
+									>
+										<div style={{ color: colors.textMuted }}>{ICONS.empty}</div>
+										<p style={{ margin: 0, fontSize: font.size.sm }}>
+											{isWorkspaceFiltered
+												? t.noResults || "No tasks match your selected buildings."
+												: t.noResults || "No tasks found."}
+										</p>
+									</div>
+								);
+							}
+
+							return (
+								<>
+									{pendingGroups.length > 0 && (
+										<>
+											<h2
+												style={{
+													fontSize: font.size.lg,
+													fontWeight: font.weight.big,
+													color: colors.textHeading,
+													margin: `${spacing[2]} 0 0 0`,
+													width: "100%",
+													maxWidth: "420px",
+												}}
+											>
+												{translations[language].pendingTasks}
+											</h2>
+											{pendingGroups.map((group) => (
 												<div
+													key={
+														group.building?.id ||
+														group.tasks[0]?.building_id
+													}
 													style={{
-														fontSize:
-															font
-																.size
-																.sm,
-														color: colors.textSecondary,
-														marginBottom:
-															spacing[3],
-														fontWeight:
-															font
-																.weight
-																.medium,
+														width: "100%",
+														maxWidth: "420px",
 													}}
 												>
-													{
-														group
-															.building
-															?.street_address
-													}
-
-													,{" "}
-													{
-														group
-															.building
-															?.district
-													}
-
-													,{" "}
-													{
-														group
-															.building
-															?.city
-													}
-												</div>
-												<div
-													style={{
-														display:
-															"flex",
-														flexDirection:
-															"column",
-														gap: spacing[3],
-													}}
-												>
-													{group.tasks.map(
-														(
-															task
-														) => (
+													<div
+														style={{
+															fontSize: font.size.sm,
+															color: colors.textSecondary,
+															marginBottom: spacing[2],
+															fontWeight: font.weight.medium,
+														}}
+													>
+														{group.building?.street_address}
+														{group.building?.district ? `, ${group.building.district}` : ""}
+														{group.building?.city ? `, ${group.building.city}` : ""}
+													</div>
+													<div
+														style={{
+															display: "flex",
+															flexDirection: "column",
+															gap: spacing[3],
+														}}
+													>
+														{group.tasks.map((task) => (
 															<Task
-																key={
-																	task.id
-																}
-																initialData={
-																	task
-																}
+																key={task.id}
+																initialData={task}
 																expanded={
-																	state.expandedTaskId ===
-																	task.id
+																	state.expandedTaskId === task.id
 																}
 																onToggle={() =>
-																	toggleTaskExpanded(
-																		task.id
-																	)
+																	toggleTaskExpanded(task.id)
 																}
 																onMarkCompleted={() =>
-																	handleMarkCompleted(
-																		task.id
-																	)
+																	handleMarkCompleted(task.id)
 																}
 																onReassign={() =>
-																	handleReassign(
-																		task.id
-																	)
+																	handleReassign(task.id)
 																}
 																onEdit={() =>
-																	openTaskEditor(
-																		task
-																	)
+																	openTaskEditor(task)
 																}
 																onRevertCompleted={() =>
-																	handleRevertCompleted(
-																		task.id
-																	)
+																	handleRevertCompleted(task.id)
 																}
 																onDeleteTask={() =>
-																	handleDeleteTask(
-																		task.id
-																	)
+																	handleDeleteTask(task.id)
 																}
-																language={
-																	language
-																}
-																userRole={
-																	currentUser.role
-																}
+																language={language}
+																userRole={currentUser.role}
 															/>
-														)
-													)}
+														))}
+													</div>
 												</div>
-											</div>
-										)
+											))}
+										</>
+									)}
+
+									{completedGroups.length > 0 && (
+										<>
+											<h2
+												style={{
+													fontSize: font.size.lg,
+													fontWeight: font.weight.big,
+													color: colors.textHeading,
+													margin: `${spacing[4]} 0 0 0`,
+													width: "100%",
+													maxWidth: "420px",
+												}}
+											>
+												{translations[language].completedTasks}
+											</h2>
+											{completedGroups.map((group) => (
+												<div
+													key={
+														group.building?.id ||
+														group.tasks[0]?.building_id
+													}
+													style={{
+														width: "100%",
+														maxWidth: "420px",
+													}}
+												>
+													<div
+														style={{
+															fontSize: font.size.sm,
+															color: colors.textSecondary,
+															marginBottom: spacing[2],
+															fontWeight: font.weight.medium,
+														}}
+													>
+														{group.building?.street_address}
+														{group.building?.district ? `, ${group.building.district}` : ""}
+														{group.building?.city ? `, ${group.building.city}` : ""}
+													</div>
+													<div
+														style={{
+															display: "flex",
+															flexDirection: "column",
+															gap: spacing[3],
+														}}
+													>
+														{group.tasks.map((task) => (
+															<Task
+																key={task.id}
+																initialData={task}
+																expanded={
+																	state.expandedTaskId === task.id
+																}
+																onToggle={() =>
+																	toggleTaskExpanded(task.id)
+																}
+																onMarkCompleted={() =>
+																	handleMarkCompleted(task.id)
+																}
+																onReassign={() =>
+																	handleReassign(task.id)
+																}
+																onEdit={() =>
+																	openTaskEditor(task)
+																}
+																onRevertCompleted={() =>
+																	handleRevertCompleted(task.id)
+																}
+																onDeleteTask={() =>
+																	handleDeleteTask(task.id)
+																}
+																language={language}
+																userRole={currentUser.role}
+															/>
+														))}
+													</div>
+												</div>
+											))}
+										</>
 									)}
 								</>
-							) : null;
+							);
 						})()}
 					</>
 				) : (
 					<>
-						{groupTasksByBuilding(
-							filteredTasks
-						).map((group) => (
-							<div
-								key={
-									group.building
-										?.id ||
-									group.tasks[0]
-										?.building_id
+						{(() => {
+							const groups = groupTasksByBuilding(filteredTasks);
+							if (groups.length === 0) {
+								if (isNoBuildingsSelected) {
+									return (
+										<div
+											style={{
+												width: "100%",
+												maxWidth: "420px",
+												textAlign: "center",
+												padding: `${spacing[8]} ${spacing[5]}`,
+												color: colors.textSecondary,
+												display: "flex",
+												flexDirection: "column",
+												alignItems: "center",
+												gap: spacing[3],
+												background: colors.cardBg,
+												borderRadius: radius.xl,
+												border: `1px dashed ${colors.borderDefault}`,
+												boxSizing: "border-box",
+												marginTop: spacing[2],
+											}}
+										>
+											<div
+												style={{
+													width: "44px",
+													height: "44px",
+													borderRadius: radius.full,
+													background: `${colors.primary}15`,
+													color: colors.primary,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												{ICONS.building}
+											</div>
+											<div>
+												<h3
+													style={{
+														margin: `0 0 ${spacing[1]} 0`,
+														fontSize: font.size.md,
+														fontWeight: font.weight.big,
+														color: colors.textHeading,
+													}}
+												>
+													{t.noBuildingsSelected || "No buildings selected"}
+												</h3>
+												<p style={{ margin: 0, fontSize: font.size.sm, color: colors.textSecondary }}>
+													{t.selectBuildingsPrompt || "Select buildings in the workspace filter to view tasks."}
+												</p>
+											</div>
+											<button
+												type="button"
+												onClick={() => setWorkspaceModalOpen(true)}
+												style={{
+													...components.primaryButton,
+													padding: `${spacing[2]} ${spacing[4]}`,
+													fontSize: font.size.sm,
+													marginTop: spacing[1],
+												}}
+											>
+												{t.workspaceFilter || "Customize Workspace"}
+											</button>
+										</div>
+									);
 								}
-								style={{
-									width: "100%",
-									maxWidth:
-										"420px",
-								}}
-							>
+
+								return (
+									<div
+										style={{
+											width: "100%",
+											maxWidth: "420px",
+											textAlign: "center",
+											padding: `${spacing[8]} ${spacing[4]}`,
+											color: colors.textSecondary,
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											gap: spacing[2],
+										}}
+									>
+										<div style={{ color: colors.textMuted }}>{ICONS.empty}</div>
+										<p style={{ margin: 0, fontSize: font.size.sm }}>
+											{isWorkspaceFiltered
+												? t.noResults || "No tasks match your selected buildings."
+												: t.noResults || "No tasks found."}
+										</p>
+									</div>
+								);
+							}
+
+							return groups.map((group) => (
 								<div
+									key={
+										group.building?.id ||
+										group.tasks[0]?.building_id
+									}
 									style={{
-										fontSize:
-											font
-												.size
-												.sm,
-										color: colors.textSecondary,
-										marginBottom:
-											spacing[3],
-										fontWeight:
-											font
-												.weight
-												.medium,
+										width: "100%",
+										maxWidth: "420px",
 									}}
 								>
-									{
-										group
-											.building
-											?.street_address
-									}
-									,{" "}
-									{
-										group
-											.building
-											?.district
-									}
-									,{" "}
-									{
-										group
-											.building
-											?.city
-									}
-								</div>
-								<div
-									style={{
-										display:
-											"flex",
-										flexDirection:
-											"column",
-										gap: spacing[3],
-									}}
-								>
-									{group.tasks.map(
-										(
-											task
-										) => (
+									<div
+										style={{
+											fontSize: font.size.sm,
+											color: colors.textSecondary,
+											marginBottom: spacing[2],
+											fontWeight: font.weight.medium,
+										}}
+									>
+										{group.building?.street_address}
+										{group.building?.district ? `, ${group.building.district}` : ""}
+										{group.building?.city ? `, ${group.building.city}` : ""}
+									</div>
+									<div
+										style={{
+											display: "flex",
+											flexDirection: "column",
+											gap: spacing[3],
+										}}
+									>
+										{group.tasks.map((task) => (
 											<Task
-												key={
-													task.id
-												}
-												initialData={
-													task
-												}
+												key={task.id}
+												initialData={task}
 												expanded={
-													state.expandedTaskId ===
-													task.id
+													state.expandedTaskId === task.id
 												}
 												onToggle={() =>
-													toggleTaskExpanded(
-														task.id
-													)
+													toggleTaskExpanded(task.id)
 												}
 												onMarkCompleted={() =>
-													handleMarkCompleted(
-														task.id
-													)
+													handleMarkCompleted(task.id)
 												}
 												onReassign={() =>
-													handleReassign(
-														task.id
-													)
+													handleReassign(task.id)
 												}
 												onEdit={() =>
-													openTaskEditor(
-														task
-													)
+													openTaskEditor(task)
 												}
 												onRevertCompleted={() =>
-													handleRevertCompleted(
-														task.id
-													)
+													handleRevertCompleted(task.id)
 												}
 												onDeleteTask={() =>
-													handleDeleteTask(
-														task.id
-													)
+													handleDeleteTask(task.id)
 												}
-												language={
-													language
-												}
+												language={language}
+												userRole={currentUser.role}
 											/>
-										)
-									)}
+										))}
+									</div>
 								</div>
-							</div>
-						))}
+							));
+						})()}
 					</>
 				)}
 			</div>
-			{currentUser.role !==
-				"contractor" && (
+
+			{currentUser?.role !== "contractor" && (
 				<button
 					type="button"
-					style={floatingButtonStyle}
-					onMouseEnter={(e) =>
-						(e.currentTarget.style.background =
-							colors.primaryHover)
-					}
-					onMouseLeave={(e) =>
-						(e.currentTarget.style.background =
-							colors.primary)
-					}
 					onClick={toggleTaskModal}
-					aria-label={t.createNewTask}
+					style={floatingButtonStyle}
 				>
 					<svg
 						width="32"
@@ -807,42 +922,47 @@ export default function ManagerPage({
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
-						strokeWidth="3"
+						strokeWidth="2.5"
 						strokeLinecap="round"
 						strokeLinejoin="round"
 					>
-						<line
-							x1="12"
-							y1="5"
-							x2="12"
-							y2="19"
-						/>
-						<line
-							x1="5"
-							y1="12"
-							x2="19"
-							y2="12"
-						/>
+						<line x1="12" y1="5" x2="12" y2="19" />
+						<line x1="5" y1="12" x2="19" y2="12" />
 					</svg>
 				</button>
 			)}
-			{(state.isTaskModalOpen ||
-				editingTask) && (
+
+			{state.isTaskModalOpen && (
 				<TaskModal
+					isOpen={state.isTaskModalOpen}
+					onClose={closeTaskModal}
+					onSubmit={refreshTasks}
 					buildings={state.buildings}
-					contractors={
-						state.contractors
-					}
+					contractors={state.contractors}
 					currentUser={currentUser}
-					onClose={() => {
-						closeTaskModal();
-						closeTaskEditor();
-					}}
-					onTaskCreated={() => {
-						refreshTasks();
-						closeTaskEditor();
-					}}
+					language={language}
+				/>
+			)}
+
+			{editingTask && (
+				<TaskModal
+					isOpen={true}
+					onClose={closeTaskEditor}
+					onSubmit={refreshTasks}
+					buildings={state.buildings}
+					contractors={state.contractors}
+					currentUser={currentUser}
 					task={editingTask}
+					language={language}
+				/>
+			)}
+
+			{isWorkspaceModalOpen && (
+				<WorkspaceFilterModal
+					buildings={state.buildings}
+					selectedBuildingIds={selectedBuildingIds}
+					onSave={handleSaveWorkspace}
+					onClose={() => setWorkspaceModalOpen(false)}
 					language={language}
 				/>
 			)}
