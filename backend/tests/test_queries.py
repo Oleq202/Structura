@@ -19,27 +19,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Session-scoped real connection (not the app pool) for transaction wrapping
-# ---------------------------------------------------------------------------
-
 @pytest_asyncio.fixture()
 async def raw_conn():
-    conn = await asyncpg.connect(dsn=os.getenv("DATABASE_URL"))
+    conn = await asyncpg.connect(dsn=os.getenv("DATABASE_URL"), statement_cache_size=0)
     yield conn
     await conn.close()
-
 
 @pytest_asyncio.fixture()
 async def conn(raw_conn):
     await raw_conn.execute("BEGIN")
     yield raw_conn
     await raw_conn.execute("ROLLBACK")
-
-
-# ---------------------------------------------------------------------------
-# Tiny helpers that operate on the injected connection (bypass the pool)
-# ---------------------------------------------------------------------------
 
 async def _insert_user(conn, *, login="test", role="manager") -> int:
     return await conn.fetchval(
@@ -48,7 +38,6 @@ async def _insert_user(conn, *, login="test", role="manager") -> int:
         login, role,
     )
 
-
 async def _insert_building(conn, *, city="Poznań", street_address="ul. Testowa 1") -> int:
     return await conn.fetchval(
         """INSERT INTO buildings (city, street_address)
@@ -56,18 +45,12 @@ async def _insert_building(conn, *, city="Poznań", street_address="ul. Testowa 
         city, street_address,
     )
 
-
 async def _insert_task(conn, *, building_id: int, created_by: int, assigned_to: int | None = None) -> int:
     return await conn.fetchval(
         """INSERT INTO tasks (title, building_id, created_by, assigned_to)
            VALUES ('Test task', $1, $2, $3) RETURNING id""",
         building_id, created_by, assigned_to,
     )
-
-
-# ---------------------------------------------------------------------------
-# Users
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_get_user(conn):
@@ -77,7 +60,6 @@ async def test_get_user(conn):
     assert row["login"] == "test"
     assert row["role"] == "manager"
 
-
 @pytest.mark.asyncio
 async def test_get_user_by_login(conn):
     await _insert_user(conn, login="find_me")
@@ -85,12 +67,10 @@ async def test_get_user_by_login(conn):
     assert row is not None
     assert row["first_name"] == "Test"
 
-
 @pytest.mark.asyncio
 async def test_get_user_not_found(conn):
     row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", 999_999)
     assert row is None
-
 
 @pytest.mark.asyncio
 async def test_add_and_delete_user(conn):
@@ -98,7 +78,6 @@ async def test_add_and_delete_user(conn):
     await conn.execute("DELETE FROM users WHERE id = $1", uid)
     row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", uid)
     assert row is None
-
 
 @pytest.mark.asyncio
 async def test_update_user(conn):
@@ -110,7 +89,6 @@ async def test_update_user(conn):
     row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", uid)
     assert row["login"] == "after"
 
-
 @pytest.mark.asyncio
 async def test_get_contractors(conn):
     await _insert_user(conn, login="c1", role="contractor")
@@ -118,17 +96,11 @@ async def test_get_contractors(conn):
     rows = await conn.fetch("SELECT * FROM users WHERE role = 'contractor'")
     assert len(rows) >= 2
 
-
-# ---------------------------------------------------------------------------
-# Buildings
-# ---------------------------------------------------------------------------
-
 @pytest.mark.asyncio
 async def test_get_building(conn):
     bid = await _insert_building(conn)
     row = await conn.fetchrow("SELECT * FROM buildings WHERE id = $1", bid)
     assert row["city"] == "Poznań"
-
 
 @pytest.mark.asyncio
 async def test_get_all_buildings(conn):
@@ -136,7 +108,6 @@ async def test_get_all_buildings(conn):
     await _insert_building(conn, city="City B")
     rows = await conn.fetch("SELECT * FROM buildings ORDER BY city")
     assert len(rows) >= 2
-
 
 @pytest.mark.asyncio
 async def test_update_building(conn):
@@ -148,18 +119,12 @@ async def test_update_building(conn):
     row = await conn.fetchrow("SELECT * FROM buildings WHERE id = $1", bid)
     assert row["city"] == "New City"
 
-
 @pytest.mark.asyncio
 async def test_delete_building(conn):
     bid = await _insert_building(conn)
     await conn.execute("DELETE FROM buildings WHERE id = $1", bid)
     row = await conn.fetchrow("SELECT * FROM buildings WHERE id = $1", bid)
     assert row is None
-
-
-# ---------------------------------------------------------------------------
-# Tasks
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_add_and_get_task(conn):
@@ -171,7 +136,6 @@ async def test_add_and_get_task(conn):
     assert row["title"] == "Test task"
     assert row["status"] == "pending"
 
-
 @pytest.mark.asyncio
 async def test_get_task_by_contractor(conn):
     manager = await _insert_user(conn, login="mgr", role="manager")
@@ -181,7 +145,6 @@ async def test_get_task_by_contractor(conn):
 
     rows = await conn.fetch("SELECT * FROM tasks WHERE assigned_to = $1", contractor)
     assert len(rows) == 1
-
 
 @pytest.mark.asyncio
 async def test_update_task_status(conn):
@@ -193,7 +156,6 @@ async def test_update_task_status(conn):
     row = await conn.fetchrow("SELECT * FROM tasks WHERE id = $1", tid)
     assert row["status"] == "completed"
 
-
 @pytest.mark.asyncio
 async def test_updated_at_trigger(conn):
     """The DB trigger must bump updated_at on any UPDATE."""
@@ -202,17 +164,14 @@ async def test_updated_at_trigger(conn):
     tid = await _insert_task(conn, building_id=bid, created_by=uid)
 
     before = (await conn.fetchrow("SELECT updated_at FROM tasks WHERE id = $1", tid))["updated_at"]
-    # Small sleep so NOW() advances
+
     import asyncio; await asyncio.sleep(1.5)
     await conn.execute("UPDATE tasks SET title = 'Updated' WHERE id = $1", tid)
     after = (await conn.fetchrow("SELECT updated_at FROM tasks WHERE id = $1", tid))["updated_at"]
 
-    # Check that updated_at is not None and has a reasonable timestamp
     assert after is not None, "updated_at should not be None"
-    # The trigger should update the timestamp, but we'll just check it's not identical
-    # (sometimes timing is too granular for strict > comparison)
-    assert after >= before, "updated_at should not decrease"
 
+    assert after >= before, "updated_at should not decrease"
 
 @pytest.mark.asyncio
 async def test_get_pending_tasks_manager(conn):
@@ -232,7 +191,6 @@ async def test_get_pending_tasks_manager(conn):
     )
     assert len(rows) >= 1
 
-
 @pytest.mark.asyncio
 async def test_task_deleted_on_building_cascade(conn):
     uid = await _insert_user(conn)
@@ -242,11 +200,6 @@ async def test_task_deleted_on_building_cascade(conn):
     await conn.execute("DELETE FROM buildings WHERE id = $1", bid)
     row = await conn.fetchrow("SELECT * FROM tasks WHERE id = $1", tid)
     assert row is None, "CASCADE delete from buildings to tasks did not work"
-
-
-# ---------------------------------------------------------------------------
-# Activity logs
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_add_and_get_activity_log(conn):
@@ -262,7 +215,6 @@ async def test_add_and_get_activity_log(conn):
     assert len(rows) == 1
     assert rows[0]["action"] == "Marked task as completed"
 
-
 @pytest.mark.asyncio
 async def test_activity_log_deleted_on_task_cascade(conn):
     uid = await _insert_user(conn)
@@ -277,11 +229,6 @@ async def test_activity_log_deleted_on_task_cascade(conn):
     rows = await conn.fetch("SELECT * FROM activity_logs WHERE task_id = $1", tid)
     assert rows == [], "CASCADE delete from tasks to activity_logs did not work"
 
-
-# ---------------------------------------------------------------------------
-# Building managers
-# ---------------------------------------------------------------------------
-
 @pytest.mark.asyncio
 async def test_add_building_manager(conn):
     uid = await _insert_user(conn, login="bm", role="manager")
@@ -295,7 +242,6 @@ async def test_add_building_manager(conn):
         uid, bid,
     )
     assert row is not None
-
 
 @pytest.mark.asyncio
 async def test_delete_building_manager(conn):
@@ -314,7 +260,6 @@ async def test_delete_building_manager(conn):
         uid, bid,
     )
     assert row is None
-
 
 @pytest.mark.asyncio
 async def test_get_buildings_by_manager(conn):
