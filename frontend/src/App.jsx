@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	BrowserRouter,
 	Routes,
@@ -15,39 +15,41 @@ import { defaultLanguage } from "./i18n";
 import * as api from "./services/api";
 
 export default function App() {
-	const [isLoggedIn, setIsLoggedIn] =
-		useState(false);
-	const [language, setLanguage] = useState(
-		defaultLanguage
-	);
-	const [currentUser, setCurrentUser] =
-		useState(() => {
-			const stored = localStorage.getItem(
-				"currentUser:v1"
-			);
-			if (stored) {
-				try {
-					return JSON.parse(stored);
-				} catch (error) {
-					console.error(
-						"Failed to parse stored user:",
-						error
-					);
-					localStorage.removeItem(
-						"currentUser:v1"
-					);
-					return null;
-				}
+	const [currentUser, setCurrentUser] = useState(() => {
+		const stored = localStorage.getItem("currentUser:v1");
+		if (stored) {
+			try {
+				return JSON.parse(stored);
+			} catch (error) {
+				console.error("Failed to parse stored user:", error);
+				localStorage.removeItem("currentUser:v1");
+				return null;
 			}
-			return null;
-		});
+		}
+		return null;
+	});
+
+	const [isLoggedIn, setIsLoggedIn] = useState(() => {
+		return Boolean(localStorage.getItem("accessToken") && localStorage.getItem("currentUser:v1"));
+	});
+
+	const [language, setLanguage] = useState(defaultLanguage);
 
 	const handleLogout = () => {
 		localStorage.removeItem("currentUser:v1");
 		localStorage.removeItem("accessToken");
+		localStorage.removeItem("refreshToken");
 		setCurrentUser(null);
 		setIsLoggedIn(false);
 	};
+
+	useEffect(() => {
+		const onUnauthorized = () => {
+			handleLogout();
+		};
+		window.addEventListener("auth:unauthorized", onUnauthorized);
+		return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+	}, []);
 
 	const handleLoginSuccess = async (
 		loginInput,
@@ -66,8 +68,23 @@ export default function App() {
 				"accessToken",
 				user.access_token
 			);
+			if (user.refresh_token) {
+				localStorage.setItem(
+					"refreshToken",
+					user.refresh_token
+				);
+			}
 			setCurrentUser(user);
 			setIsLoggedIn(true);
+
+			try {
+				const prefs = await api.getUserPreferences();
+				if (prefs && prefs.language) {
+					setLanguage(prefs.language);
+				}
+			} catch (prefErr) {
+				console.warn("Could not load preferences on login", prefErr);
+			}
 		} catch (error) {
 			console.error("Login failed:", error);
 			alert(
@@ -144,6 +161,9 @@ export default function App() {
 											}
 											onLanguageChange={
 												setLanguage
+											}
+											onLogout={
+												handleLogout
 											}
 										/>
 									}

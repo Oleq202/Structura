@@ -48,5 +48,11 @@ backend/.env
 pyproject.toml
 setup.cfg
 
+# SQL seeding files
+backend/app/db/seed.sql
+
 # Logs
 *.log
+
+# Learning and Interview Prep
+recruiter_guide/
