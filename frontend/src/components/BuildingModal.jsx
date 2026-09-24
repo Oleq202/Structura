@@ -1,8 +1,4 @@
-import {
-	useState,
-	useRef,
-	useEffect,
-} from "react";
+import { useState, useRef, useEffect } from "react";
 import {
 	colors,
 	font,
@@ -14,154 +10,63 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
-const errorStyle = {
-	fontSize: font.size.xs,
-	fontFamily: font.family.sans,
-	color: status.danger.text,
-	marginTop: spacing[1],
-	paddingLeft: spacing[1],
+const ICONS = {
+	building: (
+		<svg
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+			<path d="M9 22v-4h6v4" />
+			<path d="M8 6h.01" />
+			<path d="M16 6h.01" />
+			<path d="M12 6h.01" />
+			<path d="M12 10h.01" />
+			<path d="M12 14h.01" />
+			<path d="M16 10h.01" />
+			<path d="M16 14h.01" />
+			<path d="M8 10h.01" />
+			<path d="M8 14h.01" />
+		</svg>
+	),
+	close: (
+		<svg
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<line x1="18" y1="6" x2="6" y2="18" />
+			<line x1="6" y1="6" x2="18" y2="18" />
+		</svg>
+	),
 };
-
-const labelStyle = {
-	fontSize: font.size.sm,
-	fontFamily: font.family.sans,
-	color: colors.textSecondary,
-	marginBottom: spacing[1],
-	display: "block",
-};
-
-const modalOverlayStyle = {
-	position: "fixed",
-	top: 0,
-	left: 0,
-	width: "100vw",
-	height: "100vh",
-	background: "rgba(0, 0, 0, 0.4)",
-	backdropFilter: "blur(6px)",
-	WebkitBackdropFilter: "blur(6px)",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: `0 ${spacing[4]}`,
-	boxSizing: "border-box",
-	zIndex: 10000,
-};
-
-const modalContentStyle = {
-	width: "100%",
-	maxWidth: "360px",
-	background: colors.cardBg,
-	borderRadius: radius.xl,
-	border: `0.5px solid ${colors.cardBorder}`,
-	padding: spacing[8],
-	boxShadow: shadow.modal,
-	boxSizing: "border-box",
-	position: "relative",
-};
-
-const closeButtonStyle = {
-	position: "absolute",
-	top: spacing[4],
-	right: spacing[4],
-	background: "transparent",
-	border: "none",
-	color: colors.textSecondary,
-	cursor: "pointer",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: spacing[1],
-};
-
-const headingStyle = {
-	fontSize: font.size["2xl"],
-	fontWeight: font.weight.medium,
-	color: colors.textHeading,
-	marginBottom: spacing[6],
-	marginTop: 0,
-	letterSpacing: font.letterSpacing.tight,
-	lineHeight: font.lineHeight.tight,
-};
-
-const submitButtonBaseStyle = {
-	...components.primaryButton,
-	flex: 2,
-	padding: `${spacing[3]} ${spacing[4]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.base,
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	letterSpacing: font.letterSpacing.wide,
-	transition:
-		"background 0.15s, opacity 0.15s, transform 0.1s",
-	boxSizing: "border-box",
-};
-
-const formStyle = {
-	display: "flex",
-	flexDirection: "column",
-	gap: spacing[5],
-};
-
-const buttonGroupStyle = {
-	display: "flex",
-	gap: spacing[3],
-	marginTop: spacing[2],
-};
-
-const cancelButtonStyle = {
-	flex: 1,
-	background: "transparent",
-	border: `1px solid ${colors.borderDefault}`,
-	color: colors.textBody,
-	padding: `${spacing[3]} ${spacing[4]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.base,
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	cursor: "pointer",
-	boxSizing: "border-box",
-};
-
-const inputStyle = (hasError, isFocused) => ({
-	...components.input,
-	boxSizing: "border-box",
-	padding: `${spacing[2]} ${spacing[3]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.sm,
-	fontFamily: font.family.sans,
-	border: hasError
-		? `1px solid ${status.danger.border}`
-		: isFocused
-			? `1px solid ${colors.borderStrong}`
-			: `1px solid ${colors.borderDefault}`,
-	background: hasError
-		? status.danger.bg
-		: colors.cardBg,
-	color: colors.textBody,
-	boxShadow:
-		isFocused && !hasError
-			? shadow.focus
-			: "none",
-	transition:
-		"border-color 0.15s, box-shadow 0.15s",
-});
 
 export default function BuildingModal({
 	building = null,
 	onClose,
 	onSave,
-	language,
+	language = "pl",
 }) {
 	const t = translations[language];
-	const cityRef = useRef(null);
 	const isEdit = !!building;
+	const bodyRef = useRef(null);
+	const addressInputRef = useRef(null);
 
 	const [formData, setFormData] = useState({
 		city: building?.city || "",
 		district: building?.district || "",
-		street_address:
-			building?.street_address || "",
+		street_address: building?.street_address || "",
 	});
 
 	const [errors, setErrors] = useState({
@@ -169,31 +74,38 @@ export default function BuildingModal({
 		street_address: "",
 	});
 
-	const [focused, setFocused] = useState({
-		city: false,
-		district: false,
-		street_address: false,
-	});
-
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		if (cityRef.current) {
-			cityRef.current.focus();
+		if (bodyRef.current) {
+			bodyRef.current.scrollTop = 0;
 		}
-	}, []);
+		if (addressInputRef.current) {
+			addressInputRef.current.focus();
+		}
+	}, [building]);
+
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape") {
+				onClose?.();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [onClose]);
 
 	const validate = () => {
 		const newErrors = {};
 		let valid = true;
 
-		if (!formData.city) {
-			newErrors.city = t.required;
+		if (!formData.street_address.trim()) {
+			newErrors.street_address = t.required;
 			valid = false;
 		}
 
-		if (!formData.street_address) {
-			newErrors.street_address = t.required;
+		if (!formData.city.trim()) {
+			newErrors.city = t.required;
 			valid = false;
 		}
 
@@ -201,28 +113,22 @@ export default function BuildingModal({
 		return valid;
 	};
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!validate()) return;
 
 		setLoading(true);
 		try {
 			const savedBuilding = {
-				...(building?.id && {
-					id: building.id,
-				}),
-				city: formData.city,
-				district: formData.district,
-				street_address:
-					formData.street_address,
+				...(building?.id && { id: building.id }),
+				city: formData.city.trim(),
+				district: formData.district.trim(),
+				street_address: formData.street_address.trim(),
 			};
-			if (onSave) onSave(savedBuilding);
+			if (onSave) await onSave(savedBuilding);
 			if (onClose) onClose();
 		} catch (err) {
-			console.error(
-				"Error saving building",
-				err
-			);
+			console.error("Error saving building", err);
 		} finally {
 			setLoading(false);
 		}
@@ -230,263 +136,318 @@ export default function BuildingModal({
 
 	return (
 		<div
-			role="button"
-			tabIndex={0}
-			style={modalOverlayStyle}
-			onClick={() => onClose?.()}
-			onKeyDown={(e) => {
-				if (e.key === "Escape") {
-					e.preventDefault();
-					onClose?.();
-				}
+			style={{
+				position: "fixed",
+				top: 0,
+				left: 0,
+				right: 0,
+				bottom: 0,
+				background: "rgba(9, 21, 42, 0.65)",
+				backdropFilter: "blur(6px)",
+				WebkitBackdropFilter: "blur(6px)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				zIndex: 2500,
+				padding: spacing[4],
 			}}
+			onClick={() => onClose?.()}
 		>
 			<div
-				style={modalContentStyle}
-				onClick={(e) =>
-					e.stopPropagation()
-				}
+				style={{
+					background: colors.cardBg,
+					borderRadius: radius.xl,
+					boxShadow: shadow.modal,
+					border: `1px solid ${colors.borderSubtle}`,
+					width: "100%",
+					maxWidth: "460px",
+					maxHeight: "85vh",
+					display: "flex",
+					flexDirection: "column",
+					overflow: "hidden",
+					boxSizing: "border-box",
+					fontFamily: font.family.sans,
+				}}
+				onClick={(e) => e.stopPropagation()}
 			>
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						onClose?.();
+				<div
+					style={{
+						padding: `${spacing[4]} ${spacing[5]}`,
+						background: colors.shellDeep,
+						color: colors.shellText,
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						flexShrink: 0,
 					}}
-					style={closeButtonStyle}
-					aria-label={t.close}
 				>
-					<svg
-						width="18"
-						height="18"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.5"
+					<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
+						<div
+							style={{
+								width: "36px",
+								height: "36px",
+								borderRadius: radius.md,
+								background: "rgba(255,255,255,0.12)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								color: colors.primary,
+							}}
+						>
+							{ICONS.building}
+						</div>
+						<div>
+							<h3
+								style={{
+									margin: 0,
+									fontSize: font.size.md,
+									fontWeight: font.weight.big,
+									color: "#ffffff",
+								}}
+							>
+								{isEdit ? t.editBuilding : t.createBuilding}
+							</h3>
+							<p
+								style={{
+									margin: "2px 0 0 0",
+									fontSize: font.size.xs,
+									color: colors.shellTextMuted,
+								}}
+							>
+								{isEdit
+									? (building.street_address || t.building)
+									: (t.addBuilding || "Enter building location")}
+							</p>
+						</div>
+					</div>
+					<button
+						type="button"
+						onClick={onClose}
+						style={{
+							background: "rgba(255,255,255,0.08)",
+							border: "none",
+							borderRadius: radius.full,
+							width: "32px",
+							height: "32px",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							cursor: "pointer",
+							color: colors.shellTextMuted,
+							transition: "background 0.15s, color 0.15s",
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+							e.currentTarget.style.color = "#ffffff";
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+							e.currentTarget.style.color = colors.shellTextMuted;
+						}}
+						aria-label={t.close || "Close"}
 					>
-						<line
-							x1="18"
-							y1="6"
-							x2="6"
-							y2="18"
-						></line>
-						<line
-							x1="6"
-							y1="6"
-							x2="18"
-							y2="18"
-						></line>
-					</svg>
-				</button>
+						{ICONS.close}
+					</button>
+				</div>
 
-				<h1 style={headingStyle}>
-					{isEdit
-						? t.editBuilding
-						: t.createBuilding}
-				</h1>
 				<form
 					onSubmit={handleSubmit}
-					style={formStyle}
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						flex: 1,
+						overflow: "hidden",
+						margin: 0,
+					}}
 				>
-					<div>
-						<label style={labelStyle}>
-							{t.streetAddress}
-						</label>
-						<input
-							style={inputStyle(
-								!!errors.street_address,
-								focused.street_address
-							)}
-							type="text"
-							value={
-								formData.street_address
-							}
-							onChange={(e) => {
-								setFormData({
-									...formData,
-									street_address:
-										e.target
-											.value,
-								});
-								if (
-									errors.street_address
-								)
-									setErrors({
-										...errors,
-										street_address:
-											"",
+					<div
+						ref={bodyRef}
+						style={{
+							padding: `${spacing[4]} ${spacing[5]}`,
+							overflowY: "auto",
+							flex: 1,
+							display: "flex",
+							flexDirection: "column",
+							gap: spacing[4],
+							background: colors.cardBg,
+						}}
+					>
+						<div>
+							<label
+								style={{
+									fontSize: font.size.xs,
+									fontWeight: font.weight.big,
+									color: colors.textSecondary,
+									marginBottom: spacing[1],
+									display: "block",
+									textTransform: "uppercase",
+									letterSpacing: font.letterSpacing.wide,
+								}}
+							>
+								{t.streetAddress}
+							</label>
+							<input
+								ref={addressInputRef}
+								type="text"
+								value={formData.street_address}
+								onChange={(e) => {
+									setFormData({
+										...formData,
+										street_address: e.target.value,
 									});
-							}}
-							onFocus={() =>
-								setFocused({
-									...focused,
-									street_address: true,
-								})
-							}
-							onBlur={() =>
-								setFocused({
-									...focused,
-									street_address: false,
-								})
-							}
-							placeholder={
-								t.enterStreetAddress
-							}
-							aria-label={
-								t.streetAddress
-							}
-						/>
-						{errors.street_address && (
-							<p style={errorStyle}>
-								{
-									errors.street_address
+									if (errors.street_address) {
+										setErrors({ ...errors, street_address: "" });
+									}
+								}}
+								placeholder={t.enterStreetAddress}
+								style={{
+									...components.input,
+									width: "100%",
+									boxSizing: "border-box",
+									fontSize: font.size.sm,
+									borderRadius: radius.md,
+									border: errors.street_address
+										? `1px solid ${status.danger.border}`
+										: `1px solid ${colors.borderDefault}`,
+									background: errors.street_address
+										? status.danger.bg
+										: colors.cardBg,
+								}}
+							/>
+							{errors.street_address && (
+								<p
+									style={{
+										fontSize: font.size.xs,
+										color: status.danger.text,
+										margin: `${spacing[1]} 0 0 0`,
+									}}
+								>
+									{errors.street_address}
+								</p>
+							)}
+						</div>
+
+						<div>
+							<label
+								style={{
+									fontSize: font.size.xs,
+									fontWeight: font.weight.big,
+									color: colors.textSecondary,
+									marginBottom: spacing[1],
+									display: "block",
+									textTransform: "uppercase",
+									letterSpacing: font.letterSpacing.wide,
+								}}
+							>
+								{t.district}
+							</label>
+							<input
+								type="text"
+								value={formData.district}
+								onChange={(e) =>
+									setFormData({
+										...formData,
+										district: e.target.value,
+									})
 								}
-							</p>
-						)}
-					</div>
+								placeholder={t.enterDistrict}
+								style={{
+									...components.input,
+									width: "100%",
+									boxSizing: "border-box",
+									fontSize: font.size.sm,
+									borderRadius: radius.md,
+								}}
+							/>
+						</div>
 
-					<div>
-						<label style={labelStyle}>
-							{t.district}
-						</label>
-						<input
-							style={inputStyle(
-								false,
-								focused.district
-							)}
-							type="text"
-							value={
-								formData.district
-							}
-							onChange={(e) =>
-								setFormData({
-									...formData,
-									district:
-										e.target
-											.value,
-								})
-							}
-							onFocus={() =>
-								setFocused({
-									...focused,
-									district: true,
-								})
-							}
-							onBlur={() =>
-								setFocused({
-									...focused,
-									district: false,
-								})
-							}
-							placeholder={
-								t.enterDistrict
-							}
-							aria-label={
-								t.district
-							}
-						/>
-					</div>
-
-					<div>
-						<label style={labelStyle}>
-							{t.city}
-						</label>
-						<input
-							style={inputStyle(
-								!!errors.city,
-								focused.city
-							)}
-							ref={cityRef}
-							type="text"
-							value={formData.city}
-							onChange={(e) => {
-								setFormData({
-									...formData,
-									city: e.target
-										.value,
-								});
-								if (errors.city)
-									setErrors({
-										...errors,
-										city: "",
+						<div>
+							<label
+								style={{
+									fontSize: font.size.xs,
+									fontWeight: font.weight.big,
+									color: colors.textSecondary,
+									marginBottom: spacing[1],
+									display: "block",
+									textTransform: "uppercase",
+									letterSpacing: font.letterSpacing.wide,
+								}}
+							>
+								{t.city}
+							</label>
+							<input
+								type="text"
+								value={formData.city}
+								onChange={(e) => {
+									setFormData({
+										...formData,
+										city: e.target.value,
 									});
-							}}
-							onFocus={() =>
-								setFocused({
-									...focused,
-									city: true,
-								})
-							}
-							onBlur={() =>
-								setFocused({
-									...focused,
-									city: false,
-								})
-							}
-							placeholder={
-								t.enterCity
-							}
-							aria-label={t.city}
-						/>
-						{errors.city && (
-							<p style={errorStyle}>
-								{errors.city}
-							</p>
-						)}
+									if (errors.city) {
+										setErrors({ ...errors, city: "" });
+									}
+								}}
+								placeholder={t.enterCity}
+								style={{
+									...components.input,
+									width: "100%",
+									boxSizing: "border-box",
+									fontSize: font.size.sm,
+									borderRadius: radius.md,
+									border: errors.city
+										? `1px solid ${status.danger.border}`
+										: `1px solid ${colors.borderDefault}`,
+									background: errors.city
+										? status.danger.bg
+										: colors.cardBg,
+								}}
+							/>
+							{errors.city && (
+								<p
+									style={{
+										fontSize: font.size.xs,
+										color: status.danger.text,
+										margin: `${spacing[1]} 0 0 0`,
+									}}
+								>
+									{errors.city}
+								</p>
+							)}
+						</div>
 					</div>
 
-					<div style={buttonGroupStyle}>
+					<div
+						style={{
+							padding: `${spacing[3]} ${spacing[5]}`,
+							background: colors.pageBg,
+							borderTop: `1px solid ${colors.borderSubtle}`,
+							display: "flex",
+							justifyContent: "flex-end",
+							gap: spacing[2],
+							flexShrink: 0,
+						}}
+					>
 						<button
 							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								onClose?.();
+							onClick={onClose}
+							style={{
+								...components.ghostButton,
+								padding: `${spacing[2]} ${spacing[4]}`,
+								fontSize: font.size.sm,
 							}}
-							style={
-								cancelButtonStyle
-							}
-							aria-label={t.cancel}
 						>
 							{t.cancel}
 						</button>
-
 						<button
 							type="submit"
 							disabled={loading}
 							style={{
-								...submitButtonBaseStyle,
-								cursor: loading
-									? "not-allowed"
-									: "pointer",
-								opacity: loading
-									? 0.55
-									: 1,
+								...components.primaryButton,
+								padding: `${spacing[2]} ${spacing[5]}`,
+								fontSize: font.size.sm,
+								opacity: loading ? 0.6 : 1,
+								cursor: loading ? "not-allowed" : "pointer",
 							}}
-							onMouseEnter={(e) => {
-								if (!loading)
-									e.currentTarget.style.background =
-										colors.primaryHover;
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.background =
-									colors.primary;
-							}}
-							onMouseDown={(e) => {
-								if (!loading)
-									e.currentTarget.style.transform =
-										"scale(0.97)";
-							}}
-							onMouseUp={(e) => {
-								e.currentTarget.style.transform =
-									"scale(1)";
-							}}
-							aria-label={
-								loading
-									? t.saving
-									: isEdit
-										? t.update
-										: t.create
-							}
 						>
 							{loading
 								? t.saving
