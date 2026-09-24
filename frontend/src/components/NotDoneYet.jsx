@@ -7,60 +7,83 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
-const labelStyle = {
-	fontSize: font.size.sm,
-	fontFamily: font.family.sans,
-	color: colors.textSecondary,
-	marginBottom: spacing[1],
-	display: "block",
+const ICONS = {
+	construction: (
+		<svg
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+		</svg>
+	),
 };
 
-const overlayStyle = {
-	position: "fixed",
-	top: 0,
-	left: 0,
-	width: "100vw",
-	height: "100vh",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: `0 ${spacing[4]}`,
-	boxSizing: "border-box",
-};
-
-const cardStyle = {
-	width: "100%",
-	maxWidth: "360px",
-	background: colors.cardBg,
-	borderRadius: radius.xl,
-	border: `0.5px solid ${colors.cardBorder}`,
-	padding: spacing[8],
-	boxShadow: shadow.modal,
-	boxSizing: "border-box",
-	position: "relative",
-};
-
-const headingStyle = {
-	fontSize: font.size.lg,
-	fontWeight: font.weight.medium,
-	color: colors.textHeading,
-	letterSpacing: font.letterSpacing.tight,
-	lineHeight: font.lineHeight.tight,
-	marginBottom: spacing[3],
-};
-
-export default function NotDoneYet({
-	text,
-	language = "pl",
-}) {
+export default function NotDoneYet({ text, language = "pl" }) {
 	const t = translations[language];
 	return (
-		<div style={overlayStyle}>
-			<div style={cardStyle}>
-				<h2 style={headingStyle}>
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: spacing[8],
+				minHeight: "50vh",
+			}}
+		>
+			<div
+				style={{
+					background: colors.cardBg,
+					borderRadius: radius.xl,
+					border: `1px solid ${colors.borderSubtle}`,
+					boxShadow: shadow.card,
+					padding: spacing[8],
+					maxWidth: "400px",
+					textAlign: "center",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					gap: spacing[3],
+				}}
+			>
+				<div
+					style={{
+						width: "52px",
+						height: "52px",
+						borderRadius: radius.full,
+						background: `${colors.primary}15`,
+						color: colors.primary,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						marginBottom: spacing[2],
+					}}
+				>
+					{ICONS.construction}
+				</div>
+				<h2
+					style={{
+						margin: 0,
+						fontSize: font.size.lg,
+						fontWeight: font.weight.big,
+						color: colors.textHeading,
+					}}
+				>
 					{text} {t.underConstruction}
 				</h2>
-				<p style={labelStyle}>
+				<p
+					style={{
+						margin: 0,
+						fontSize: font.size.sm,
+						color: colors.textSecondary,
+						lineHeight: font.lineHeight.normal,
+					}}
+				>
 					{t.workingHard}
 				</p>
 			</div>

@@ -186,7 +186,7 @@ export const components = {
 		background: colors.shellLight,
 		borderBottom: `1px solid ${colors.shellDeep}`,
 		padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
-		// borderRadius: radius.lg,
+
 		display: "flex",
 		justifyContent: "space-around",
 		alignItems: "center",
@@ -207,7 +207,7 @@ export const components = {
 		background: colors.shell,
 		borderTop: `1px solid ${colors.shellDeep}`,
 		padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
-		// borderRadius: radius.lg,
+
 		display: "flex",
 		justifyContent: "space-around",
 		alignItems: "center",
