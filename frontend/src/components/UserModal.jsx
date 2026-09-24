@@ -1,5 +1,4 @@
 import {
-	useState,
 	useRef,
 	useEffect,
 	useReducer,
@@ -15,7 +14,68 @@ import {
 } from "../theme";
 import { translations } from "../i18n";
 
-const EMPTY_BUILDINGS = [];
+const ICONS = {
+	user: (
+		<svg
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+			<circle cx="12" cy="7" r="4" />
+		</svg>
+	),
+	close: (
+		<svg
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<line x1="18" y1="6" x2="6" y2="18" />
+			<line x1="6" y1="6" x2="18" y2="18" />
+		</svg>
+	),
+	eye: (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+			<circle cx="12" cy="12" r="3" />
+		</svg>
+	),
+	eyeOff: (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+			<line x1="1" y1="1" x2="23" y2="23" />
+		</svg>
+	),
+};
 
 const initialState = (user) => ({
 	formData: {
@@ -24,8 +84,6 @@ const initialState = (user) => ({
 		first_name: user?.first_name || "",
 		last_name: user?.last_name || "",
 		role: user?.role || "manager",
-		assignedBuildings:
-			user?.assignedBuildings || [],
 	},
 	passwordChange: {
 		currentPassword: "",
@@ -41,22 +99,8 @@ const initialState = (user) => ({
 		newPassword: "",
 		confirmPassword: "",
 	},
-	focused: {
-		login: false,
-		password: false,
-		first_name: false,
-		last_name: false,
-		buildingSearch: false,
-		currentPassword: false,
-		newPassword: false,
-		confirmPassword: false,
-	},
 	loading: false,
-	buildingSearch: "",
 	showPassword: false,
-	showCurrentPassword: false,
-	showNewPassword: false,
-	showConfirmPassword: false,
 	isChangingPassword: false,
 });
 
@@ -86,308 +130,62 @@ function reducer(state, action) {
 					...action.payload,
 				},
 			};
-		case "SET_FOCUSED":
-			return {
-				...state,
-				focused: {
-					...state.focused,
-					...action.payload,
-				},
-			};
 		case "SET_LOADING":
 			return {
 				...state,
 				loading: action.payload,
-			};
-		case "SET_BUILDING_SEARCH":
-			return {
-				...state,
-				buildingSearch: action.payload,
-			};
-		case "SET_SHOW_PASSWORD":
-			return {
-				...state,
-				showPassword: action.payload,
-			};
-		case "SET_SHOW_CURRENT_PASSWORD":
-			return {
-				...state,
-				showCurrentPassword:
-					action.payload,
-			};
-		case "SET_SHOW_NEW_PASSWORD":
-			return {
-				...state,
-				showNewPassword: action.payload,
-			};
-		case "SET_SHOW_CONFIRM_PASSWORD":
-			return {
-				...state,
-				showConfirmPassword:
-					action.payload,
 			};
 		case "TOGGLE_SHOW_PASSWORD":
 			return {
 				...state,
 				showPassword: !state.showPassword,
 			};
-		case "TOGGLE_SHOW_CURRENT_PASSWORD":
-			return {
-				...state,
-				showCurrentPassword:
-					!state.showCurrentPassword,
-			};
-		case "TOGGLE_SHOW_NEW_PASSWORD":
-			return {
-				...state,
-				showNewPassword:
-					!state.showNewPassword,
-			};
-		case "TOGGLE_SHOW_CONFIRM_PASSWORD":
-			return {
-				...state,
-				showConfirmPassword:
-					!state.showConfirmPassword,
-			};
 		case "TOGGLE_CHANGING_PASSWORD":
 			return {
 				...state,
-				isChangingPassword:
-					!state.isChangingPassword,
-			};
-		case "TOGGLE_BUILDING_ASSIGNMENT":
-			const buildingId = action.payload;
-			const assignedBuildings =
-				state.formData.assignedBuildings.includes(
-					buildingId
-				)
-					? state.formData.assignedBuildings.filter(
-							(id) =>
-								id !== buildingId
-						)
-					: [
-							...state.formData
-								.assignedBuildings,
-							buildingId,
-						];
-			return {
-				...state,
-				formData: {
-					...state.formData,
-					assignedBuildings,
-				},
+				isChangingPassword: !state.isChangingPassword,
 			};
 		default:
 			return state;
 	}
 }
 
-const modalOverlayStyle = {
-	position: "fixed",
-	top: 0,
-	left: 0,
-	width: "100vw",
-	height: "100vh",
-	background: "rgba(0, 0, 0, 0.4)",
-	backdropFilter: "blur(6px)",
-	WebkitBackdropFilter: "blur(6px)",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: `0 ${spacing[4]}`,
-	boxSizing: "border-box",
-	zIndex: 10000,
-};
-
-const modalContentStyle = {
-	width: "100%",
-	maxWidth: "400px",
-	maxHeight: "90vh",
-	overflowY: "auto",
-	background: colors.cardBg,
-	borderRadius: radius.xl,
-	border: `0.5px solid ${colors.cardBorder}`,
-	padding: spacing[8],
-	boxShadow: shadow.modal,
-	boxSizing: "border-box",
-	position: "relative",
-};
-
-const closeButtonStyle = {
-	position: "absolute",
-	top: spacing[4],
-	right: spacing[4],
-	background: "transparent",
-	border: "none",
-	color: colors.textSecondary,
-	cursor: "pointer",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	padding: spacing[1],
-};
-
-const headingStyle = {
-	fontSize: font.size["2xl"],
-	fontWeight: font.weight.medium,
-	color: colors.textHeading,
-	marginBottom: spacing[6],
-	marginTop: 0,
-	letterSpacing: font.letterSpacing.tight,
-	lineHeight: font.lineHeight.tight,
-};
-
-const formStyle = {
-	display: "flex",
-	flexDirection: "column",
-	gap: spacing[5],
-};
-
-const buttonGroupStyle = {
-	display: "flex",
-	gap: spacing[3],
-	marginTop: spacing[2],
-};
-
-const cancelButtonStyle = {
-	flex: 1,
-	background: "transparent",
-	border: `1px solid ${colors.borderDefault}`,
-	color: colors.textBody,
-	padding: `${spacing[3]} ${spacing[4]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.base,
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	cursor: "pointer",
-	boxSizing: "border-box",
-};
-
-const buildingListStyle = {
-	display: "flex",
-	flexDirection: "column",
-	gap: spacing[2],
-	maxHeight: "150px",
-	overflowY: "auto",
-	paddingRight: spacing[1],
-};
-
-const noResultsStyle = {
-	fontSize: font.size.sm,
-	color: colors.textSecondary,
-	padding: spacing[2],
-	textAlign: "center",
-};
-
-const buildingLabelStyle = {
-	display: "flex",
-	alignItems: "center",
-	gap: spacing[2],
-	fontSize: font.size.sm,
-	color: colors.textBody,
-	cursor: "pointer",
-	padding: spacing[1],
-	borderRadius: radius.sm,
-	transition: "background 0.15s",
-};
-
-const passwordToggleButtonStyle = {
-	position: "absolute",
-	right: spacing[3],
-	background: "none",
-	border: "none",
-	cursor: "pointer",
-	fontSize: font.size.xs,
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	color: colors.textSecondary,
-	padding: 0,
-	letterSpacing: font.letterSpacing.wide,
-	textTransform: "uppercase",
-	transition: "color 0.15s",
-};
-
-const submitButtonBaseStyle = {
-	...components.primaryButton,
-	flex: 2,
-	padding: `${spacing[3]} ${spacing[4]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.base,
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	letterSpacing: font.letterSpacing.wide,
-	transition:
-		"background 0.15s, opacity 0.15s, transform 0.1s",
-	boxSizing: "border-box",
-};
-
-const inputStyle = (hasError, isFocused) => ({
-	...components.input,
-	boxSizing: "border-box",
-	padding: `${spacing[2]} ${spacing[3]}`,
-	borderRadius: radius.lg,
-	fontSize: font.size.sm,
-	fontFamily: font.family.sans,
-	border: hasError
-		? `1px solid ${status.danger.border}`
-		: isFocused
-			? `1px solid ${colors.borderStrong}`
-			: `1px solid ${colors.borderDefault}`,
-	background: hasError
-		? status.danger.bg
-		: colors.cardBg,
-	color: colors.textBody,
-	boxShadow:
-		isFocused && !hasError
-			? shadow.focus
-			: "none",
-	transition:
-		"border-color 0.15s, box-shadow 0.15s",
-});
-
-const errorStyle = {
-	fontSize: font.size.xs,
-	fontFamily: font.family.sans,
-	color: status.danger.text,
-	marginTop: spacing[1],
-	paddingLeft: spacing[1],
-};
-
-const labelStyle = {
-	fontSize: font.size.sm,
-	fontFamily: font.family.sans,
-	color: colors.textSecondary,
-	marginBottom: spacing[1],
-	display: "block",
-};
-
 export default function UserModal({
 	user = null,
-	buildings = EMPTY_BUILDINGS,
 	onClose,
 	onSave,
-	language,
+	language = "pl",
 }) {
 	const t = translations[language];
-	const loginRef = useRef(null);
 	const isEdit = !!user;
-
-	const [state, dispatch] = useReducer(
-		reducer,
-		initialState(user)
-	);
+	const bodyRef = useRef(null);
+	const loginRef = useRef(null);
+	const [state, dispatch] = useReducer(reducer, user, initialState);
 
 	useEffect(() => {
+		if (bodyRef.current) {
+			bodyRef.current.scrollTop = 0;
+		}
 		if (loginRef.current) {
 			loginRef.current.focus();
 		}
-	}, []);
+	}, [user]);
+
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape") {
+				onClose?.();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [onClose]);
 
 	const validate = () => {
 		const newErrors = {};
 		let valid = true;
 
-		if (!state.formData.login) {
+		if (!state.formData.login.trim()) {
 			newErrors.login = t.required;
 			valid = false;
 		}
@@ -395,57 +193,35 @@ export default function UserModal({
 		if (!isEdit && !state.formData.password) {
 			newErrors.password = t.required;
 			valid = false;
-		} else if (
-			!isEdit &&
-			state.formData.password &&
-			state.formData.password.length < 5
-		) {
-			newErrors.password =
-				t.passwordMinLength;
+		} else if (!isEdit && state.formData.password && state.formData.password.length < 5) {
+			newErrors.password = t.passwordMinLength;
 			valid = false;
 		}
 
 		if (isEdit && state.isChangingPassword) {
-			if (
-				!state.passwordChange
-					.currentPassword
-			) {
-				newErrors.currentPassword =
-					t.required;
+			if (!state.passwordChange.currentPassword) {
+				newErrors.currentPassword = t.required;
 				valid = false;
 			}
-			if (
-				!state.passwordChange.newPassword
-			) {
-				newErrors.newPassword =
-					t.required;
+			if (!state.passwordChange.newPassword) {
+				newErrors.newPassword = t.required;
 				valid = false;
-			} else if (
-				state.passwordChange.newPassword
-					.length < 5
-			) {
-				newErrors.newPassword =
-					t.passwordMinLength;
+			} else if (state.passwordChange.newPassword.length < 5) {
+				newErrors.newPassword = t.passwordMinLength;
 				valid = false;
 			}
-			if (
-				state.passwordChange
-					.newPassword !==
-				state.passwordChange
-					.confirmPassword
-			) {
-				newErrors.confirmPassword =
-					"Passwords do not match";
+			if (state.passwordChange.newPassword !== state.passwordChange.confirmPassword) {
+				newErrors.confirmPassword = "Passwords do not match";
 				valid = false;
 			}
 		}
 
-		if (!state.formData.first_name) {
+		if (!state.formData.first_name.trim()) {
 			newErrors.first_name = t.required;
 			valid = false;
 		}
 
-		if (!state.formData.last_name) {
+		if (!state.formData.last_name.trim()) {
 			newErrors.last_name = t.required;
 			valid = false;
 		}
@@ -457,7 +233,7 @@ export default function UserModal({
 		return valid;
 	};
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!validate()) return;
 
@@ -465,37 +241,27 @@ export default function UserModal({
 			type: "SET_LOADING",
 			payload: true,
 		});
+
 		try {
 			const savedUser = {
-				login: state.formData.login,
-				first_name:
-					state.formData.first_name,
-				last_name:
-					state.formData.last_name,
+				login: state.formData.login.trim(),
+				first_name: state.formData.first_name.trim(),
+				last_name: state.formData.last_name.trim(),
 				role: state.formData.role,
-				assignedBuildings:
-					state.formData
-						.assignedBuildings,
 			};
 			if (!isEdit) {
-				savedUser.password =
-					state.formData.password;
+				savedUser.password = state.formData.password;
 			} else {
 				savedUser.id = user.id;
 				if (state.isChangingPassword) {
-					savedUser.currentPassword =
-						state.passwordChange.currentPassword;
-					savedUser.password =
-						state.passwordChange.newPassword;
+					savedUser.currentPassword = state.passwordChange.currentPassword;
+					savedUser.password = state.passwordChange.newPassword;
 				}
 			}
-			if (onSave) onSave(savedUser);
+			if (onSave) await onSave(savedUser);
 			if (onClose) onClose();
 		} catch (err) {
-			console.error(
-				"Error saving user",
-				err
-			);
+			console.error("Error saving user", err);
 		} finally {
 			dispatch({
 				type: "SET_LOADING",
@@ -504,1271 +270,535 @@ export default function UserModal({
 		}
 	};
 
-	const toggleBuildingAssignment = (
-		building_id
-	) => {
-		dispatch({
-			type: "TOGGLE_BUILDING_ASSIGNMENT",
-			payload: building_id,
-		});
-	};
-
-	const filteredBuildings = buildings.filter(
-		(building) => {
-			const search =
-				state.buildingSearch.toLowerCase();
-			return (
-				building.city
-					.toLowerCase()
-					.includes(search) ||
-				building.district
-					?.toLowerCase()
-					.includes(search) ||
-				building.street_address
-					.toLowerCase()
-					.includes(search)
-			);
-		}
-	);
-
-	const togglePassword = () =>
-		dispatch({
-			type: "TOGGLE_SHOW_PASSWORD",
-		});
-
-	const toggleCurrentPassword = () =>
-		dispatch({
-			type: "TOGGLE_SHOW_CURRENT_PASSWORD",
-		});
-
-	const toggleNewPassword = () =>
-		dispatch({
-			type: "TOGGLE_SHOW_NEW_PASSWORD",
-		});
-
-	const toggleConfirmPassword = () =>
-		dispatch({
-			type: "TOGGLE_SHOW_CONFIRM_PASSWORD",
-		});
-
-	const toggleChangingPassword = () =>
-		dispatch({
-			type: "TOGGLE_CHANGING_PASSWORD",
-		});
+	const roles = [
+		{ id: "manager", label: t.manager || "Manager" },
+		{ id: "contractor", label: t.contractor || "Contractor" },
+		{ id: "admin", label: t.admin || "Admin" },
+	];
 
 	return (
 		<div
-			role="button"
-			tabIndex={0}
-			style={modalOverlayStyle}
-			onClick={() => onClose?.()}
-			onKeyDown={(e) => {
-				if (e.key === "Escape") {
-					e.preventDefault();
-					onClose?.();
-				}
+			style={{
+				position: "fixed",
+				top: 0,
+				left: 0,
+				right: 0,
+				bottom: 0,
+				background: "rgba(9, 21, 42, 0.65)",
+				backdropFilter: "blur(6px)",
+				WebkitBackdropFilter: "blur(6px)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				zIndex: 2500,
+				padding: spacing[4],
 			}}
+			onClick={() => onClose?.()}
 		>
 			<div
-				style={modalContentStyle}
-				onClick={(e) =>
-					e.stopPropagation()
-				}
+				style={{
+					background: colors.cardBg,
+					borderRadius: radius.xl,
+					boxShadow: shadow.modal,
+					border: `1px solid ${colors.borderSubtle}`,
+					width: "100%",
+					maxWidth: "500px",
+					maxHeight: "85vh",
+					display: "flex",
+					flexDirection: "column",
+					overflow: "hidden",
+					boxSizing: "border-box",
+					fontFamily: font.family.sans,
+				}}
+				onClick={(e) => e.stopPropagation()}
 			>
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						onClose?.();
+				<div
+					style={{
+						padding: `${spacing[4]} ${spacing[5]}`,
+						background: colors.shellDeep,
+						color: colors.shellText,
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						flexShrink: 0,
 					}}
-					style={closeButtonStyle}
-					aria-label={t.close}
 				>
-					<svg
-						width="18"
-						height="18"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.5"
+					<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
+						<div
+							style={{
+								width: "36px",
+								height: "36px",
+								borderRadius: radius.md,
+								background: "rgba(255,255,255,0.12)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								color: colors.primary,
+							}}
+						>
+							{ICONS.user}
+						</div>
+						<div>
+							<h3
+								style={{
+									margin: 0,
+									fontSize: font.size.md,
+									fontWeight: font.weight.big,
+									color: "#ffffff",
+								}}
+							>
+								{isEdit ? t.editUser : t.createUser}
+							</h3>
+							<p
+								style={{
+									margin: "2px 0 0 0",
+									fontSize: font.size.xs,
+									color: colors.shellTextMuted,
+								}}
+							>
+								{isEdit
+									? (user.login || t.settings)
+									: (t.addUser || "Fill in account details")}
+							</p>
+						</div>
+					</div>
+					<button
+						type="button"
+						onClick={onClose}
+						style={{
+							background: "rgba(255,255,255,0.08)",
+							border: "none",
+							borderRadius: radius.full,
+							width: "32px",
+							height: "32px",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							cursor: "pointer",
+							color: colors.shellTextMuted,
+							transition: "background 0.15s, color 0.15s",
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+							e.currentTarget.style.color = "#ffffff";
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+							e.currentTarget.style.color = colors.shellTextMuted;
+						}}
+						aria-label={t.close || "Close"}
 					>
-						<line
-							x1="18"
-							y1="6"
-							x2="6"
-							y2="18"
-						></line>
-						<line
-							x1="6"
-							y1="6"
-							x2="18"
-							y2="18"
-						></line>
-					</svg>
-				</button>
+						{ICONS.close}
+					</button>
+				</div>
 
-				<h1 style={headingStyle}>
-					{isEdit
-						? t.editUser
-						: t.createUser}
-				</h1>
 				<form
 					onSubmit={handleSubmit}
-					style={formStyle}
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						flex: 1,
+						overflow: "hidden",
+						margin: 0,
+					}}
 				>
-					<div>
-						<label style={labelStyle}>
-							{t.login}
-						</label>
-						<input
-							style={inputStyle(
-								!!state.errors
-									.login,
-								state.focused
-									.login
-							)}
-							ref={loginRef}
-							type="text"
-							value={
-								state.formData
-									.login
-							}
-							onChange={(e) => {
-								dispatch({
-									type: "SET_FORM_DATA",
-									payload: {
-										login: e
-											.target
-											.value,
-									},
-								});
-								if (
-									state.errors
-										.login
-								)
-									dispatch({
-										type: "SET_ERRORS",
-										payload: {
-											login: "",
-										},
-									});
-							}}
-							onFocus={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										login: true,
-									},
-								})
-							}
-							onBlur={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										login: false,
-									},
-								})
-							}
-							placeholder={
-								t.enterLogin
-							}
-							aria-label={t.login}
-						/>
-						{state.errors.login && (
-							<p style={errorStyle}>
-								{
-									state.errors
-										.login
-								}
-							</p>
-						)}
-					</div>
-
-					<div>
-						<label style={labelStyle}>
-							{t.password}
-						</label>
-						{!isEdit ? (
-							<div
-								style={{
-									position:
-										"relative",
-									display:
-										"flex",
-									alignItems:
-										"center",
-								}}
-							>
-								<input
-									style={{
-										...inputStyle(
-											!!state
-												.errors
-												.password,
-											state
-												.focused
-												.password
-										),
-										paddingRight:
-											spacing[10],
-									}}
-									type={
-										state.showPassword
-											? "text"
-											: "password"
-									}
-									value={
-										state
-											.formData
-											.password
-									}
-									onChange={(
-										e
-									) => {
-										dispatch({
-											type: "SET_FORM_DATA",
-											payload:
-												{
-													password:
-														e
-															.target
-															.value,
-												},
-										});
-										if (
-											state
-												.errors
-												.password
-										)
-											dispatch(
-												{
-													type: "SET_ERRORS",
-													payload:
-														{
-															password:
-																"",
-														},
-												}
-											);
-									}}
-									onFocus={() =>
-										dispatch({
-											type: "SET_FOCUSED",
-											payload:
-												{
-													password: true,
-												},
-										})
-									}
-									onBlur={() =>
-										dispatch({
-											type: "SET_FOCUSED",
-											payload:
-												{
-													password: false,
-												},
-										})
-									}
-									placeholder={
-										t.enterPassword
-									}
-									aria-label={
-										t.password
-									}
-								/>
-								<button
-									type="button"
-									onClick={
-										togglePassword
-									}
-									style={
-										passwordToggleButtonStyle
-									}
-									onMouseEnter={(
-										e
-									) =>
-										(e.currentTarget.style.color =
-											colors.primary)
-									}
-									onMouseLeave={(
-										e
-									) =>
-										(e.currentTarget.style.color =
-											colors.textSecondary)
-									}
-									aria-label={
-										state.showPassword
-											? t.hide
-											: t.show
-									}
-								>
-									{state.showPassword
-										? t.hide
-										: t.show}
-								</button>
-							</div>
-						) : (
-							<div>
-								<div
-									style={{
-										display:
-											"flex",
-										alignItems:
-											"center",
-										gap: spacing[2],
-										marginBottom:
-											spacing[2],
-									}}
-								>
-									<input
-										style={{
-											...inputStyle(
-												false,
-												false
-											),
-											flex: 1,
-											background:
-												colors.pageBg,
-											cursor: "not-allowed",
-										}}
-										type="password"
-										value="********"
-										disabled
-										readOnly
-									/>
-									<button
-										type="button"
-										onClick={
-											toggleChangingPassword
-										}
-										style={{
-											...components.ghostButton,
-											padding: `${spacing[2]} ${spacing[3]}`,
-											borderRadius:
-												radius.lg,
-											fontSize:
-												font
-													.size
-													.sm,
-											fontFamily:
-												font
-													.family
-													.sans,
-										}}
-									>
-										{state.isChangingPassword
-											? t.cancel
-											: t.change ||
-												"Change"}
-									</button>
-								</div>
-								{state.isChangingPassword && (
-									<>
-										<div
-											style={{
-												marginTop:
-													spacing[3],
-											}}
-										>
-											<label
-												style={{
-													...labelStyle,
-													fontSize:
-														font
-															.size
-															.xs,
-												}}
-											>
-												{t.current ||
-													"Current"}{" "}
-												{
-													t.password
-												}
-											</label>
-											<div
-												style={{
-													position:
-														"relative",
-													display:
-														"flex",
-													alignItems:
-														"center",
-												}}
-											>
-												<input
-													style={{
-														...inputStyle(
-															!!state
-																.errors
-																.currentPassword,
-															state
-																.focused
-																.currentPassword
-														),
-														paddingRight:
-															spacing[10],
-													}}
-													type={
-														state.showCurrentPassword
-															? "text"
-															: "password"
-													}
-													value={
-														state
-															.passwordChange
-															.currentPassword
-													}
-													onChange={(
-														e
-													) => {
-														dispatch(
-															{
-																type: "SET_PASSWORD_CHANGE",
-																payload:
-																	{
-																		currentPassword:
-																			e
-																				.target
-																				.value,
-																	},
-															}
-														);
-														if (
-															state
-																.errors
-																.currentPassword
-														)
-															dispatch(
-																{
-																	type: "SET_ERRORS",
-																	payload:
-																		{
-																			currentPassword:
-																				"",
-																		},
-																}
-															);
-													}}
-													onFocus={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		currentPassword: true,
-																	},
-															}
-														)
-													}
-													onBlur={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		currentPassword: false,
-																	},
-															}
-														)
-													}
-													placeholder={
-														t.enterPassword
-													}
-													aria-label={
-														t.current +
-														" " +
-														t.password
-													}
-												/>
-												<button
-													type="button"
-													onClick={
-														toggleCurrentPassword
-													}
-													style={
-														passwordToggleButtonStyle
-													}
-													onMouseEnter={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.primary)
-													}
-													onMouseLeave={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.textSecondary)
-													}
-													aria-label={
-														state.showCurrentPassword
-															? t.hide
-															: t.show
-													}
-												>
-													{state.showCurrentPassword
-														? t.hide
-														: t.show}
-												</button>
-											</div>
-											{state
-												.errors
-												.currentPassword && (
-												<p
-													style={
-														errorStyle
-													}
-												>
-													{
-														state
-															.errors
-															.currentPassword
-													}
-												</p>
-											)}
-										</div>
-										<div
-											style={{
-												marginTop:
-													spacing[3],
-											}}
-										>
-											<label
-												style={{
-													...labelStyle,
-													fontSize:
-														font
-															.size
-															.xs,
-												}}
-											>
-												{t.new ||
-													"New"}{" "}
-												{
-													t.password
-												}
-											</label>
-											<div
-												style={{
-													position:
-														"relative",
-													display:
-														"flex",
-													alignItems:
-														"center",
-												}}
-											>
-												<input
-													style={{
-														...inputStyle(
-															!!state
-																.errors
-																.newPassword,
-															state
-																.focused
-																.newPassword
-														),
-														paddingRight:
-															spacing[10],
-													}}
-													type={
-														state.showNewPassword
-															? "text"
-															: "password"
-													}
-													value={
-														state
-															.passwordChange
-															.newPassword
-													}
-													onChange={(
-														e
-													) => {
-														dispatch(
-															{
-																type: "SET_PASSWORD_CHANGE",
-																payload:
-																	{
-																		newPassword:
-																			e
-																				.target
-																				.value,
-																	},
-															}
-														);
-														if (
-															state
-																.errors
-																.newPassword
-														)
-															dispatch(
-																{
-																	type: "SET_ERRORS",
-																	payload:
-																		{
-																			newPassword:
-																				"",
-																		},
-																}
-															);
-													}}
-													onFocus={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		newPassword: true,
-																	},
-															}
-														)
-													}
-													onBlur={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		newPassword: false,
-																	},
-															}
-														)
-													}
-													placeholder={
-														t.enterPassword
-													}
-													aria-label={
-														t.new +
-														" " +
-														t.password
-													}
-												/>
-												<button
-													type="button"
-													onClick={
-														toggleNewPassword
-													}
-													style={
-														passwordToggleButtonStyle
-													}
-													onMouseEnter={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.primary)
-													}
-													onMouseLeave={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.textSecondary)
-													}
-													aria-label={
-														state.showNewPassword
-															? t.hide
-															: t.show
-													}
-												>
-													{state.showNewPassword
-														? t.hide
-														: t.show}
-												</button>
-											</div>
-											{state
-												.errors
-												.newPassword && (
-												<p
-													style={
-														errorStyle
-													}
-												>
-													{
-														state
-															.errors
-															.newPassword
-													}
-												</p>
-											)}
-										</div>
-										<div
-											style={{
-												marginTop:
-													spacing[3],
-											}}
-										>
-											<label
-												style={{
-													...labelStyle,
-													fontSize:
-														font
-															.size
-															.xs,
-												}}
-											>
-												{t.confirm ||
-													"Confirm"}{" "}
-												{
-													t.password
-												}
-											</label>
-											<div
-												style={{
-													position:
-														"relative",
-													display:
-														"flex",
-													alignItems:
-														"center",
-												}}
-											>
-												<input
-													style={{
-														...inputStyle(
-															!!state
-																.errors
-																.confirmPassword,
-															state
-																.focused
-																.confirmPassword
-														),
-														paddingRight:
-															spacing[10],
-													}}
-													type={
-														state.showConfirmPassword
-															? "text"
-															: "password"
-													}
-													value={
-														state
-															.passwordChange
-															.confirmPassword
-													}
-													onChange={(
-														e
-													) => {
-														dispatch(
-															{
-																type: "SET_PASSWORD_CHANGE",
-																payload:
-																	{
-																		confirmPassword:
-																			e
-																				.target
-																				.value,
-																	},
-															}
-														);
-														if (
-															state
-																.errors
-																.confirmPassword
-														)
-															dispatch(
-																{
-																	type: "SET_ERRORS",
-																	payload:
-																		{
-																			confirmPassword:
-																				"",
-																		},
-																}
-															);
-													}}
-													onFocus={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		confirmPassword: true,
-																	},
-															}
-														)
-													}
-													onBlur={() =>
-														dispatch(
-															{
-																type: "SET_FOCUSED",
-																payload:
-																	{
-																		confirmPassword: false,
-																	},
-															}
-														)
-													}
-													placeholder={
-														t.enterPassword
-													}
-													aria-label={
-														t.confirm +
-														" " +
-														t.password
-													}
-												/>
-												<button
-													type="button"
-													onClick={
-														toggleConfirmPassword
-													}
-													style={
-														passwordToggleButtonStyle
-													}
-													onMouseEnter={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.primary)
-													}
-													onMouseLeave={(
-														e
-													) =>
-														(e.currentTarget.style.color =
-															colors.textSecondary)
-													}
-													aria-label={
-														state.showConfirmPassword
-															? t.hide
-															: t.show
-													}
-												>
-													{state.showConfirmPassword
-														? t.hide
-														: t.show}
-												</button>
-											</div>
-											{state
-												.errors
-												.confirmPassword && (
-												<p
-													style={
-														errorStyle
-													}
-												>
-													{
-														state
-															.errors
-															.confirmPassword
-													}
-												</p>
-											)}
-										</div>
-									</>
-								)}
-							</div>
-						)}
-						{!isEdit &&
-							state.errors
-								.password && (
-								<p
-									style={
-										errorStyle
-									}
-								>
-									{
-										state
-											.errors
-											.password
-									}
-								</p>
-							)}
-					</div>
-
-					<div>
-						<label style={labelStyle}>
-							{t.firstName}
-						</label>
-						<input
-							style={inputStyle(
-								!!state.errors
-									.first_name,
-								state.focused
-									.first_name
-							)}
-							type="text"
-							value={
-								state.formData
-									.first_name
-							}
-							onChange={(e) => {
-								dispatch({
-									type: "SET_FORM_DATA",
-									payload: {
-										first_name:
-											e
-												.target
-												.value,
-									},
-								});
-								if (
-									state.errors
-										.first_name
-								)
-									dispatch({
-										type: "SET_ERRORS",
-										payload: {
-											first_name:
-												"",
-										},
-									});
-							}}
-							onFocus={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										first_name: true,
-									},
-								})
-							}
-							onBlur={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										first_name: false,
-									},
-								})
-							}
-							placeholder={
-								t.enterFirstName
-							}
-							aria-label={
-								t.first_name
-							}
-						/>
-						{state.errors
-							.first_name && (
-							<p style={errorStyle}>
-								{
-									state.errors
-										.first_name
-								}
-							</p>
-						)}
-					</div>
-
-					<div>
-						<label style={labelStyle}>
-							{t.lastName}
-						</label>
-						<input
-							style={inputStyle(
-								!!state.errors
-									.last_name,
-								state.focused
-									.last_name
-							)}
-							type="text"
-							value={
-								state.formData
-									.last_name
-							}
-							onChange={(e) => {
-								dispatch({
-									type: "SET_FORM_DATA",
-									payload: {
-										last_name:
-											e
-												.target
-												.value,
-									},
-								});
-								if (
-									state.errors
-										.last_name
-								)
-									dispatch({
-										type: "SET_ERRORS",
-										payload: {
-											last_name:
-												"",
-										},
-									});
-							}}
-							onFocus={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										last_name: true,
-									},
-								})
-							}
-							onBlur={() =>
-								dispatch({
-									type: "SET_FOCUSED",
-									payload: {
-										last_name: false,
-									},
-								})
-							}
-							placeholder={
-								t.enterLastName
-							}
-							aria-label={
-								t.last_name
-							}
-						/>
-						{state.errors
-							.last_name && (
-							<p style={errorStyle}>
-								{
-									state.errors
-										.last_name
-								}
-							</p>
-						)}
-					</div>
-
-					<div>
-						<label style={labelStyle}>
-							{t.role}
-						</label>
-						<select
-							style={inputStyle(
-								false,
-								false
-							)}
-							value={
-								state.formData
-									.role
-							}
-							onChange={(e) =>
-								dispatch({
-									type: "SET_FORM_DATA",
-									payload: {
-										role: e
-											.target
-											.value,
-									},
-								})
-							}
-							aria-label={t.role}
-						>
-							<option
-								value="admin"
-								aria-label={
-									t.admin
-								}
-							>
-								{t.admin}
-							</option>
-							<option
-								value="manager"
-								aria-label={
-									t.manager
-								}
-							>
-								{t.manager}
-							</option>
-							<option
-								value="contractor"
-								aria-label={
-									t.contractor
-								}
-							>
-								{t.contractor}
-							</option>
-						</select>
-					</div>
-
-					{state.formData.role ===
-						"manager" && (
+					<div
+						ref={bodyRef}
+						style={{
+							padding: `${spacing[4]} ${spacing[5]}`,
+							overflowY: "auto",
+							flex: 1,
+							display: "flex",
+							flexDirection: "column",
+							gap: spacing[4],
+							background: colors.cardBg,
+						}}
+					>
 						<div>
 							<label
-								style={labelStyle}
-							>
-								{
-									t.assignBuildings
-								}
-							</label>
-							<input
 								style={{
-									...inputStyle(
-										false,
-										state
-											.focused
-											.buildingSearch
-									),
-									marginBottom:
-										spacing[2],
+									fontSize: font.size.xs,
+									fontWeight: font.weight.big,
+									color: colors.textSecondary,
+									marginBottom: spacing[1],
+									display: "block",
+									textTransform: "uppercase",
+									letterSpacing: font.letterSpacing.wide,
 								}}
-								type="text"
-								value={
-									state.buildingSearch
-								}
-								onChange={(e) =>
-									dispatch({
-										type: "SET_BUILDING_SEARCH",
-										payload:
-											e
-												.target
-												.value,
-									})
-								}
-								onFocus={() =>
-									dispatch({
-										type: "SET_FOCUSED",
-										payload: {
-											buildingSearch: true,
-										},
-									})
-								}
-								onBlur={() =>
-									dispatch({
-										type: "SET_FOCUSED",
-										payload: {
-											buildingSearch: false,
-										},
-									})
-								}
-								placeholder={
-									t.searchBuildings
-								}
-								aria-label={
-									t.searchBuildings
-								}
-							/>
-							<div
-								style={
-									buildingListStyle
-								}
 							>
-								{filteredBuildings.length >
-								0 ? (
-									filteredBuildings.map(
-										(
-											building
-										) => (
-											<label
-												key={
-													building.id
-												}
-												style={
-													buildingLabelStyle
-												}
-												onMouseEnter={(
-													e
-												) => {
-													e.currentTarget.style.background =
-														colors.pageBg;
-												}}
-												onMouseLeave={(
-													e
-												) => {
-													e.currentTarget.style.background =
-														"transparent";
-												}}
-											>
-												<input
-													type="checkbox"
-													checked={state.formData.assignedBuildings.includes(
-														building.id
-													)}
-													onChange={() =>
-														toggleBuildingAssignment(
-															building.id
-														)
-													}
-													style={{
-														width: "16px",
-														height: "16px",
-														cursor: "pointer",
-													}}
-													aria-label={
-														building.street_address
-													}
-												/>
-												<span>
-													{
-														building.street_address
-													}
+								{t.role}
+							</label>
+							<div
+								style={{
+									display: "grid",
+									gridTemplateColumns: "repeat(3, 1fr)",
+									gap: spacing[2],
+								}}
+							>
+								{roles.map((r) => {
+									const isSelected = state.formData.role === r.id;
+									return (
+										<button
+											key={r.id}
+											type="button"
+											onClick={() =>
+												dispatch({
+													type: "SET_FORM_DATA",
+													payload: { role: r.id },
+												})
+											}
+											style={{
+												padding: `${spacing[2]} ${spacing[3]}`,
+												borderRadius: radius.md,
+												border: `1.5px solid ${isSelected ? colors.primary : colors.borderDefault}`,
+												background: isSelected ? `${colors.primary}12` : colors.pageBg,
+												color: isSelected ? colors.primary : colors.textBody,
+												fontWeight: isSelected ? font.weight.big : font.weight.medium,
+												fontSize: font.size.xs,
+												cursor: "pointer",
+												transition: "all 0.15s ease",
+												textAlign: "center",
+											}}
+										>
+											{r.label}
+										</button>
+									);
+								})}
+							</div>
+						</div>
 
-													,{" "}
-													{
-														building.district
-													}
+						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing[3] }}>
+							<div>
+								<label
+									style={{
+										fontSize: font.size.xs,
+										fontWeight: font.weight.big,
+										color: colors.textSecondary,
+										marginBottom: spacing[1],
+										display: "block",
+										textTransform: "uppercase",
+										letterSpacing: font.letterSpacing.wide,
+									}}
+								>
+									{t.firstName}
+								</label>
+								<input
+									type="text"
+									value={state.formData.first_name}
+									onChange={(e) =>
+										dispatch({
+											type: "SET_FORM_DATA",
+											payload: { first_name: e.target.value },
+										})
+									}
+									placeholder={t.enterFirstName}
+									style={{
+										...components.input,
+										width: "100%",
+										boxSizing: "border-box",
+										fontSize: font.size.sm,
+										borderRadius: radius.md,
+										border: state.errors.first_name
+											? `1px solid ${status.danger.border}`
+											: `1px solid ${colors.borderDefault}`,
+										background: state.errors.first_name
+											? status.danger.bg
+											: colors.cardBg,
+									}}
+								/>
+								{state.errors.first_name && (
+									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+										{state.errors.first_name}
+									</p>
+								)}
+							</div>
 
-													,{" "}
-													{
-														building.city
-													}
-												</span>
-											</label>
-										)
-									)
-								) : (
-									<div
-										style={
-											noResultsStyle
-										}
-									>
-										{
-											t.noResults
-										}
-									</div>
+							<div>
+								<label
+									style={{
+										fontSize: font.size.xs,
+										fontWeight: font.weight.big,
+										color: colors.textSecondary,
+										marginBottom: spacing[1],
+										display: "block",
+										textTransform: "uppercase",
+										letterSpacing: font.letterSpacing.wide,
+									}}
+								>
+									{t.lastName}
+								</label>
+								<input
+									type="text"
+									value={state.formData.last_name}
+									onChange={(e) =>
+										dispatch({
+											type: "SET_FORM_DATA",
+											payload: { last_name: e.target.value },
+										})
+									}
+									placeholder={t.enterLastName}
+									style={{
+										...components.input,
+										width: "100%",
+										boxSizing: "border-box",
+										fontSize: font.size.sm,
+										borderRadius: radius.md,
+										border: state.errors.last_name
+											? `1px solid ${status.danger.border}`
+											: `1px solid ${colors.borderDefault}`,
+										background: state.errors.last_name
+											? status.danger.bg
+											: colors.cardBg,
+									}}
+								/>
+								{state.errors.last_name && (
+									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+										{state.errors.last_name}
+									</p>
 								)}
 							</div>
 						</div>
-					)}
 
-					<div style={buttonGroupStyle}>
+						<div>
+							<label
+								style={{
+									fontSize: font.size.xs,
+									fontWeight: font.weight.big,
+									color: colors.textSecondary,
+									marginBottom: spacing[1],
+									display: "block",
+									textTransform: "uppercase",
+									letterSpacing: font.letterSpacing.wide,
+								}}
+							>
+								{t.login}
+							</label>
+							<input
+								ref={loginRef}
+								type="text"
+								value={state.formData.login}
+								onChange={(e) =>
+									dispatch({
+										type: "SET_FORM_DATA",
+										payload: { login: e.target.value },
+									})
+								}
+								placeholder={t.enterLogin}
+								style={{
+									...components.input,
+									width: "100%",
+									boxSizing: "border-box",
+									fontSize: font.size.sm,
+									borderRadius: radius.md,
+									border: state.errors.login
+										? `1px solid ${status.danger.border}`
+										: `1px solid ${colors.borderDefault}`,
+									background: state.errors.login
+										? status.danger.bg
+										: colors.cardBg,
+								}}
+							/>
+							{state.errors.login && (
+								<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+									{state.errors.login}
+								</p>
+							)}
+						</div>
+
+						{!isEdit && (
+							<div>
+								<label
+									style={{
+										fontSize: font.size.xs,
+										fontWeight: font.weight.big,
+										color: colors.textSecondary,
+										marginBottom: spacing[1],
+										display: "block",
+										textTransform: "uppercase",
+										letterSpacing: font.letterSpacing.wide,
+									}}
+								>
+									{t.password}
+								</label>
+								<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+									<input
+										type={state.showPassword ? "text" : "password"}
+										value={state.formData.password}
+										onChange={(e) =>
+											dispatch({
+												type: "SET_FORM_DATA",
+												payload: { password: e.target.value },
+											})
+										}
+										placeholder={t.enterPassword}
+										style={{
+											...components.input,
+											width: "100%",
+											boxSizing: "border-box",
+											paddingRight: spacing[9],
+											fontSize: font.size.sm,
+											borderRadius: radius.md,
+											border: state.errors.password
+												? `1px solid ${status.danger.border}`
+												: `1px solid ${colors.borderDefault}`,
+											background: state.errors.password
+												? status.danger.bg
+												: colors.cardBg,
+										}}
+									/>
+									<button
+										type="button"
+										onClick={() => dispatch({ type: "TOGGLE_SHOW_PASSWORD" })}
+										style={{
+											position: "absolute",
+											right: spacing[3],
+											background: "none",
+											border: "none",
+											color: colors.textSecondary,
+											cursor: "pointer",
+											display: "flex",
+											alignItems: "center",
+											padding: 0,
+										}}
+									>
+										{state.showPassword ? ICONS.eyeOff : ICONS.eye}
+									</button>
+								</div>
+								{state.errors.password && (
+									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+										{state.errors.password}
+									</p>
+								)}
+							</div>
+						)}
+
+						{isEdit && (
+							<div
+								style={{
+									border: `1px solid ${colors.borderSubtle}`,
+									borderRadius: radius.md,
+									padding: spacing[3],
+									background: colors.pageBg,
+								}}
+							>
+								<button
+									type="button"
+									onClick={() => dispatch({ type: "TOGGLE_CHANGING_PASSWORD" })}
+									style={{
+										background: "none",
+										border: "none",
+										color: colors.primary,
+										fontWeight: font.weight.big,
+										fontSize: font.size.xs,
+										cursor: "pointer",
+										padding: 0,
+									}}
+								>
+									{state.isChangingPassword
+										? "✕ Anuluj zmianę hasła"
+										: "+ Zmień hasło"}
+								</button>
+
+								{state.isChangingPassword && (
+									<div style={{ marginTop: spacing[3], display: "flex", flexDirection: "column", gap: spacing[3] }}>
+										<div>
+											<input
+												type="password"
+												placeholder="Aktualne hasło"
+												value={state.passwordChange.currentPassword}
+												onChange={(e) =>
+													dispatch({
+														type: "SET_PASSWORD_CHANGE",
+														payload: { currentPassword: e.target.value },
+													})
+												}
+												style={{
+													...components.input,
+													width: "100%",
+													boxSizing: "border-box",
+													fontSize: font.size.sm,
+													borderRadius: radius.md,
+												}}
+											/>
+										</div>
+										<div>
+											<input
+												type="password"
+												placeholder="Nowe hasło"
+												value={state.passwordChange.newPassword}
+												onChange={(e) =>
+													dispatch({
+														type: "SET_PASSWORD_CHANGE",
+														payload: { newPassword: e.target.value },
+													})
+												}
+												style={{
+													...components.input,
+													width: "100%",
+													boxSizing: "border-box",
+													fontSize: font.size.sm,
+													borderRadius: radius.md,
+												}}
+											/>
+										</div>
+										<div>
+											<input
+												type="password"
+												placeholder="Powtórz nowe hasło"
+												value={state.passwordChange.confirmPassword}
+												onChange={(e) =>
+													dispatch({
+														type: "SET_PASSWORD_CHANGE",
+														payload: { confirmPassword: e.target.value },
+													})
+												}
+												style={{
+													...components.input,
+													width: "100%",
+													boxSizing: "border-box",
+													fontSize: font.size.sm,
+													borderRadius: radius.md,
+												}}
+											/>
+										</div>
+									</div>
+								)}
+							</div>
+						)}
+					</div>
+
+					<div
+						style={{
+							padding: `${spacing[3]} ${spacing[5]}`,
+							background: colors.pageBg,
+							borderTop: `1px solid ${colors.borderSubtle}`,
+							display: "flex",
+							justifyContent: "flex-end",
+							gap: spacing[2],
+							flexShrink: 0,
+						}}
+					>
 						<button
 							type="button"
-							onClick={(e) => {
-								e.stopPropagation();
-								onClose?.();
+							onClick={onClose}
+							style={{
+								...components.ghostButton,
+								padding: `${spacing[2]} ${spacing[4]}`,
+								fontSize: font.size.sm,
 							}}
-							style={
-								cancelButtonStyle
-							}
-							aria-label={t.cancel}
 						>
 							{t.cancel}
 						</button>
-
 						<button
 							type="submit"
-							disabled={
-								state.loading
-							}
+							disabled={state.loading}
 							style={{
-								...submitButtonBaseStyle,
-								cursor: state.loading
-									? "not-allowed"
-									: "pointer",
-								opacity:
-									state.loading
-										? 0.55
-										: 1,
+								...components.primaryButton,
+								padding: `${spacing[2]} ${spacing[5]}`,
+								fontSize: font.size.sm,
+								opacity: state.loading ? 0.6 : 1,
+								cursor: state.loading ? "not-allowed" : "pointer",
 							}}
-							onMouseEnter={(e) => {
-								if (
-									!state.loading
-								)
-									e.currentTarget.style.background =
-										colors.primaryHover;
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.background =
-									colors.primary;
-							}}
-							onMouseDown={(e) => {
-								if (
-									!state.loading
-								)
-									e.currentTarget.style.transform =
-										"scale(0.97)";
-							}}
-							onMouseUp={(e) => {
-								e.currentTarget.style.transform =
-									"scale(1)";
-							}}
-							aria-label={
-								state.loading
-									? t.saving
-									: isEdit
-										? t.update
-										: t.create
-							}
 						>
 							{state.loading
 								? t.saving
