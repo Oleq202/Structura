@@ -1,29 +1,51 @@
-import {
-	useState,
-	useEffect,
-	useReducer,
-} from "react";
-import Task from "../components/Task";
-import Navbar from "../components/Navbar";
-import TaskModal from "../components/TaskModal";
-import WorkspaceFilterModal from "../components/WorkspaceFilterModal";
+import { useState, useEffect, useReducer, useMemo } from "react";
 import {
 	colors,
 	font,
 	spacing,
 	radius,
-	shadow,
 	components,
-	badgeStyle,
 } from "../theme";
 import { translations } from "../i18n";
 import * as api from "../services/api";
+import Task from "../components/Task";
+import TaskModal from "../components/TaskModal";
+import WorkspaceFilterModal from "../components/WorkspaceFilterModal";
 
 const ICONS = {
+	plus: (
+		<svg
+			width="14"
+			height="14"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<line x1="12" y1="5" x2="12" y2="19" />
+			<line x1="5" y1="12" x2="19" y2="12" />
+		</svg>
+	),
+	filter: (
+		<svg
+			width="14"
+			height="14"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+		</svg>
+	),
 	building: (
 		<svg
-			width="16"
-			height="16"
+			width="13"
+			height="13"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -44,915 +66,748 @@ const ICONS = {
 			<path d="M8 14h.01" />
 		</svg>
 	),
-	sliders: (
-		<svg
-			width="15"
-			height="15"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="4" y1="21" x2="4" y2="14" />
-			<line x1="4" y1="10" x2="4" y2="3" />
-			<line x1="12" y1="21" x2="12" y2="12" />
-			<line x1="12" y1="8" x2="12" y2="3" />
-			<line x1="20" y1="21" x2="20" y2="16" />
-			<line x1="20" y1="12" x2="20" y2="3" />
-			<line x1="1" y1="14" x2="7" y2="14" />
-			<line x1="9" y1="8" x2="15" y2="8" />
-			<line x1="17" y1="16" x2="23" y2="16" />
-		</svg>
-	),
-	empty: (
-		<svg
-			width="40"
-			height="40"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="1.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-			<line x1="9" y1="14" x2="15" y2="14" />
-		</svg>
-	),
 };
 
-const groupTasksByBuilding = (tasksToGroup) => {
-	const groups = {};
-	tasksToGroup.forEach((task) => {
-		const buildingId = task.building_id;
-		if (!groups[buildingId]) {
-			groups[buildingId] = {
-				building: task.building,
-				tasks: [],
-			};
-		}
-		groups[buildingId].tasks.push(task);
-	});
-
-	return Object.values(groups).sort((a, b) => {
-		const aAddress = a.building
-			? `${a.building.street_address}, ${a.building.district || ""}, ${a.building.city}`
-			: "";
-		const bAddress = b.building
-			? `${b.building.street_address}, ${b.building.district || ""}, ${b.building.city}`
-			: "";
-		return aAddress.localeCompare(bAddress);
-	});
-};
-
-const handleReassign = async (taskId) => {
-	console.log("Reassign task:", taskId);
-};
-
-const floatingButtonStyle = {
-	...components.primaryButton,
-	position: "fixed",
-	bottom: spacing[24],
-	right: spacing[4],
-	padding: `${spacing[1]} ${spacing[1]}`,
-	borderRadius: radius.full,
-	fontFamily: font.family.sans,
-	boxSizing: "border-box",
-	zIndex: 200,
-	width: "64px",
-	height: "64px",
+const filterTabsContainerStyle = {
 	display: "flex",
+	gap: spacing[2],
+	overflowX: "auto",
+	paddingBottom: spacing[1],
+	scrollbarWidth: "none",
+	msOverflowStyle: "none",
+	width: "100%",
+	boxSizing: "border-box",
+};
+
+const getFilterTabStyle = (isActive) => ({
+	...components.tab,
+	background: isActive ? colors.primary : colors.cardBg,
+	color: isActive ? "#ffffff" : colors.textSecondary,
+	borderColor: isActive ? colors.primary : colors.borderSubtle,
+	fontWeight: isActive ? font.weight.big : font.weight.medium,
+	padding: `${spacing[2]} ${spacing[4]}`,
+	borderRadius: radius.full,
+	fontSize: font.size.sm,
+	whiteSpace: "nowrap",
+	cursor: "pointer",
+	minHeight: "44px",
+	minWidth: "44px",
+	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
-};
+	boxSizing: "border-box",
+	transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease",
+});
 
 const initialState = {
-	activeFilter: "all",
-	isTaskModalOpen: false,
-	expandedTaskId: null,
 	tasks: [],
 	buildings: [],
 	contractors: [],
+	isCreateTaskOpen: false,
+	activeFilter: "all",
+	editingTask: null,
+	expandedTaskId: null,
 };
 
 function reducer(state, action) {
 	switch (action.type) {
-		case "SET_ACTIVE_FILTER":
-			return {
-				...state,
-				activeFilter: action.payload,
-			};
-		case "SET_CREATE_TASK_OPEN":
-			return {
-				...state,
-				isTaskModalOpen: action.payload,
-			};
-		case "SET_EXPANDED_TASK_ID":
-			return {
-				...state,
-				expandedTaskId: action.payload,
-			};
 		case "SET_TASKS":
-			return {
-				...state,
-				tasks: action.payload,
-			};
+			return { ...state, tasks: action.payload };
 		case "SET_BUILDINGS":
-			return {
-				...state,
-				buildings: action.payload,
-			};
+			return { ...state, buildings: action.payload };
 		case "SET_CONTRACTORS":
-			return {
-				...state,
-				contractors: action.payload,
-			};
+			return { ...state, contractors: action.payload };
+		case "SET_CREATE_TASK_OPEN":
+			return { ...state, isCreateTaskOpen: action.payload };
 		case "TOGGLE_CREATE_TASK":
-			return {
-				...state,
-				isTaskModalOpen: !state.isTaskModalOpen,
-			};
+			return { ...state, isCreateTaskOpen: !state.isCreateTaskOpen };
+		case "SET_ACTIVE_FILTER":
+			return { ...state, activeFilter: action.payload };
+		case "SET_EDITING_TASK":
+			return { ...state, editingTask: action.payload };
 		case "TOGGLE_TASK_EXPANDED":
 			return {
 				...state,
 				expandedTaskId:
-					state.expandedTaskId === action.payload
-						? null
-						: action.payload,
+					state.expandedTaskId === action.payload ? null : action.payload,
+			};
+		case "OPTIMISTIC_TASK_STATUS":
+			return {
+				...state,
+				tasks: state.tasks.map((task) =>
+					task.id === action.payload.taskId
+						? {
+								...task,
+								status: action.payload.status,
+								updated_at: new Date().toISOString(),
+							}
+						: task
+				),
 			};
 		default:
 			return state;
 	}
 }
 
-export default function ManagerPage({
-	currentUser,
-	language = "pl",
-}) {
-	const t = translations[language];
-	const [state, dispatch] = useReducer(
-		reducer,
-		initialState
-	);
-	const [selectedBuildingIds, setSelectedBuildingIds] = useState([]);
-	const [isWorkspaceModalOpen, setWorkspaceModalOpen] = useState(false);
+function compareTasks(a, b) {
+	const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+	const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+	return timeB - timeA;
+}
 
-	const openTaskModal = () =>
-		dispatch({
-			type: "SET_CREATE_TASK_OPEN",
-			payload: true,
-		});
-	const closeTaskModal = () =>
-		dispatch({
-			type: "SET_CREATE_TASK_OPEN",
-			payload: false,
-		});
-	const toggleTaskModal = () =>
-		dispatch({ type: "TOGGLE_CREATE_TASK" });
-	const toggleTaskExpanded = (taskId) =>
-		dispatch({
-			type: "TOGGLE_TASK_EXPANDED",
-			payload: taskId,
-		});
+function compareBuildings(a, b) {
+	const addrA = `${a.street_address || ""} ${a.city || ""} ${a.district || ""}`.trim();
+	const addrB = `${b.street_address || ""} ${b.city || ""} ${b.district || ""}`.trim();
+	return addrA.localeCompare(addrB, undefined, { sensitivity: "base" });
+}
 
-	const handleSaveWorkspace = (newBuildingIds) => {
-		setSelectedBuildingIds(newBuildingIds);
-		api.updateUserPreferences({
-			selected_building_ids: newBuildingIds,
-		}).catch((err) =>
-			console.error("Failed to save workspace preferences:", err)
-		);
+function compareContractors(a, b) {
+	const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim() || a.login || "";
+	const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim() || b.login || "";
+	return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+}
+
+function useManagerData(currentUser) {
+	const [state, dispatch] = useReducer(reducer, initialState);
+	const [selectedBuildingIds, setSelectedBuildingIds] = useState(() => {
+		if (currentUser?.id) {
+			try {
+				const cached = localStorage.getItem(
+					`structura_workspace_${currentUser.id}`
+				);
+				if (cached !== null) {
+					return JSON.parse(cached);
+				}
+			} catch (e) {
+				console.warn("Failed to read workspace cache", e);
+			}
+		}
+		return null;
+	});
+
+	const loadTasks = () => {
+		api.getTasks().then((data) => {
+			dispatch({ type: "SET_TASKS", payload: [...data].sort(compareTasks) });
+		});
 	};
 
+	useEffect(() => {
+		loadTasks();
+		api.getBuildings().then((data) => {
+			dispatch({ type: "SET_BUILDINGS", payload: [...data].sort(compareBuildings) });
+		});
+		api.getUsers().then((users) => {
+			dispatch({
+				type: "SET_CONTRACTORS",
+				payload: users
+					.filter((u) => u.role === "contractor")
+					.sort(compareContractors),
+			});
+		});
+
+		if (currentUser?.role !== "contractor") {
+			api.getUserPreferences()
+				.then((prefs) => {
+					if (prefs && Array.isArray(prefs.selected_building_ids) && prefs.selected_building_ids.length > 0) {
+						setSelectedBuildingIds(prefs.selected_building_ids);
+						if (currentUser?.id) {
+							try {
+								localStorage.setItem(
+									`structura_workspace_${currentUser.id}`,
+									JSON.stringify(prefs.selected_building_ids)
+								);
+							} catch (e) {
+								console.warn("Failed to update workspace cache", e);
+							}
+						}
+					}
+				})
+				.catch((err) => {
+					console.error("Failed to fetch preferences:", err);
+				});
+		}
+	}, [currentUser]);
+
+	return { state, dispatch, loadTasks, selectedBuildingIds, setSelectedBuildingIds };
+}
+
+function ManagerFilterBar({
+	activeFilter,
+	onSelectFilter,
+	pendingCount,
+	completedCount,
+	totalCount,
+	isWorkspaceFiltered,
+	isNoBuildingsSelected,
+	selectedBuildingCount,
+	totalBuildingCount,
+	showWorkspaceButton,
+	onOpenWorkspaceModal,
+	t,
+}) {
+	return (
+		<div style={filterTabsContainerStyle}>
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "all")}
+				onClick={() => onSelectFilter("all")}
+			>
+				{t.all} ({totalCount})
+			</button>
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "pending")}
+				onClick={() => onSelectFilter("pending")}
+			>
+				{t.pending} ({pendingCount})
+			</button>
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "completed")}
+				onClick={() => onSelectFilter("completed")}
+			>
+				{t.completed} ({completedCount})
+			</button>
+
+			{showWorkspaceButton && (
+				<button
+					type="button"
+					onClick={onOpenWorkspaceModal}
+					style={{
+						...getFilterTabStyle(isWorkspaceFiltered || isNoBuildingsSelected),
+						display: "flex",
+						alignItems: "center",
+						gap: spacing[1],
+						background:
+							isWorkspaceFiltered || isNoBuildingsSelected
+								? `${colors.primary}18`
+								: colors.cardBg,
+						color:
+							isWorkspaceFiltered || isNoBuildingsSelected
+								? colors.primary
+								: colors.textSecondary,
+						borderColor:
+							isWorkspaceFiltered || isNoBuildingsSelected
+								? colors.primary
+								: colors.borderSubtle,
+					}}
+				>
+					{ICONS.building}
+					<span>
+						{isNoBuildingsSelected
+							? (t.noBuildingsSelected || "0 budynków")
+							: isWorkspaceFiltered
+								? `${selectedBuildingCount}/${totalBuildingCount}`
+								: (t.allBuildings || "Wszystkie budynki")}
+					</span>
+				</button>
+			)}
+		</div>
+	);
+}
+
+function TaskGroupHeader({ label, count, color, bg, border }) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				padding: "4px 0",
+				marginTop: "4px",
+				marginBottom: "2px",
+			}}
+		>
+			<span
+				style={{
+					fontSize: font.size.sm,
+					fontWeight: font.weight.big,
+					color: colors.textHeading,
+					letterSpacing: font.letterSpacing.wide,
+					textTransform: "uppercase",
+				}}
+			>
+				{label}
+			</span>
+			<span
+				style={{
+					padding: "2px 8px",
+					borderRadius: radius.full,
+					fontSize: "11px",
+					fontWeight: font.weight.big,
+					background: bg,
+					border: `1px solid ${border}`,
+					color: color,
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "4px",
+				}}
+			>
+				<span
+					style={{
+						width: "6px",
+						height: "6px",
+						borderRadius: radius.full,
+						background: color,
+					}}
+				/>
+				{count}
+			</span>
+			<div
+				style={{
+					flex: 1,
+					height: "1px",
+					background: colors.borderSubtle,
+				}}
+			/>
+		</div>
+	);
+}
+
+function ManagerTaskList({
+	tasks,
+	expandedTaskId,
+	updatingTaskIds,
+	onToggleExpanded,
+	onEditTask,
+	onMarkCompleted,
+	onRevertCompleted,
+	onDeleteTask,
+	isNoBuildingsSelected,
+	onOpenWorkspaceModal,
+	language,
+	userRole,
+	t,
+}) {
+	if (isNoBuildingsSelected) {
+		return (
+			<div
+				style={{
+					width: "100%",
+					boxSizing: "border-box",
+					textAlign: "center",
+					padding: `${spacing[8]} ${spacing[4]}`,
+					background: colors.cardBg,
+					borderRadius: radius.xl,
+					border: `1px solid ${colors.borderSubtle}`,
+				}}
+			>
+				<p style={{ color: colors.textSecondary, margin: `0 0 ${spacing[3]} 0` }}>
+					{t.noBuildingsSelectedMessage || "Nie wybrano żadnych budynków w filtrze obszaru roboczego."}
+				</p>
+				<button
+					type="button"
+					onClick={onOpenWorkspaceModal}
+					style={{
+						...components.ghostButton,
+						color: colors.primary,
+						borderColor: colors.primary,
+						minHeight: "44px",
+						minWidth: "44px",
+					}}
+				>
+					{t.configureWorkspace || "Skonfiguruj obszar roboczy"}
+				</button>
+			</div>
+		);
+	}
+
+	if (tasks.length === 0) {
+		return (
+			<div
+				style={{
+					width: "100%",
+					boxSizing: "border-box",
+					textAlign: "center",
+					padding: `${spacing[8]} 0`,
+					color: colors.textSecondary,
+					fontSize: font.size.sm,
+				}}
+			>
+				{t.noTasks}
+			</div>
+		);
+	}
+
+	const pendingTasks = tasks.filter((t) => t.status === "pending");
+	const completedTasks = tasks.filter((t) => t.status === "completed");
+
+	return (
+		<div style={{ width: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: spacing[3] }}>
+			{pendingTasks.length > 0 && (
+				<div style={{ display: "flex", flexDirection: "column", gap: spacing[3] }}>
+					<TaskGroupHeader
+						label={t.pending || "Oczekujące"}
+						count={pendingTasks.length}
+						color="#92400e"
+						bg="#fef3c7"
+						border="#fde68a"
+					/>
+					{pendingTasks.map((task) => (
+						<Task
+							key={task.id}
+							initialData={task}
+							expanded={expandedTaskId === task.id}
+							onToggle={() => onToggleExpanded(task.id)}
+							onEdit={() => onEditTask(task)}
+							onMarkCompleted={() => onMarkCompleted(task.id)}
+							onRevertCompleted={() => onRevertCompleted(task.id)}
+							onDeleteTask={() => onDeleteTask(task.id)}
+							isUpdating={updatingTaskIds?.has(task.id)}
+							language={language}
+							userRole={userRole}
+						/>
+					))}
+				</div>
+			)}
+
+			{completedTasks.length > 0 && (
+				<div style={{ display: "flex", flexDirection: "column", gap: spacing[3], marginTop: pendingTasks.length > 0 ? spacing[2] : 0 }}>
+					<TaskGroupHeader
+						label={t.completed || "Ukończone"}
+						count={completedTasks.length}
+						color="#27500a"
+						bg="#eaf3de"
+						border="#97c459"
+					/>
+					{completedTasks.map((task) => (
+						<Task
+							key={task.id}
+							initialData={task}
+							expanded={expandedTaskId === task.id}
+							onToggle={() => onToggleExpanded(task.id)}
+							onEdit={() => onEditTask(task)}
+							onMarkCompleted={() => onMarkCompleted(task.id)}
+							onRevertCompleted={() => onRevertCompleted(task.id)}
+							onDeleteTask={() => onDeleteTask(task.id)}
+							isUpdating={updatingTaskIds?.has(task.id)}
+							language={language}
+							userRole={userRole}
+						/>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function useFilteredTasks(tasks, buildings, activeFilter, currentUser, selectedBuildingIds) {
 	const isNoBuildingsSelected =
 		currentUser?.role !== "contractor" &&
 		selectedBuildingIds !== null &&
 		Array.isArray(selectedBuildingIds) &&
 		selectedBuildingIds.length === 0 &&
-		state.buildings.length > 0;
+		buildings.length > 0;
 
 	const isWorkspaceFiltered =
 		currentUser?.role !== "contractor" &&
 		selectedBuildingIds !== null &&
 		Array.isArray(selectedBuildingIds) &&
 		selectedBuildingIds.length > 0 &&
-		selectedBuildingIds.length < state.buildings.length;
+		selectedBuildingIds.length < buildings.length;
 
-	const getFilteredTasks = () => {
+	const selectedBuildingIdSet = useMemo(() => {
+		if (Array.isArray(selectedBuildingIds)) {
+			return new Set(selectedBuildingIds.map(Number));
+		}
+		return null;
+	}, [selectedBuildingIds]);
+
+	const filteredTasks = useMemo(() => {
 		if (isNoBuildingsSelected) {
 			return [];
 		}
 
-		let currentTasks = state.tasks;
+		let currentTasks = tasks;
 
-		if (isWorkspaceFiltered) {
+		if (isWorkspaceFiltered && selectedBuildingIdSet) {
 			currentTasks = currentTasks.filter((t) =>
-				selectedBuildingIds.includes(t.building_id)
+				selectedBuildingIdSet.has(Number(t.building_id))
 			);
 		}
 
-		switch (state.activeFilter) {
+		let result;
+		switch (activeFilter) {
 			case "pending":
-				return currentTasks.filter(
-					(t) => t.status === "pending"
-				);
+				result = currentTasks.filter((t) => t.status === "pending");
+				break;
 			case "completed":
-				return currentTasks.filter(
-					(t) => t.status === "completed"
-				);
+				result = currentTasks.filter((t) => t.status === "completed");
+				break;
 			case "all":
-				return currentTasks;
+				result = currentTasks;
+				break;
 			default:
-				if (
-					![
-						"all",
-						"pending",
-						"completed",
-					].includes(state.activeFilter)
-				) {
-					return currentTasks.filter(
-						(t) =>
-							t.building_id ===
-							parseInt(state.activeFilter)
-					);
-				}
-				return currentTasks;
+				result = currentTasks.filter(
+					(t) => t.building_id === parseInt(activeFilter)
+				);
+				break;
 		}
-	};
+		return [...result].sort(compareTasks);
+	}, [
+		tasks,
+		activeFilter,
+		isNoBuildingsSelected,
+		isWorkspaceFiltered,
+		selectedBuildingIdSet,
+	]);
 
-	const refreshTasks = () => {
-		api.getTasks()
-			.then((tasks) =>
-				dispatch({
-					type: "SET_TASKS",
-					payload: tasks,
-				})
-			)
-			.catch(console.error);
-	};
+	const counts = useMemo(() => {
+		let currentTasks = tasks;
+		if (isWorkspaceFiltered && selectedBuildingIdSet) {
+			currentTasks = currentTasks.filter((t) =>
+				selectedBuildingIdSet.has(t.building_id)
+			);
+		}
+		return {
+			pending: currentTasks.filter((t) => t.status === "pending").length,
+			completed: currentTasks.filter((t) => t.status === "completed").length,
+			total: currentTasks.length,
+		};
+	}, [tasks, isWorkspaceFiltered, selectedBuildingIdSet]);
 
-	useEffect(() => {
-		Promise.all([
-			api.getTasks(),
-			api.getBuildings(),
-			api.getContractors(),
-			api.getUserPreferences().catch(() => null),
-		])
-			.then(
-				([
-					tasks,
-					buildings,
-					contractors,
-					prefs,
-				]) => {
-					dispatch({
-						type: "SET_TASKS",
-						payload: tasks,
-					});
-					dispatch({
-						type: "SET_BUILDINGS",
-						payload: buildings,
-					});
-					dispatch({
-						type: "SET_CONTRACTORS",
-						payload: contractors,
-					});
-					if (
-						prefs &&
-						Array.isArray(prefs.selected_building_ids)
-					) {
-						setSelectedBuildingIds(prefs.selected_building_ids);
-					} else {
-						setSelectedBuildingIds(null);
-					}
-				}
-			)
-			.catch(console.error);
-	}, []);
+	return {
+		filteredTasks,
+		counts,
+		isNoBuildingsSelected,
+		isWorkspaceFiltered,
+	};
+}
+
+function CreateTaskButton({ onClick, t }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={{
+				...components.primaryButton,
+				position: "fixed",
+				bottom: "calc(96px + env(safe-area-inset-bottom, 0px))",
+				right: "max(24px, calc((100vw - 840px) / 2 + 20px))",
+				width: "56px",
+				height: "56px",
+				borderRadius: radius.full,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				boxShadow: "0 6px 20px rgba(46, 141, 228, 0.45)",
+				zIndex: 1000,
+				cursor: "pointer",
+				border: "none",
+				transition: "transform 0.15s ease, background-color 0.15s ease",
+			}}
+			onMouseEnter={(e) => {
+				e.currentTarget.style.backgroundColor = colors.primaryHover;
+				e.currentTarget.style.transform = "scale(1.06)";
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.backgroundColor = colors.primary;
+				e.currentTarget.style.transform = "scale(1)";
+			}}
+			onMouseDown={(e) => {
+				e.currentTarget.style.transform = "scale(0.94)";
+			}}
+			onMouseUp={(e) => {
+				e.currentTarget.style.transform = "scale(1.06)";
+			}}
+			aria-label={t.createNewTask || t.createTask || "Utwórz zadanie"}
+			title={t.createNewTask || t.createTask || "Utwórz zadanie"}
+		>
+			<svg
+				width="26"
+				height="26"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="2.5"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			>
+				<line x1="12" y1="5" x2="12" y2="19" />
+				<line x1="5" y1="12" x2="19" y2="12" />
+			</svg>
+		</button>
+	);
+}
+
+export default function ManagerPage({
+	currentUser,
+	language = "pl",
+}) {
+	const t = translations[language] || translations.pl;
+	const [isWorkspaceModalOpen, setWorkspaceModalOpen] = useState(false);
+	const [updatingTaskIds, setUpdatingTaskIds] = useState(() => new Set());
+
+	const {
+		state,
+		dispatch,
+		loadTasks,
+		selectedBuildingIds,
+		setSelectedBuildingIds,
+	} = useManagerData(currentUser);
+
+	const {
+		filteredTasks,
+		counts,
+		isNoBuildingsSelected,
+		isWorkspaceFiltered,
+	} = useFilteredTasks(
+		state.tasks,
+		state.buildings,
+		state.activeFilter,
+		currentUser,
+		selectedBuildingIds
+	);
+
+	const handleSaveWorkspace = (newBuildingIds) => {
+		setSelectedBuildingIds(newBuildingIds);
+		if (currentUser?.id) {
+			try {
+				localStorage.setItem(
+					`structura_workspace_${currentUser.id}`,
+					JSON.stringify(newBuildingIds)
+				);
+			} catch (e) {
+				console.warn("Failed to update workspace cache", e);
+			}
+		}
+		api.updateUserPreferences({
+			selected_building_ids: newBuildingIds || [],
+		}).catch((err) =>
+			console.error("Failed to save workspace preferences:", err)
+		);
+	};
 
 	const handleMarkCompleted = async (taskId) => {
+		setUpdatingTaskIds((prev) => new Set(prev).add(taskId));
+		dispatch({
+			type: "OPTIMISTIC_TASK_STATUS",
+			payload: { taskId, status: "completed" },
+		});
 		try {
-			if (currentUser.role === "contractor") {
-				await api.updateTaskStatus(taskId, "completed");
-			} else {
-				await api.updateTask(taskId, {
-					status: "completed",
-					created_by: currentUser.id,
-				});
-			}
-			refreshTasks();
+			await api.updateTaskStatus(taskId, "completed");
+			loadTasks();
 		} catch (err) {
-			console.error("Error marking task as completed", err);
+			console.error("Failed to mark task completed", err);
+			loadTasks();
+		} finally {
+			setUpdatingTaskIds((prev) => {
+				const next = new Set(prev);
+				next.delete(taskId);
+				return next;
+			});
 		}
 	};
 
 	const handleRevertCompleted = async (taskId) => {
+		setUpdatingTaskIds((prev) => new Set(prev).add(taskId));
+		dispatch({
+			type: "OPTIMISTIC_TASK_STATUS",
+			payload: { taskId, status: "pending" },
+		});
 		try {
-			if (currentUser.role === "contractor") {
-				await api.updateTaskStatus(taskId, "pending");
-			} else {
-				await api.updateTask(taskId, {
-					status: "pending",
-					created_by: currentUser.id,
-				});
-			}
-			refreshTasks();
+			await api.updateTaskStatus(taskId, "pending");
+			loadTasks();
 		} catch (err) {
-			console.error("Error reverting task completion", err);
+			console.error("Failed to revert task", err);
+			loadTasks();
+		} finally {
+			setUpdatingTaskIds((prev) => {
+				const next = new Set(prev);
+				next.delete(taskId);
+				return next;
+			});
 		}
 	};
 
 	const handleDeleteTask = async (taskId) => {
-		if (!window.confirm(t.deleteTaskConfirm)) {
-			return;
+		if (confirm(t.deleteTaskConfirm)) {
+			try {
+				await api.deleteTask(taskId);
+				loadTasks();
+			} catch (err) {
+				console.error("Failed to delete task", err);
+			}
 		}
-		try {
-			await api.deleteTask(taskId);
-			refreshTasks();
-		} catch (err) {
-			console.error("Error deleting task", err);
-		}
 	};
 
-	const [editingTask, setEditingTask] = useState(null);
-
-	const openTaskEditor = (task) => {
-		setEditingTask(task);
-	};
-
-	const closeTaskEditor = () => {
-		setEditingTask(null);
-	};
-
-	const filteredTasks = getFilteredTasks();
 	return (
 		<div
 			style={{
+				padding: `${spacing[4]} ${spacing[4]}`,
+				maxWidth: "840px",
+				width: "100%",
+				margin: "0 auto",
 				display: "flex",
 				flexDirection: "column",
-				background: colors.pageBg,
-				fontFamily: font.family.sans,
+				gap: spacing[3],
 				boxSizing: "border-box",
-				minHeight: "100%",
 			}}
 		>
-			<Navbar
+			<ManagerFilterBar
 				activeFilter={state.activeFilter}
-				onFilterChange={(filter) =>
-					dispatch({
-						type: "SET_ACTIVE_FILTER",
-						payload: filter,
-					})
+				onSelectFilter={(filter) =>
+					dispatch({ type: "SET_ACTIVE_FILTER", payload: filter })
 				}
-				language={language}
+				pendingCount={counts.pending}
+				completedCount={counts.completed}
+				totalCount={counts.total}
+				isWorkspaceFiltered={isWorkspaceFiltered}
+				isNoBuildingsSelected={isNoBuildingsSelected}
+				selectedBuildingCount={selectedBuildingIds === null ? state.buildings.length : (selectedBuildingIds?.length || 0)}
+				totalBuildingCount={state.buildings.length}
+				showWorkspaceButton={currentUser?.role !== "contractor"}
+				onOpenWorkspaceModal={() => setWorkspaceModalOpen(true)}
+				t={t}
 			/>
 
-			<div
-				style={{
-					display: "flex",
-					flexDirection: "column",
-					gap: spacing[4],
-					padding: `${spacing[3]} ${spacing[4]}`,
-					alignItems: "center",
-					width: "100%",
-					maxWidth: "600px",
-					margin: "0 auto",
-					boxSizing: "border-box",
-				}}
-			>
-				{currentUser?.role !== "contractor" && state.buildings.length > 0 && (
-					<div
-						style={{
-							width: "100%",
-							maxWidth: "420px",
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-							padding: `${spacing[2]} ${spacing[3]}`,
-							background: colors.cardBg,
-							border: `1px solid ${colors.borderSubtle}`,
-							borderRadius: radius.lg,
-							boxShadow: shadow.card,
-							boxSizing: "border-box",
-						}}
-					>
-						<div
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: spacing[2],
-								color: colors.textSecondary,
-								fontSize: font.size.sm,
-							}}
-						>
-							<span style={{ color: colors.primary, display: "flex", alignItems: "center" }}>
-								{ICONS.building}
-							</span>
-							<span style={{ fontWeight: font.weight.medium, color: colors.textHeading }}>
-								{isNoBuildingsSelected
-									? t.noBuildingsSelected || "No buildings selected"
-									: !isWorkspaceFiltered
-										? t.allBuildings || "All Buildings"
-										: `${selectedBuildingIds.length} / ${state.buildings.length} ${t.buildingsCount || "buildings"}`}
-							</span>
-						</div>
+			<ManagerTaskList
+				tasks={filteredTasks}
+				expandedTaskId={state.expandedTaskId}
+				updatingTaskIds={updatingTaskIds}
+				onToggleExpanded={(id) =>
+					dispatch({ type: "TOGGLE_TASK_EXPANDED", payload: id })
+				}
+				onEditTask={(task) =>
+					dispatch({ type: "SET_EDITING_TASK", payload: task })
+				}
+				onMarkCompleted={handleMarkCompleted}
+				onRevertCompleted={handleRevertCompleted}
+				onDeleteTask={handleDeleteTask}
+				isNoBuildingsSelected={isNoBuildingsSelected}
+				onOpenWorkspaceModal={() => setWorkspaceModalOpen(true)}
+				language={language}
+				userRole={currentUser?.role}
+				t={t}
+			/>
 
-						<button
-							type="button"
-							onClick={() => setWorkspaceModalOpen(true)}
-							style={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: "6px",
-								background: (isWorkspaceFiltered || isNoBuildingsSelected) ? `${colors.primary}15` : colors.pageBg,
-								border: `1px solid ${(isWorkspaceFiltered || isNoBuildingsSelected) ? colors.primary : colors.borderDefault}`,
-								color: colors.primary,
-								fontWeight: font.weight.big,
-								cursor: "pointer",
-								fontSize: font.size.xs,
-								padding: `5px 10px`,
-								borderRadius: radius.md,
-								transition: "all 0.15s ease",
-							}}
-						>
-							{ICONS.sliders}
-							<span>{t.workspaceFilter || "Filter"}</span>
-						</button>
-					</div>
-				)}
-
-				{state.activeFilter === "all" ? (
-					<>
-						{(() => {
-							const pendingTasks = filteredTasks.filter(
-								(t) => t.status === "pending"
-							);
-							const pendingGroups = groupTasksByBuilding(pendingTasks);
-
-							const completedTasks = filteredTasks.filter(
-								(t) => t.status === "completed"
-							);
-							const completedGroups = groupTasksByBuilding(completedTasks);
-
-							if (pendingGroups.length === 0 && completedGroups.length === 0) {
-								if (isNoBuildingsSelected) {
-									return (
-										<div
-											style={{
-												width: "100%",
-												maxWidth: "420px",
-												textAlign: "center",
-												padding: `${spacing[8]} ${spacing[5]}`,
-												color: colors.textSecondary,
-												display: "flex",
-												flexDirection: "column",
-												alignItems: "center",
-												gap: spacing[3],
-												background: colors.cardBg,
-												borderRadius: radius.xl,
-												border: `1px dashed ${colors.borderDefault}`,
-												boxSizing: "border-box",
-												marginTop: spacing[2],
-											}}
-										>
-											<div
-												style={{
-													width: "44px",
-													height: "44px",
-													borderRadius: radius.full,
-													background: `${colors.primary}15`,
-													color: colors.primary,
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												{ICONS.building}
-											</div>
-											<div>
-												<h3
-													style={{
-														margin: `0 0 ${spacing[1]} 0`,
-														fontSize: font.size.md,
-														fontWeight: font.weight.big,
-														color: colors.textHeading,
-													}}
-												>
-													{t.noBuildingsSelected || "No buildings selected"}
-												</h3>
-												<p style={{ margin: 0, fontSize: font.size.sm, color: colors.textSecondary }}>
-													{t.selectBuildingsPrompt || "Select buildings in the workspace filter to view tasks."}
-												</p>
-											</div>
-											<button
-												type="button"
-												onClick={() => setWorkspaceModalOpen(true)}
-												style={{
-													...components.primaryButton,
-													padding: `${spacing[2]} ${spacing[4]}`,
-													fontSize: font.size.sm,
-													marginTop: spacing[1],
-												}}
-											>
-												{t.workspaceFilter || "Customize Workspace"}
-											</button>
-										</div>
-									);
-								}
-
-								return (
-									<div
-										style={{
-											width: "100%",
-											maxWidth: "420px",
-											textAlign: "center",
-											padding: `${spacing[8]} ${spacing[4]}`,
-											color: colors.textSecondary,
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											gap: spacing[2],
-										}}
-									>
-										<div style={{ color: colors.textMuted }}>{ICONS.empty}</div>
-										<p style={{ margin: 0, fontSize: font.size.sm }}>
-											{isWorkspaceFiltered
-												? t.noResults || "No tasks match your selected buildings."
-												: t.noResults || "No tasks found."}
-										</p>
-									</div>
-								);
-							}
-
-							return (
-								<>
-									{pendingGroups.length > 0 && (
-										<>
-											<h2
-												style={{
-													fontSize: font.size.lg,
-													fontWeight: font.weight.big,
-													color: colors.textHeading,
-													margin: `${spacing[2]} 0 0 0`,
-													width: "100%",
-													maxWidth: "420px",
-												}}
-											>
-												{translations[language].pendingTasks}
-											</h2>
-											{pendingGroups.map((group) => (
-												<div
-													key={
-														group.building?.id ||
-														group.tasks[0]?.building_id
-													}
-													style={{
-														width: "100%",
-														maxWidth: "420px",
-													}}
-												>
-													<div
-														style={{
-															fontSize: font.size.sm,
-															color: colors.textSecondary,
-															marginBottom: spacing[2],
-															fontWeight: font.weight.medium,
-														}}
-													>
-														{group.building?.street_address}
-														{group.building?.district ? `, ${group.building.district}` : ""}
-														{group.building?.city ? `, ${group.building.city}` : ""}
-													</div>
-													<div
-														style={{
-															display: "flex",
-															flexDirection: "column",
-															gap: spacing[3],
-														}}
-													>
-														{group.tasks.map((task) => (
-															<Task
-																key={task.id}
-																initialData={task}
-																expanded={
-																	state.expandedTaskId === task.id
-																}
-																onToggle={() =>
-																	toggleTaskExpanded(task.id)
-																}
-																onMarkCompleted={() =>
-																	handleMarkCompleted(task.id)
-																}
-																onReassign={() =>
-																	handleReassign(task.id)
-																}
-																onEdit={() =>
-																	openTaskEditor(task)
-																}
-																onRevertCompleted={() =>
-																	handleRevertCompleted(task.id)
-																}
-																onDeleteTask={() =>
-																	handleDeleteTask(task.id)
-																}
-																language={language}
-																userRole={currentUser.role}
-															/>
-														))}
-													</div>
-												</div>
-											))}
-										</>
-									)}
-
-									{completedGroups.length > 0 && (
-										<>
-											<h2
-												style={{
-													fontSize: font.size.lg,
-													fontWeight: font.weight.big,
-													color: colors.textHeading,
-													margin: `${spacing[4]} 0 0 0`,
-													width: "100%",
-													maxWidth: "420px",
-												}}
-											>
-												{translations[language].completedTasks}
-											</h2>
-											{completedGroups.map((group) => (
-												<div
-													key={
-														group.building?.id ||
-														group.tasks[0]?.building_id
-													}
-													style={{
-														width: "100%",
-														maxWidth: "420px",
-													}}
-												>
-													<div
-														style={{
-															fontSize: font.size.sm,
-															color: colors.textSecondary,
-															marginBottom: spacing[2],
-															fontWeight: font.weight.medium,
-														}}
-													>
-														{group.building?.street_address}
-														{group.building?.district ? `, ${group.building.district}` : ""}
-														{group.building?.city ? `, ${group.building.city}` : ""}
-													</div>
-													<div
-														style={{
-															display: "flex",
-															flexDirection: "column",
-															gap: spacing[3],
-														}}
-													>
-														{group.tasks.map((task) => (
-															<Task
-																key={task.id}
-																initialData={task}
-																expanded={
-																	state.expandedTaskId === task.id
-																}
-																onToggle={() =>
-																	toggleTaskExpanded(task.id)
-																}
-																onMarkCompleted={() =>
-																	handleMarkCompleted(task.id)
-																}
-																onReassign={() =>
-																	handleReassign(task.id)
-																}
-																onEdit={() =>
-																	openTaskEditor(task)
-																}
-																onRevertCompleted={() =>
-																	handleRevertCompleted(task.id)
-																}
-																onDeleteTask={() =>
-																	handleDeleteTask(task.id)
-																}
-																language={language}
-																userRole={currentUser.role}
-															/>
-														))}
-													</div>
-												</div>
-											))}
-										</>
-									)}
-								</>
-							);
-						})()}
-					</>
-				) : (
-					<>
-						{(() => {
-							const groups = groupTasksByBuilding(filteredTasks);
-							if (groups.length === 0) {
-								if (isNoBuildingsSelected) {
-									return (
-										<div
-											style={{
-												width: "100%",
-												maxWidth: "420px",
-												textAlign: "center",
-												padding: `${spacing[8]} ${spacing[5]}`,
-												color: colors.textSecondary,
-												display: "flex",
-												flexDirection: "column",
-												alignItems: "center",
-												gap: spacing[3],
-												background: colors.cardBg,
-												borderRadius: radius.xl,
-												border: `1px dashed ${colors.borderDefault}`,
-												boxSizing: "border-box",
-												marginTop: spacing[2],
-											}}
-										>
-											<div
-												style={{
-													width: "44px",
-													height: "44px",
-													borderRadius: radius.full,
-													background: `${colors.primary}15`,
-													color: colors.primary,
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												{ICONS.building}
-											</div>
-											<div>
-												<h3
-													style={{
-														margin: `0 0 ${spacing[1]} 0`,
-														fontSize: font.size.md,
-														fontWeight: font.weight.big,
-														color: colors.textHeading,
-													}}
-												>
-													{t.noBuildingsSelected || "No buildings selected"}
-												</h3>
-												<p style={{ margin: 0, fontSize: font.size.sm, color: colors.textSecondary }}>
-													{t.selectBuildingsPrompt || "Select buildings in the workspace filter to view tasks."}
-												</p>
-											</div>
-											<button
-												type="button"
-												onClick={() => setWorkspaceModalOpen(true)}
-												style={{
-													...components.primaryButton,
-													padding: `${spacing[2]} ${spacing[4]}`,
-													fontSize: font.size.sm,
-													marginTop: spacing[1],
-												}}
-											>
-												{t.workspaceFilter || "Customize Workspace"}
-											</button>
-										</div>
-									);
-								}
-
-								return (
-									<div
-										style={{
-											width: "100%",
-											maxWidth: "420px",
-											textAlign: "center",
-											padding: `${spacing[8]} ${spacing[4]}`,
-											color: colors.textSecondary,
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											gap: spacing[2],
-										}}
-									>
-										<div style={{ color: colors.textMuted }}>{ICONS.empty}</div>
-										<p style={{ margin: 0, fontSize: font.size.sm }}>
-											{isWorkspaceFiltered
-												? t.noResults || "No tasks match your selected buildings."
-												: t.noResults || "No tasks found."}
-										</p>
-									</div>
-								);
-							}
-
-							return groups.map((group) => (
-								<div
-									key={
-										group.building?.id ||
-										group.tasks[0]?.building_id
-									}
-									style={{
-										width: "100%",
-										maxWidth: "420px",
-									}}
-								>
-									<div
-										style={{
-											fontSize: font.size.sm,
-											color: colors.textSecondary,
-											marginBottom: spacing[2],
-											fontWeight: font.weight.medium,
-										}}
-									>
-										{group.building?.street_address}
-										{group.building?.district ? `, ${group.building.district}` : ""}
-										{group.building?.city ? `, ${group.building.city}` : ""}
-									</div>
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: spacing[3],
-										}}
-									>
-										{group.tasks.map((task) => (
-											<Task
-												key={task.id}
-												initialData={task}
-												expanded={
-													state.expandedTaskId === task.id
-												}
-												onToggle={() =>
-													toggleTaskExpanded(task.id)
-												}
-												onMarkCompleted={() =>
-													handleMarkCompleted(task.id)
-												}
-												onReassign={() =>
-													handleReassign(task.id)
-												}
-												onEdit={() =>
-													openTaskEditor(task)
-												}
-												onRevertCompleted={() =>
-													handleRevertCompleted(task.id)
-												}
-												onDeleteTask={() =>
-													handleDeleteTask(task.id)
-												}
-												language={language}
-												userRole={currentUser.role}
-											/>
-										))}
-									</div>
-								</div>
-							));
-						})()}
-					</>
-				)}
-			</div>
-
-			{currentUser?.role !== "contractor" && (
-				<button
-					type="button"
-					onClick={toggleTaskModal}
-					style={floatingButtonStyle}
-				>
-					<svg
-						width="32"
-						height="32"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2.5"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-					>
-						<line x1="12" y1="5" x2="12" y2="19" />
-						<line x1="5" y1="12" x2="19" y2="12" />
-					</svg>
-				</button>
-			)}
-
-			{state.isTaskModalOpen && (
+			{state.isCreateTaskOpen && (
 				<TaskModal
-					isOpen={state.isTaskModalOpen}
-					onClose={closeTaskModal}
-					onSubmit={refreshTasks}
+					isOpen={state.isCreateTaskOpen}
 					buildings={state.buildings}
+					selectedBuildingIds={selectedBuildingIds}
 					contractors={state.contractors}
 					currentUser={currentUser}
+					onClose={() =>
+						dispatch({ type: "SET_CREATE_TASK_OPEN", payload: false })
+					}
+					onTaskCreated={loadTasks}
 					language={language}
 				/>
 			)}
 
-			{editingTask && (
+			{state.editingTask && (
 				<TaskModal
-					isOpen={true}
-					onClose={closeTaskEditor}
-					onSubmit={refreshTasks}
+					isOpen={!!state.editingTask}
+					task={state.editingTask}
 					buildings={state.buildings}
+					selectedBuildingIds={selectedBuildingIds}
 					contractors={state.contractors}
 					currentUser={currentUser}
-					task={editingTask}
+					onClose={() =>
+						dispatch({ type: "SET_EDITING_TASK", payload: null })
+					}
+					onTaskCreated={loadTasks}
 					language={language}
 				/>
 			)}
@@ -964,6 +819,15 @@ export default function ManagerPage({
 					onSave={handleSaveWorkspace}
 					onClose={() => setWorkspaceModalOpen(false)}
 					language={language}
+				/>
+			)}
+
+			{currentUser?.role !== "contractor" && (
+				<CreateTaskButton
+					onClick={() =>
+						dispatch({ type: "SET_CREATE_TASK_OPEN", payload: true })
+					}
+					t={t}
 				/>
 			)}
 		</div>

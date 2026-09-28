@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+html,
+body,
+#root {
+	height: 100%;
+	height: 100dvh;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	background-color: #09152a;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-tap-highlight-color: transparent;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+	.user-action-label,
+	.building-action-label {
+		display: none;
+	}
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+

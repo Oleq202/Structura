@@ -38,6 +38,7 @@ export const translations = {
 		signIn: "Zaloguj się",
 		signingIn: "Logowanie...",
 		yourUsername: "Twoja nazwa użytkownika",
+		atLeast5Chars: "Co najmniej 5 znaków",
 		atLeast6Chars:
 			"Musi mieć co najmniej 5 znaków",
 		show: "Pokaż",
@@ -188,6 +189,14 @@ export const translations = {
 		entityAuth: "Logowanie",
 		searchLogs: "Szukaj w akcjach, zadaniach, użytkownikach...",
 		showingFilteredLogs: "Wyniki filtrowania",
+		newTask: "Nowe zadanie",
+		noTasks: "Brak zadań",
+		noBuildingsSelectedMessage: "Nie wybrano żadnych budynków w filtrze obszaru roboczego.",
+		configureWorkspace: "Skonfiguruj obszar roboczy",
+		buildingsSelectedCount: "wybranych",
+		clearFilters: "Wyczyść filtry",
+		filters: "Filtry",
+		operationType: "Typ operacji",
 	},
 	en: {
 		settings: "Settings",
@@ -228,6 +237,7 @@ export const translations = {
 		signIn: "Sign in",
 		signingIn: "Signing in…",
 		yourUsername: "Your username",
+		atLeast5Chars: "At least 5 characters",
 		atLeast6Chars:
 			"Must be at least 5 characters long",
 		show: "Show",
@@ -378,6 +388,14 @@ export const translations = {
 		entityAuth: "Login",
 		searchLogs: "Search actions, tasks, users...",
 		showingFilteredLogs: "Filtered results",
+		newTask: "New Task",
+		noTasks: "No tasks",
+		noBuildingsSelectedMessage: "No buildings selected in the workspace filter.",
+		configureWorkspace: "Configure workspace",
+		buildingsSelectedCount: "selected",
+		clearFilters: "Clear filters",
+		filters: "Filters",
+		operationType: "Operation Type",
 	},
 };
 
