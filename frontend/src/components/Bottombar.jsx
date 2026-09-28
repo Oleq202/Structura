@@ -88,29 +88,37 @@ const NAV_ICONS = {
 	),
 };
 
-const links = [
-	{ key: "tasks", to: "/", labelKey: "tasks" },
-	{
-		key: "logs",
-		to: "/logs",
-		labelKey: "logs",
-	},
-	{
-		key: "settings",
-		to: "/settings",
-		labelKey: "settings",
-	},
-];
-
 const bottombarStyle = {
-	...components.bottomNav,
+	background: colors.shell,
+	borderTop: `1px solid ${colors.shellDeep}`,
+	paddingTop: spacing[2],
+	paddingBottom: `calc(${spacing[2]} + env(safe-area-inset-bottom, 0px))`,
+	paddingLeft: `max(${spacing[4]}, env(safe-area-inset-left, 0px))`,
+	paddingRight: `max(${spacing[4]}, env(safe-area-inset-right, 0px))`,
+	display: "flex",
+	justifyContent: "center",
+	alignItems: "center",
+	flexShrink: 0,
 	zIndex: 2000,
+	boxSizing: "border-box",
+};
+
+const bottombarInnerStyle = {
+	maxWidth: "600px",
+	width: "100%",
+	display: "flex",
+	justifyContent: "space-around",
+	alignItems: "center",
 };
 
 const navLinkBaseStyle = {
 	display: "flex",
 	flexDirection: "column",
 	alignItems: "center",
+	justifyContent: "center",
+	minWidth: "44px",
+	minHeight: "44px",
+	boxSizing: "border-box",
 	gap: "4px",
 	textDecoration: "none",
 	fontFamily: font.family.sans,
@@ -125,9 +133,22 @@ const navLinkBaseStyle = {
 
 export default function Bottombar({
 	language = "pl",
+	currentUser,
 }) {
-	const t = translations[language];
+	const t = translations[language] || translations.pl;
 	const pathname = useLocation().pathname;
+
+	const links = [
+		{ key: "tasks", to: "/", labelKey: "tasks" },
+		...(currentUser?.role === "admin"
+			? [{ key: "logs", to: "/logs", labelKey: "logs" }]
+			: []),
+		{
+			key: "settings",
+			to: "/settings",
+			labelKey: "settings",
+		},
+	];
 
 	const activeKey =
 		pathname === "/"
@@ -140,66 +161,68 @@ export default function Bottombar({
 
 	return (
 		<nav style={bottombarStyle}>
-			{links.map(
-				({ key, to, labelKey }) => {
-					const isActive =
-						activeKey === key;
-					return (
-						<Link
-							key={key}
-							to={to}
-							style={{
-								...navLinkBaseStyle,
-								color: isActive
-									? colors.shellDeep
-									: colors.shellTextMuted,
-								background:
-									isActive
-										? colors.pageBg
-										: "transparent",
-							}}
-							onMouseEnter={(e) => {
-								if (!isActive) {
-									e.currentTarget.style.color =
-										colors.shellText;
-									e.currentTarget.style.fontWeight =
-										font.weight.bold;
-									e.currentTarget.querySelector(
-										"span"
-									).style.opacity =
-										1;
-								}
-							}}
-							onMouseLeave={(e) => {
-								if (!isActive) {
-									e.currentTarget.style.color =
-										colors.shellTextMuted;
-									e.currentTarget.style.fontWeight =
-										font.weight.medium;
-									e.currentTarget.querySelector(
-										"span"
-									).style.opacity =
-										0.6;
-								}
-							}}
-						>
-							<span
+			<div style={bottombarInnerStyle}>
+				{links.map(
+					({ key, to, labelKey }) => {
+						const isActive =
+							activeKey === key;
+						return (
+							<Link
+								key={key}
+								to={to}
 								style={{
-									opacity:
+									...navLinkBaseStyle,
+									color: isActive
+										? colors.shellDeep
+										: colors.shellTextMuted,
+									background:
 										isActive
-											? 1
-											: 0.6,
-									transition:
-										"opacity 0.15s",
+											? colors.pageBg
+											: "transparent",
+								}}
+								onMouseEnter={(e) => {
+									if (!isActive) {
+										e.currentTarget.style.color =
+											colors.shellText;
+										e.currentTarget.style.fontWeight =
+											font.weight.bold;
+										e.currentTarget.querySelector(
+											"span"
+										).style.opacity =
+											1;
+									}
+								}}
+								onMouseLeave={(e) => {
+									if (!isActive) {
+										e.currentTarget.style.color =
+											colors.shellTextMuted;
+										e.currentTarget.style.fontWeight =
+											font.weight.medium;
+										e.currentTarget.querySelector(
+											"span"
+										).style.opacity =
+											0.6;
+									}
 								}}
 							>
-								{NAV_ICONS[key]}
-							</span>
-							{t[labelKey]}
-						</Link>
-					);
-				}
-			)}
+								<span
+									style={{
+										opacity:
+											isActive
+												? 1
+												: 0.6,
+										transition:
+											"opacity 0.15s",
+									}}
+								>
+									{NAV_ICONS[key]}
+								</span>
+								{t[labelKey]}
+							</Link>
+						);
+					}
+				)}
+			</div>
 		</nav>
 	);
 }

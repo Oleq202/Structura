@@ -18,7 +18,14 @@ export default function App() {
 	const [currentUser, setCurrentUser] = useState(null);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [isInitializing, setIsInitializing] = useState(true);
-	const [language, setLanguage] = useState(defaultLanguage);
+	const [language, setLanguage] = useState(() => {
+		return localStorage.getItem("structura_lang") || defaultLanguage;
+	});
+
+	const handleLanguageChange = (newLang) => {
+		setLanguage(newLang);
+		localStorage.setItem("structura_lang", newLang);
+	};
 
 	const handleLogout = async () => {
 		try {
@@ -42,6 +49,7 @@ export default function App() {
 						const prefs = await api.getUserPreferences();
 						if (prefs && prefs.language && isMounted) {
 							setLanguage(prefs.language);
+							localStorage.setItem("structura_lang", prefs.language);
 						}
 					} catch (prefErr) {
 						console.warn("Could not load preferences on session init", prefErr);
@@ -85,6 +93,7 @@ export default function App() {
 				const prefs = await api.getUserPreferences();
 				if (prefs && prefs.language) {
 					setLanguage(prefs.language);
+					localStorage.setItem("structura_lang", prefs.language);
 				}
 			} catch (prefErr) {
 				console.warn("Could not load preferences on login", prefErr);
@@ -122,7 +131,10 @@ export default function App() {
 				style={{
 					display: "flex",
 					flexDirection: "column",
-					height: "100vh",
+					height: "100%",
+					minHeight: "100dvh",
+					maxHeight: "100dvh",
+					overflow: "hidden",
 				}}
 			>
 				{!isLoggedIn ? (
@@ -135,13 +147,14 @@ export default function App() {
 				) : (
 					<>
 						<AppHeader />
-						<div
+						<main
 							style={{
 								flex: 1,
 								minHeight: 0,
 								overflowY: "auto",
+								WebkitOverflowScrolling: "touch",
+								background: "#f8fafc",
 							}}
-
 						>
 							<Routes>
 								<Route
@@ -163,14 +176,21 @@ export default function App() {
 								<Route
 									path="/logs"
 									element={
-										<LogsPage
-											currentUser={
-												currentUser
-											}
-											language={
-												language
-											}
-										/>
+										currentUser?.role === "admin" ? (
+											<LogsPage
+												currentUser={
+													currentUser
+												}
+												language={
+													language
+												}
+											/>
+										) : (
+											<Navigate
+												to="/"
+												replace
+											/>
+										)
 									}
 								/>
 								<Route
@@ -184,7 +204,7 @@ export default function App() {
 												language
 											}
 											onLanguageChange={
-												setLanguage
+												handleLanguageChange
 											}
 											onLogout={
 												handleLogout
@@ -202,9 +222,10 @@ export default function App() {
 									}
 								/>
 							</Routes>
-						</div>
+						</main>
 						<Bottombar
 							language={language}
+							currentUser={currentUser}
 						/>
 					</>
 				)}

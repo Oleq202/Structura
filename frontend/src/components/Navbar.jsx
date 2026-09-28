@@ -26,6 +26,10 @@ const navbarStyle = {
 const filterButtonBaseStyle = {
 	display: "inline-flex",
 	alignItems: "center",
+	justifyContent: "center",
+	minHeight: "44px",
+	minWidth: "44px",
+	boxSizing: "border-box",
 	gap: spacing[1],
 	whiteSpace: "nowrap",
 	flexShrink: 0,
