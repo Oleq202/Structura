@@ -182,13 +182,23 @@ if env_origins:
 else:
     origins = default_origins
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-)
+if not is_prod:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|172\.\d{1,3}\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    )
 
 security = HTTPBearer()
 
@@ -783,23 +793,39 @@ async def create_task_endpoint(
 
 @app.put("/tasks/{task_id}")
 async def update_task_endpoint(
-    task_id: int, task: TaskUpdate, request: Request, current_user=Depends(require_role("admin", "manager"))
+    task_id: int, task: TaskUpdate, request: Request, current_user=Depends(get_current_user)
 ):
     ip, ua = get_client_info(request)
     old_task = await get_task(task_id)
     if not old_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    user_role = current_user.get("role")
+    if user_role == "contractor":
+        if old_task.get("assigned_to") != current_user.get("id"):
+            raise HTTPException(status_code=403, detail="Forbidden: You can only update tasks assigned to you")
+        if task.title is not None and task.title != old_task.get("title"):
+            raise HTTPException(status_code=403, detail="Forbidden: Contractors cannot edit task title")
+        if task.description is not None and task.description != old_task.get("description"):
+            raise HTTPException(status_code=403, detail="Forbidden: Contractors cannot edit task description")
+        if task.building_id is not None and task.building_id != old_task.get("building_id"):
+            raise HTTPException(status_code=403, detail="Forbidden: Contractors cannot edit task building")
+        if task.assigned_to is not None and task.assigned_to != old_task.get("assigned_to"):
+            raise HTTPException(status_code=403, detail="Forbidden: Contractors cannot reassign tasks")
+    elif user_role not in ["admin", "manager"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     user_performing_action = current_user.get("id")
 
-    await update_task(
-        task_id,
-        task.title,
-        task.description,
-        task.building_id,
-        None,
-        task.assigned_to,
-    )
+    if user_role != "contractor":
+        await update_task(
+            task_id,
+            task.title,
+            task.description,
+            task.building_id,
+            None,
+            task.assigned_to,
+        )
 
     if task.status:
         await update_task_status(task_id, task.status)
