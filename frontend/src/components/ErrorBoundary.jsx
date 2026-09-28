@@ -92,6 +92,12 @@ export default class ErrorBoundary extends React.Component {
               onClick={this.handleReset}
               style={{
                 padding: "10px 24px",
+                minHeight: "44px",
+                minWidth: "44px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
                 backgroundColor: colors.primary,
                 color: colors.primaryText,
                 border: "none",

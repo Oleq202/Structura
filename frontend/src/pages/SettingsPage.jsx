@@ -23,6 +23,7 @@ const unassignedTextStyle = {
 const primaryButtonStyle = {
 	...components.primaryButton,
 	width: "100%",
+	minHeight: "44px",
 	padding: "10px 14px",
 	borderRadius: radius.md,
 	fontSize: "13px",
@@ -40,6 +41,7 @@ const primaryButtonStyle = {
 
 const logoutButtonStyle = {
 	width: "100%",
+	minHeight: "44px",
 	padding: "10px 14px",
 	borderRadius: radius.md,
 	fontSize: "13px",
@@ -162,7 +164,7 @@ export default function SettingsPage({
 	onLanguageChange,
 	onLogout,
 }) {
-	const t = translations[language];
+	const t = translations[language] || translations.pl;
 	const [isUsersModalOpen, setUsersModalOpen] =
 		useState(false);
 	const [
@@ -192,7 +194,10 @@ export default function SettingsPage({
 				background: colors.pageBg,
 				fontFamily: font.family.sans,
 				boxSizing: "border-box",
-				minHeight: "100vh",
+				maxWidth: "600px",
+				margin: "0 auto",
+				width: "100%",
+				paddingBottom: spacing[8],
 			}}
 		>
 			<div
@@ -296,20 +301,6 @@ export default function SettingsPage({
 							{t.addBuilding}
 						</button>
 					</>
-				)}
-
-				{!isAdmin && (
-					<div
-						style={{
-							textAlign: "center",
-							padding: spacing[6],
-							color: colors.textSecondary,
-							fontSize:
-								font.size.md,
-						}}
-					>
-						{t.settingsAccessLimited}
-					</div>
 				)}
 
 				<button

@@ -355,7 +355,15 @@ export default function LogEntry({
 
 	return (
 		<div
+			role="button"
+			tabIndex={0}
 			onClick={onToggle}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onToggle?.(e);
+				}
+			}}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 			style={{

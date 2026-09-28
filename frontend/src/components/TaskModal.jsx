@@ -1,8 +1,5 @@
-import {
-	useRef,
-	useEffect,
-	useReducer,
-} from "react";
+import { useRef, useEffect, useEffectEvent, useReducer, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
@@ -15,14 +12,26 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 
-const EMPTY_BUILDINGS = [];
-const EMPTY_CONTRACTORS = [];
-
 const ICONS = {
-	task: (
+	plus: (
 		<svg
-			width="15"
-			height="15"
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<line x1="12" y1="5" x2="12" y2="19" />
+			<line x1="5" y1="12" x2="19" y2="12" />
+		</svg>
+	),
+	edit: (
+		<svg
+			width="16"
+			height="16"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -30,15 +39,14 @@ const ICONS = {
 			strokeLinecap="round"
 			strokeLinejoin="round"
 		>
-			<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-			<rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-			<path d="M9 14l2 2 4-4" />
+			<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+			<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
 		</svg>
 	),
 	search: (
 		<svg
-			width="13"
-			height="13"
+			width="12"
+			height="12"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -52,8 +60,8 @@ const ICONS = {
 	),
 	close: (
 		<svg
-			width="15"
-			height="15"
+			width="16"
+			height="16"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -67,8 +75,8 @@ const ICONS = {
 	),
 	check: (
 		<svg
-			width="10"
-			height="10"
+			width="8"
+			height="8"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -79,10 +87,10 @@ const ICONS = {
 			<polyline points="20 6 9 17 4 12" />
 		</svg>
 	),
-	building: (
+	mapPin: (
 		<svg
-			width="12"
-			height="12"
+			width="11"
+			height="11"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -90,50 +98,28 @@ const ICONS = {
 			strokeLinecap="round"
 			strokeLinejoin="round"
 		>
-			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-			<path d="M9 22v-4h6v4" />
-			<path d="M8 6h.01" />
-			<path d="M16 6h.01" />
-			<path d="M12 6h.01" />
-			<path d="M12 10h.01" />
-			<path d="M12 14h.01" />
-			<path d="M16 10h.01" />
-			<path d="M16 14h.01" />
-			<path d="M8 10h.01" />
-			<path d="M8 14h.01" />
-		</svg>
-	),
-	user: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-			<circle cx="12" cy="7" r="4" />
+			<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+			<circle cx="12" cy="10" r="3" />
 		</svg>
 	),
 };
 
-const createInitialState = (task = null) => ({
+const EMPTY_BUILDINGS = [];
+const EMPTY_CONTRACTORS = [];
+
+const createInitialState = (task) => ({
 	task: {
 		title: task?.title || "",
 		description: task?.description || "",
 		building_id: task?.building_id ? String(task.building_id) : "",
 		assigned_to: task?.assigned_to ? String(task.assigned_to) : "",
 	},
-	loading: false,
-	titleError: "",
-	descriptionError: "",
-	buildingIdError: "",
-	assignedToError: "",
 	buildingSearch: "",
 	contractorSearch: "",
+	loading: false,
+	titleError: "",
+	buildingIdError: "",
+	assignedToError: "",
 });
 
 function reducer(state, action) {
@@ -146,6 +132,16 @@ function reducer(state, action) {
 					...action.payload,
 				},
 			};
+		case "SET_BUILDING_SEARCH":
+			return {
+				...state,
+				buildingSearch: action.payload,
+			};
+		case "SET_CONTRACTOR_SEARCH":
+			return {
+				...state,
+				contractorSearch: action.payload,
+			};
 		case "SET_LOADING":
 			return {
 				...state,
@@ -155,11 +151,6 @@ function reducer(state, action) {
 			return {
 				...state,
 				titleError: action.payload,
-			};
-		case "SET_DESCRIPTION_ERROR":
-			return {
-				...state,
-				descriptionError: action.payload,
 			};
 		case "SET_BUILDING_ID_ERROR":
 			return {
@@ -171,21 +162,10 @@ function reducer(state, action) {
 				...state,
 				assignedToError: action.payload,
 			};
-		case "SET_BUILDING_SEARCH":
-			return {
-				...state,
-				buildingSearch: action.payload,
-			};
-		case "SET_CONTRACTOR_SEARCH":
-			return {
-				...state,
-				contractorSearch: action.payload,
-			};
 		case "CLEAR_ERRORS":
 			return {
 				...state,
 				titleError: "",
-				descriptionError: "",
 				buildingIdError: "",
 				assignedToError: "",
 			};
@@ -194,9 +174,677 @@ function reducer(state, action) {
 	}
 }
 
+function TaskModalHeader({ isEdit, t, onClose }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[3]} ${spacing[4]}`,
+				background: colors.shellDeep,
+				color: colors.shellText,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				flexShrink: 0,
+			}}
+		>
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[2] }}>
+				<div
+					style={{
+						width: "28px",
+						height: "28px",
+						borderRadius: radius.md,
+						background: "rgba(255,255,255,0.12)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						color: colors.primary,
+					}}
+				>
+					{isEdit ? ICONS.edit : ICONS.plus}
+				</div>
+				<h3
+					style={{
+						margin: 0,
+						fontSize: font.size.sm,
+						fontWeight: font.weight.big,
+						color: "#ffffff",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{isEdit ? t.editTask : t.newTask}
+				</h3>
+			</div>
+			<button
+				type="button"
+				onClick={onClose}
+				style={{
+					background: "rgba(255,255,255,0.08)",
+					border: "none",
+					borderRadius: radius.full,
+					width: "44px",
+					height: "44px",
+					minWidth: "44px",
+					minHeight: "44px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					cursor: "pointer",
+					color: colors.shellTextMuted,
+					transition: "background 0.15s, color 0.15s",
+					boxSizing: "border-box",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+					e.currentTarget.style.color = "#ffffff";
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+					e.currentTarget.style.color = colors.shellTextMuted;
+				}}
+				aria-label={t.close || "Close"}
+			>
+				{ICONS.close}
+			</button>
+		</div>
+	);
+}
+
+function compareBuildings(a, b) {
+	const addrA = `${a.street_address || ""} ${a.city || ""} ${a.district || ""}`.trim();
+	const addrB = `${b.street_address || ""} ${b.city || ""} ${b.district || ""}`.trim();
+	return addrA.localeCompare(addrB, undefined, { sensitivity: "base" });
+}
+
+function compareContractors(a, b) {
+	const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim() || a.login || "";
+	const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim() || b.login || "";
+	return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+}
+
+function BuildingPicker({
+	buildings,
+	selectedBuildingIds = null,
+	search,
+	onSearchChange,
+	selectedId,
+	onSelect,
+	error,
+	t,
+}) {
+	const isSearching = search.trim().length > 0;
+	const filtered = useMemo(() => {
+		let list = buildings;
+		if (!isSearching && Array.isArray(selectedBuildingIds) && selectedBuildingIds.length > 0) {
+			const idSet = new Set(selectedBuildingIds.map(Number));
+			list = buildings.filter((b) => idSet.has(Number(b.id)) || String(b.id) === String(selectedId));
+		} else if (isSearching) {
+			const q = search.toLowerCase().trim();
+			list = buildings.filter((b) =>
+				b.city.toLowerCase().includes(q) ||
+				b.district?.toLowerCase().includes(q) ||
+				b.street_address.toLowerCase().includes(q)
+			);
+		}
+		return [...list].sort(compareBuildings);
+	}, [buildings, isSearching, selectedBuildingIds, search, selectedId]);
+
+	return (
+		<div>
+			<span
+				style={{
+					fontSize: font.size.xs,
+					fontWeight: font.weight.big,
+					color: colors.textSecondary,
+					marginBottom: "2px",
+					display: "block",
+					textTransform: "uppercase",
+					letterSpacing: font.letterSpacing.wide,
+				}}
+			>
+				{t.building}
+			</span>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: "3px",
+					border: error ? `1px solid ${status.danger.border}` : `1px solid ${colors.borderSubtle}`,
+					borderRadius: radius.md,
+					padding: "4px",
+					background: colors.cardBg,
+				}}
+			>
+				<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+					<span
+						style={{
+							position: "absolute",
+							left: "6px",
+							color: colors.textSecondary,
+							display: "flex",
+							alignItems: "center",
+						}}
+					>
+						{ICONS.search}
+					</span>
+					<input
+						type="text"
+						placeholder={t.searchBuilding || "Szukaj budynku..."}
+						value={search}
+						onChange={(e) => onSearchChange(e.target.value)}
+						style={{
+							...components.input,
+							paddingLeft: "22px",
+							paddingTop: "2px",
+							paddingBottom: "2px",
+							fontSize: "11px",
+							borderRadius: radius.sm,
+							width: "100%",
+							boxSizing: "border-box",
+							height: "24px",
+						}}
+					/>
+				</div>
+				<div
+					style={{
+						maxHeight: "90px",
+						overflowY: "auto",
+						display: "flex",
+						flexDirection: "column",
+						gap: "2px",
+					}}
+				>
+					{filtered.length > 0 ? (
+						filtered.map((b) => {
+							const isChecked = selectedId === String(b.id);
+							return (
+								<button
+									key={b.id}
+									type="button"
+									role="radio"
+									aria-checked={isChecked}
+									onClick={() => onSelect(String(b.id))}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										minHeight: "44px",
+										gap: "6px",
+										padding: "4px 6px",
+										borderRadius: radius.sm,
+										background: isChecked ? `${colors.primary}12` : colors.pageBg,
+										border: `1px solid ${isChecked ? colors.primary : colors.borderSubtle}`,
+										cursor: "pointer",
+										width: "100%",
+										textAlign: "left",
+										boxSizing: "border-box",
+										transition: "border-color 0.15s, background-color 0.15s",
+									}}
+								>
+									<div
+										style={{
+											width: "14px",
+											height: "14px",
+											borderRadius: radius.full,
+											border: `1.5px solid ${isChecked ? colors.primary : colors.borderDefault}`,
+											background: isChecked ? colors.primary : colors.cardBg,
+											color: "#ffffff",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+											fontSize: "8px",
+										}}
+									>
+										{isChecked && ICONS.check}
+									</div>
+									<div style={{ flex: 1, minWidth: 0 }}>
+										<div
+											style={{
+												fontWeight: font.weight.big,
+												color: colors.textHeading,
+												fontSize: "12px",
+												lineHeight: 1.25,
+												wordBreak: "break-word",
+											}}
+										>
+											{b.street_address}
+										</div>
+										<div
+											style={{
+												fontSize: "10px",
+												color: colors.textSecondary,
+												display: "flex",
+												alignItems: "center",
+												gap: "2px",
+											}}
+										>
+											{ICONS.mapPin}
+											<span>{[b.district, b.city].filter(Boolean).join(", ")}</span>
+										</div>
+									</div>
+								</button>
+							);
+						})
+					) : (
+						<div
+							style={{
+								padding: "6px",
+								fontSize: "10px",
+								color: colors.textSecondary,
+								textAlign: "center",
+							}}
+						>
+							{t.noResults || "Brak wyników"}
+						</div>
+					)}
+				</div>
+			</div>
+			{error && (
+				<p style={{ fontSize: "10px", color: status.danger.text, margin: "2px 0 0 0" }}>
+					{error}
+				</p>
+			)}
+		</div>
+	);
+}
+
+function ContractorPicker({
+	contractors,
+	search,
+	onSearchChange,
+	selectedId,
+	onSelect,
+	error,
+	t,
+}) {
+	const filtered = contractors
+		.filter((c) => {
+			const q = search.toLowerCase();
+			return (
+				c.first_name.toLowerCase().includes(q) ||
+				c.last_name.toLowerCase().includes(q)
+			);
+		})
+		.sort(compareContractors);
+
+	return (
+		<div>
+			<span
+				style={{
+					fontSize: font.size.xs,
+					fontWeight: font.weight.big,
+					color: colors.textSecondary,
+					marginBottom: "2px",
+					display: "block",
+					textTransform: "uppercase",
+					letterSpacing: font.letterSpacing.wide,
+				}}
+			>
+				{t.contractor}
+			</span>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: "3px",
+					border: error ? `1px solid ${status.danger.border}` : `1px solid ${colors.borderSubtle}`,
+					borderRadius: radius.md,
+					padding: "4px",
+					background: colors.cardBg,
+				}}
+			>
+				<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+					<span
+						style={{
+							position: "absolute",
+							left: "6px",
+							color: colors.textSecondary,
+							display: "flex",
+							alignItems: "center",
+						}}
+					>
+						{ICONS.search}
+					</span>
+					<input
+						type="text"
+						placeholder={t.searchContractor || "Szukaj wykonawcy..."}
+						value={search}
+						onChange={(e) => onSearchChange(e.target.value)}
+						style={{
+							...components.input,
+							paddingLeft: "22px",
+							paddingTop: "2px",
+							paddingBottom: "2px",
+							fontSize: "11px",
+							borderRadius: radius.sm,
+							width: "100%",
+							boxSizing: "border-box",
+							height: "24px",
+						}}
+					/>
+				</div>
+				<div
+					style={{
+						maxHeight: "90px",
+						overflowY: "auto",
+						display: "flex",
+						flexDirection: "column",
+						gap: "2px",
+					}}
+				>
+					{filtered.length > 0 ? (
+						filtered.map((c) => {
+							const isChecked = selectedId === String(c.id);
+							const initials =
+								[c.first_name, c.last_name]
+									.filter(Boolean)
+									.map((n) => n[0].toUpperCase())
+									.join("") || "?";
+
+							return (
+								<button
+									key={c.id}
+									type="button"
+									role="radio"
+									aria-checked={isChecked}
+									onClick={() => onSelect(String(c.id))}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										minHeight: "44px",
+										gap: "6px",
+										padding: "4px 6px",
+										borderRadius: radius.sm,
+										background: isChecked ? `${colors.primary}12` : colors.pageBg,
+										border: `1px solid ${isChecked ? colors.primary : colors.borderSubtle}`,
+										cursor: "pointer",
+										width: "100%",
+										textAlign: "left",
+										boxSizing: "border-box",
+										transition: "border-color 0.15s, background-color 0.15s",
+									}}
+								>
+									<div
+										style={{
+											width: "14px",
+											height: "14px",
+											borderRadius: radius.full,
+											border: `1.5px solid ${isChecked ? colors.primary : colors.borderDefault}`,
+											background: isChecked ? colors.primary : colors.cardBg,
+											color: "#ffffff",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+											fontSize: "8px",
+										}}
+									>
+										{isChecked && ICONS.check}
+									</div>
+									<div
+										style={{
+											...components.avatar,
+											width: "22px",
+											height: "22px",
+											fontSize: "9px",
+											flexShrink: 0,
+										}}
+									>
+										{initials}
+									</div>
+									<div
+										style={{
+											fontWeight: font.weight.big,
+											color: colors.textHeading,
+											fontSize: "12px",
+											lineHeight: 1.25,
+											wordBreak: "break-word",
+											flex: 1,
+											minWidth: 0,
+										}}
+									>
+										{c.first_name} {c.last_name}
+									</div>
+								</button>
+							);
+						})
+					) : (
+						<div
+							style={{
+								padding: "6px",
+								fontSize: "10px",
+								color: colors.textSecondary,
+								textAlign: "center",
+							}}
+						>
+							{t.noResults || "Brak wyników"}
+						</div>
+					)}
+				</div>
+			</div>
+			{error && (
+				<p style={{ fontSize: "10px", color: status.danger.text, margin: "2px 0 0 0" }}>
+					{error}
+				</p>
+			)}
+		</div>
+	);
+}
+
+function TaskFormFields({
+	state,
+	dispatch,
+	bodyRef,
+	titleInputRef,
+	buildings,
+	selectedBuildingIds = null,
+	contractors,
+	t,
+}) {
+	return (
+		<div
+			ref={bodyRef}
+			style={{
+				padding: `${spacing[3]} ${spacing[4]}`,
+				overflowY: "auto",
+				flex: 1,
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[3],
+				background: colors.cardBg,
+			}}
+		>
+			<div>
+				<label
+					htmlFor="task-title"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: "2px",
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.title}
+				</label>
+				<input
+					id="task-title"
+					ref={titleInputRef}
+					type="text"
+					value={state.task.title}
+					onChange={(e) =>
+						dispatch({
+							type: "SET_TASK",
+							payload: { title: e.target.value },
+						})
+					}
+					placeholder={t.taskTitlePlaceholder}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.sm,
+						padding: "6px 8px",
+						border: state.titleError
+							? `1px solid ${status.danger.border}`
+							: `1px solid ${colors.borderDefault}`,
+						background: state.titleError
+							? status.danger.bg
+							: colors.cardBg,
+					}}
+				/>
+				{state.titleError && (
+					<p style={{ fontSize: "10px", color: status.danger.text, margin: "2px 0 0 0" }}>
+						{state.titleError}
+					</p>
+				)}
+			</div>
+
+			<div>
+				<label
+					htmlFor="task-description"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: "2px",
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.description}
+				</label>
+				<textarea
+					id="task-description"
+					value={state.task.description}
+					onChange={(e) =>
+						dispatch({
+							type: "SET_TASK",
+							payload: { description: e.target.value },
+						})
+					}
+					placeholder={t.taskDescPlaceholder}
+					rows={2}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.sm,
+						resize: "none",
+						padding: "6px 8px",
+					}}
+				/>
+			</div>
+
+			<BuildingPicker
+				buildings={buildings}
+				selectedBuildingIds={selectedBuildingIds}
+				search={state.buildingSearch}
+				onSearchChange={(buildingSearch) =>
+					dispatch({
+						type: "SET_BUILDING_SEARCH",
+						payload: buildingSearch,
+					})
+				}
+				selectedId={state.task.building_id}
+				onSelect={(building_id) =>
+					dispatch({
+						type: "SET_TASK",
+						payload: { building_id },
+					})
+				}
+				error={state.buildingIdError}
+				t={t}
+			/>
+
+			<ContractorPicker
+				contractors={contractors}
+				search={state.contractorSearch}
+				onSearchChange={(contractorSearch) =>
+					dispatch({
+						type: "SET_CONTRACTOR_SEARCH",
+						payload: contractorSearch,
+					})
+				}
+				selectedId={state.task.assigned_to}
+				onSelect={(assigned_to) =>
+					dispatch({
+						type: "SET_TASK",
+						payload: { assigned_to },
+					})
+				}
+				error={state.assignedToError}
+				t={t}
+			/>
+		</div>
+	);
+}
+
+function TaskModalFooter({ isEdit, loading, onClose, t }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[3]} ${spacing[4]}`,
+				background: colors.pageBg,
+				borderTop: `1px solid ${colors.borderSubtle}`,
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: spacing[2],
+				flexShrink: 0,
+			}}
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				style={{
+					...components.ghostButton,
+					minHeight: "44px",
+					minWidth: "44px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					padding: `${spacing[2]} ${spacing[4]}`,
+					fontSize: font.size.sm,
+				}}
+			>
+				{t.cancel}
+			</button>
+			<button
+				type="submit"
+				disabled={loading}
+				style={{
+					...components.primaryButton,
+					minHeight: "44px",
+					minWidth: "44px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					padding: `${spacing[2]} ${spacing[5]}`,
+					fontSize: font.size.sm,
+					opacity: loading ? 0.6 : 1,
+					cursor: loading ? "not-allowed" : "pointer",
+				}}
+			>
+				{loading
+					? t.saving
+					: isEdit
+						? t.update
+						: t.create}
+			</button>
+		</div>
+	);
+}
+
 export default function TaskModal({
 	isOpen = true,
 	buildings = EMPTY_BUILDINGS,
+	selectedBuildingIds = null,
 	contractors = EMPTY_CONTRACTORS,
 	currentUser,
 	onClose,
@@ -205,8 +853,6 @@ export default function TaskModal({
 	task = null,
 	language = "pl",
 }) {
-	if (!isOpen) return null;
-
 	const t = translations[language];
 	const isEdit = !!task?.id;
 	const bodyRef = useRef(null);
@@ -218,40 +864,30 @@ export default function TaskModal({
 	);
 
 	useEffect(() => {
-		if (bodyRef.current) {
+		if (isOpen && bodyRef.current) {
 			bodyRef.current.scrollTop = 0;
 		}
-		if (titleInputRef.current) {
+		if (isOpen && titleInputRef.current) {
 			titleInputRef.current.focus();
 		}
 	}, [isOpen, task]);
 
+	const handleKeyDownEvent = useEffectEvent((e) => {
+		if (e.key === "Escape") {
+			onClose?.();
+		}
+	});
+
 	useEffect(() => {
+		if (!isOpen) return;
 		const handleKeyDown = (e) => {
-			if (e.key === "Escape") {
-				onClose?.();
-			}
+			handleKeyDownEvent(e);
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [onClose]);
+	}, [isOpen]);
 
-	const filteredBuildings = buildings.filter((building) => {
-		const search = state.buildingSearch.toLowerCase();
-		return (
-			building.city.toLowerCase().includes(search) ||
-			building.district?.toLowerCase().includes(search) ||
-			building.street_address.toLowerCase().includes(search)
-		);
-	});
-
-	const filteredContractors = contractors.filter((contractor) => {
-		const search = state.contractorSearch.toLowerCase();
-		return (
-			contractor.first_name.toLowerCase().includes(search) ||
-			contractor.last_name.toLowerCase().includes(search)
-		);
-	});
+	if (!isOpen) return null;
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -318,7 +954,7 @@ export default function TaskModal({
 		}
 	};
 
-	return (
+	return createPortal(
 		<div
 			style={{
 				position: "fixed",
@@ -326,115 +962,62 @@ export default function TaskModal({
 				left: 0,
 				right: 0,
 				bottom: 0,
-				background: "rgba(9, 21, 42, 0.65)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
+				height: "100%",
+				minHeight: "100dvh",
+				maxHeight: "100dvh",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 2500,
-				padding: spacing[2],
+				zIndex: 99999,
+				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
+				boxSizing: "border-box",
 			}}
-			onClick={() => onClose?.()}
 		>
+			<button
+				type="button"
+				aria-label={t.close || "Zamknij"}
+				tabIndex={-1}
+				onClick={() => onClose?.()}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					background: "rgba(9, 21, 42, 0.65)",
+					backdropFilter: "blur(6px)",
+					WebkitBackdropFilter: "blur(6px)",
+					border: "none",
+					padding: 0,
+					margin: 0,
+					cursor: "default",
+					width: "100%",
+					height: "100%",
+				}}
+			/>
 			<div
 				style={{
+					position: "relative",
+					zIndex: 1,
 					background: colors.cardBg,
 					borderRadius: radius.lg,
 					boxShadow: shadow.modal,
 					border: `1px solid ${colors.borderSubtle}`,
 					width: "100%",
-					maxWidth: "540px",
-					maxHeight: "85vh",
+					maxWidth: "440px",
+					maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
 					boxSizing: "border-box",
 					fontFamily: font.family.sans,
 				}}
-				onClick={(e) => e.stopPropagation()}
 			>
-				<div
-					style={{
-						padding: `6px 12px`,
-						background: colors.shellDeep,
-						color: colors.shellText,
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						flexShrink: 0,
-					}}
-				>
-					<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-						<div
-							style={{
-								width: "24px",
-								height: "24px",
-								borderRadius: radius.sm,
-								background: "rgba(255,255,255,0.12)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: colors.primary,
-							}}
-						>
-							{ICONS.task}
-						</div>
-						<div>
-							<h3
-								style={{
-									margin: 0,
-									fontSize: "13px",
-									fontWeight: font.weight.big,
-									color: "#ffffff",
-									lineHeight: 1.2,
-								}}
-							>
-								{isEdit ? t.editTask : t.createNewTask}
-							</h3>
-							<p
-								style={{
-									margin: 0,
-									fontSize: "10px",
-									color: colors.shellTextMuted,
-									lineHeight: 1.2,
-								}}
-							>
-								{isEdit
-									? (task.building_address || t.tasks)
-									: (t.createTask || "Fill in task details")}
-							</p>
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						style={{
-							background: "rgba(255,255,255,0.08)",
-							border: "none",
-							borderRadius: radius.full,
-							width: "24px",
-							height: "24px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							color: colors.shellTextMuted,
-							transition: "background 0.15s, color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-							e.currentTarget.style.color = "#ffffff";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-							e.currentTarget.style.color = colors.shellTextMuted;
-						}}
-						aria-label={t.close || "Close"}
-					>
-						{ICONS.close}
-					</button>
-				</div>
+				<TaskModalHeader
+					isEdit={isEdit}
+					t={t}
+					onClose={onClose}
+				/>
 
 				<form
 					onSubmit={handleSubmit}
@@ -446,530 +1029,26 @@ export default function TaskModal({
 						margin: 0,
 					}}
 				>
-					<div
-						ref={bodyRef}
-						style={{
-							padding: "8px 12px",
-							overflowY: "auto",
-							flex: 1,
-							display: "flex",
-							flexDirection: "column",
-							gap: "6px",
-							background: colors.cardBg,
-						}}
-					>
-						<div>
-							<label
-								style={{
-									fontSize: "10px",
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: "2px",
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.title}
-							</label>
-							<input
-								ref={titleInputRef}
-								type="text"
-								value={state.task.title}
-								onChange={(e) =>
-									dispatch({
-										type: "SET_TASK",
-										payload: { title: e.target.value },
-									})
-								}
-								placeholder={t.enterTaskTitle}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: "12px",
-									padding: "4px 8px",
-									borderRadius: radius.sm,
-									border: state.titleError
-										? `1px solid ${status.danger.border}`
-										: `1px solid ${colors.borderDefault}`,
-									background: state.titleError
-										? status.danger.bg
-										: colors.cardBg,
-								}}
-							/>
-							{state.titleError && (
-								<p
-									style={{
-										fontSize: "10px",
-										color: status.danger.text,
-										margin: "2px 0 0 0",
-									}}
-								>
-									{state.titleError}
-								</p>
-							)}
-						</div>
+					<TaskFormFields
+						state={state}
+						dispatch={dispatch}
+						bodyRef={bodyRef}
+						titleInputRef={titleInputRef}
+						buildings={buildings}
+						selectedBuildingIds={selectedBuildingIds}
+						contractors={contractors}
+						t={t}
+					/>
 
-						<div>
-							<label
-								style={{
-									fontSize: "10px",
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: "2px",
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.description}
-							</label>
-							<textarea
-								rows={2}
-								value={state.task.description}
-								onChange={(e) =>
-									dispatch({
-										type: "SET_TASK",
-										payload: { description: e.target.value },
-									})
-								}
-								placeholder={t.enterTaskDescription}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: "12px",
-									padding: "5px 8px",
-									borderRadius: radius.sm,
-									resize: "vertical",
-									minHeight: "52px",
-									fontFamily: font.family.sans,
-								}}
-							/>
-						</div>
-
-						<div
-							style={{
-								display: "grid",
-								gridTemplateColumns: "1fr 1fr",
-								gap: "8px",
-								flex: 1,
-								minHeight: 0,
-							}}
-						>
-							<div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-								<div
-									style={{
-										display: "flex",
-										justifyContent: "space-between",
-										alignItems: "center",
-										marginBottom: "2px",
-									}}
-								>
-									<label
-										style={{
-											fontSize: "10px",
-											fontWeight: font.weight.big,
-											color: colors.textSecondary,
-											textTransform: "uppercase",
-											letterSpacing: font.letterSpacing.wide,
-										}}
-									>
-										{t.building}
-									</label>
-									{state.task.building_id && (
-										<span
-											style={{
-												fontSize: "10px",
-												color: colors.primary,
-												fontWeight: font.weight.medium,
-											}}
-										>
-											{t.selectBuilding || "Selected"}
-										</span>
-									)}
-								</div>
-								<div
-									style={{
-										position: "relative",
-										display: "flex",
-										alignItems: "center",
-										marginBottom: "4px",
-									}}
-								>
-									<span
-										style={{
-											position: "absolute",
-											left: "6px",
-											color: colors.textSecondary,
-											display: "flex",
-											alignItems: "center",
-										}}
-									>
-										{ICONS.search}
-									</span>
-									<input
-										type="text"
-										placeholder={t.searchBuildings || "Search..."}
-										value={state.buildingSearch}
-										onChange={(e) =>
-											dispatch({
-												type: "SET_BUILDING_SEARCH",
-												payload: e.target.value,
-											})
-										}
-										style={{
-											...components.input,
-											width: "100%",
-											boxSizing: "border-box",
-											paddingLeft: "24px",
-											paddingTop: "3px",
-											paddingBottom: "3px",
-											fontSize: "11px",
-											borderRadius: radius.sm,
-										}}
-									/>
-								</div>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "2px",
-										maxHeight: "180px",
-										minHeight: "110px",
-										overflowY: "auto",
-										paddingRight: "2px",
-									}}
-								>
-									{filteredBuildings.length > 0 ? (
-										filteredBuildings.map((b) => {
-											const isChecked = state.task.building_id === String(b.id);
-											return (
-												<div
-													key={b.id}
-													onClick={() =>
-														dispatch({
-															type: "SET_TASK",
-															payload: { building_id: String(b.id) },
-														})
-													}
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "6px",
-														padding: "4px 6px",
-														borderRadius: radius.sm,
-														background: isChecked ? `${colors.primary}12` : colors.pageBg,
-														border: `1px solid ${isChecked ? colors.primary : colors.borderSubtle}`,
-														cursor: "pointer",
-														transition: "border 0.15s, background 0.15s",
-													}}
-												>
-													<div
-														style={{
-															width: "12px",
-															height: "12px",
-															borderRadius: radius.full,
-															border: `1.5px solid ${isChecked ? colors.primary : colors.borderDefault}`,
-															background: isChecked ? colors.primary : colors.cardBg,
-															color: "#ffffff",
-															display: "flex",
-															alignItems: "center",
-															justifyContent: "center",
-															flexShrink: 0,
-															transition: "all 0.15s ease",
-														}}
-													>
-														{isChecked && ICONS.check}
-													</div>
-													<div style={{ flex: 1, minWidth: 0 }}>
-														<div
-															style={{
-																fontWeight: font.weight.big,
-																color: colors.textHeading,
-																fontSize: "11px",
-																whiteSpace: "nowrap",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-															}}
-														>
-															{b.street_address}
-														</div>
-														<div
-															style={{
-																fontSize: "9px",
-																color: colors.textSecondary,
-																display: "flex",
-																alignItems: "center",
-																gap: "2px",
-																whiteSpace: "nowrap",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-															}}
-														>
-															{ICONS.building}
-															<span>{[b.district, b.city].filter(Boolean).join(", ")}</span>
-														</div>
-													</div>
-												</div>
-											);
-										})
-									) : (
-										<div
-											style={{
-												fontSize: "10px",
-												color: colors.textSecondary,
-												padding: "4px",
-												textAlign: "center",
-											}}
-										>
-											{t.noResults}
-										</div>
-									)}
-								</div>
-								{state.buildingIdError && (
-									<p
-										style={{
-											fontSize: "10px",
-											color: status.danger.text,
-											margin: "2px 0 0 0",
-										}}
-									>
-										{state.buildingIdError}
-									</p>
-								)}
-							</div>
-
-							<div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-								<div
-									style={{
-										display: "flex",
-										justifyContent: "space-between",
-										alignItems: "center",
-										marginBottom: "2px",
-									}}
-								>
-									<label
-										style={{
-											fontSize: "10px",
-											fontWeight: font.weight.big,
-											color: colors.textSecondary,
-											textTransform: "uppercase",
-											letterSpacing: font.letterSpacing.wide,
-										}}
-									>
-										{t.contractor}
-									</label>
-									{state.task.assigned_to && (
-										<span
-											style={{
-												fontSize: "10px",
-												color: colors.primary,
-												fontWeight: font.weight.medium,
-											}}
-										>
-											{t.selectContractor || "Selected"}
-										</span>
-									)}
-								</div>
-								<div
-									style={{
-										position: "relative",
-										display: "flex",
-										alignItems: "center",
-										marginBottom: "4px",
-									}}
-								>
-									<span
-										style={{
-											position: "absolute",
-											left: "6px",
-											color: colors.textSecondary,
-											display: "flex",
-											alignItems: "center",
-										}}
-									>
-										{ICONS.search}
-									</span>
-									<input
-										type="text"
-										placeholder={t.searchContractors || "Search..."}
-										value={state.contractorSearch}
-										onChange={(e) =>
-											dispatch({
-												type: "SET_CONTRACTOR_SEARCH",
-												payload: e.target.value,
-											})
-										}
-										style={{
-											...components.input,
-											width: "100%",
-											boxSizing: "border-box",
-											paddingLeft: "24px",
-											paddingTop: "3px",
-											paddingBottom: "3px",
-											fontSize: "11px",
-											borderRadius: radius.sm,
-										}}
-									/>
-								</div>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "2px",
-										maxHeight: "180px",
-										minHeight: "110px",
-										overflowY: "auto",
-										paddingRight: "2px",
-									}}
-								>
-									{filteredContractors.length > 0 ? (
-										filteredContractors.map((c) => {
-											const isChecked = state.task.assigned_to === String(c.id);
-											return (
-												<div
-													key={c.id}
-													onClick={() =>
-														dispatch({
-															type: "SET_TASK",
-															payload: { assigned_to: String(c.id) },
-														})
-													}
-													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: "6px",
-														padding: "4px 6px",
-														borderRadius: radius.sm,
-														background: isChecked ? `${colors.primary}12` : colors.pageBg,
-														border: `1px solid ${isChecked ? colors.primary : colors.borderSubtle}`,
-														cursor: "pointer",
-														transition: "border 0.15s, background 0.15s",
-													}}
-												>
-													<div
-														style={{
-															width: "12px",
-															height: "12px",
-															borderRadius: radius.full,
-															border: `1.5px solid ${isChecked ? colors.primary : colors.borderDefault}`,
-															background: isChecked ? colors.primary : colors.cardBg,
-															color: "#ffffff",
-															display: "flex",
-															alignItems: "center",
-															justifyContent: "center",
-															flexShrink: 0,
-															transition: "all 0.15s ease",
-														}}
-													>
-														{isChecked && ICONS.check}
-													</div>
-													<div style={{ flex: 1, minWidth: 0 }}>
-														<div
-															style={{
-																fontWeight: font.weight.big,
-																color: colors.textHeading,
-																fontSize: "11px",
-																whiteSpace: "nowrap",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-															}}
-														>
-															{c.first_name} {c.last_name}
-														</div>
-														<div
-															style={{
-																fontSize: "9px",
-																color: colors.textSecondary,
-																display: "flex",
-																alignItems: "center",
-																gap: "2px",
-																whiteSpace: "nowrap",
-																overflow: "hidden",
-																textOverflow: "ellipsis",
-															}}
-														>
-															{ICONS.user}
-															<span>{c.login || t.contractor}</span>
-														</div>
-													</div>
-												</div>
-											);
-										})
-									) : (
-										<div
-											style={{
-												fontSize: "10px",
-												color: colors.textSecondary,
-												padding: "4px",
-												textAlign: "center",
-											}}
-										>
-											{t.noResults}
-										</div>
-									)}
-								</div>
-								{state.assignedToError && (
-									<p
-										style={{
-											fontSize: "10px",
-											color: status.danger.text,
-											margin: "2px 0 0 0",
-										}}
-									>
-										{state.assignedToError}
-									</p>
-								)}
-							</div>
-						</div>
-					</div>
-
-					<div
-						style={{
-							padding: `6px 12px`,
-							background: colors.pageBg,
-							borderTop: `1px solid ${colors.borderSubtle}`,
-							display: "flex",
-							justifyContent: "flex-end",
-							gap: "6px",
-							flexShrink: 0,
-						}}
-					>
-						<button
-							type="button"
-							onClick={onClose}
-							style={{
-								...components.ghostButton,
-								padding: "4px 10px",
-								fontSize: "11px",
-							}}
-						>
-							{t.cancel}
-						</button>
-						<button
-							type="submit"
-							disabled={state.loading}
-							style={{
-								...components.primaryButton,
-								padding: "4px 14px",
-								fontSize: "11px",
-								opacity: state.loading ? 0.6 : 1,
-								cursor: state.loading ? "not-allowed" : "pointer",
-							}}
-						>
-							{state.loading
-								? isEdit
-									? t.saving
-									: t.creating
-								: isEdit
-									? t.update
-									: t.createTask}
-						</button>
-					</div>
+					<TaskModalFooter
+						isEdit={isEdit}
+						loading={state.loading}
+						onClose={onClose}
+						t={t}
+					/>
 				</form>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

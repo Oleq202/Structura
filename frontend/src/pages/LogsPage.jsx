@@ -1,15 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
+import { Navigate } from "react-router-dom";
 import {
 	colors,
 	font,
 	radius,
-	shadow,
 	components,
-	spacing,
 } from "../theme";
 import { translations } from "../i18n";
-import LogEntry from "../components/LogEntry";
 import * as api from "../services/api";
+import LogEntry from "../components/LogEntry";
 
 const ICONS = {
 	search: (
@@ -27,6 +26,20 @@ const ICONS = {
 			<line x1="21" y1="21" x2="16.65" y2="16.65" />
 		</svg>
 	),
+	filter: (
+		<svg
+			width="13"
+			height="13"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+		</svg>
+	),
 	task: (
 		<svg
 			width="12"
@@ -38,9 +51,8 @@ const ICONS = {
 			strokeLinecap="round"
 			strokeLinejoin="round"
 		>
-			<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-			<rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-			<path d="M9 14l2 2 4-4" />
+			<polyline points="9 11 12 14 22 4" />
+			<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
 		</svg>
 	),
 	building: (
@@ -56,6 +68,15 @@ const ICONS = {
 		>
 			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
 			<path d="M9 22v-4h6v4" />
+			<path d="M8 6h.01" />
+			<path d="M16 6h.01" />
+			<path d="M12 6h.01" />
+			<path d="M12 10h.01" />
+			<path d="M12 14h.01" />
+			<path d="M16 10h.01" />
+			<path d="M16 14h.01" />
+			<path d="M8 10h.01" />
+			<path d="M8 14h.01" />
 		</svg>
 	),
 	user: (
@@ -84,16 +105,13 @@ const ICONS = {
 			strokeLinecap="round"
 			strokeLinejoin="round"
 		>
-			<circle cx="8" cy="15" r="4" />
-			<path d="M10.85 12.15L19 4" />
-			<path d="M18 5l2 2" />
-			<path d="M15 8l2 2" />
+			<path d="M21 2l-2 2m-1.5 1.5L14 9a5 5 0 1 0-4 4l9.5-9.5z" />
 		</svg>
 	),
-	close: (
+	x: (
 		<svg
-			width="12"
-			height="12"
+			width="11"
+			height="11"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -107,50 +125,40 @@ const ICONS = {
 	),
 };
 
-export default function LogsPage({
-	language = "pl",
-	currentUser,
-}) {
-	const t = translations[language] || translations.pl;
+const ROLE_ORDER = { admin: 1, manager: 2, contractor: 3 };
+
+function compareUsers(a, b) {
+	const roleA = ROLE_ORDER[a.role] ?? 99;
+	const roleB = ROLE_ORDER[b.role] ?? 99;
+	if (roleA !== roleB) {
+		return roleA - roleB;
+	}
+	const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim() || a.login || "";
+	const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim() || b.login || "";
+	return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+}
+
+function useActivityLogs(currentUser, filters) {
 	const [logs, setLogs] = useState([]);
 	const [loading, setLoading] = useState(true);
-	const [filters, setFilters] = useState({
-		userId: "",
-		entityType: "",
-		operationType: "",
-		search: "",
-		startDate: "",
-		endDate: "",
-	});
 	const [users, setUsers] = useState([]);
-	const [expandedLogId, setExpandedLogId] = useState(null);
-	const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
 	useEffect(() => {
-		if (currentUser?.role !== "admin") {
-			setLoading(false);
-			return;
-		}
+		if (currentUser?.role !== "admin") return;
 
-		const fetchUsers = async () => {
-			try {
-				const usersData = await api.getUsers();
-				setUsers(usersData);
-			} catch (err) {
-				console.error("Failed to fetch users:", err);
-			}
-		};
-
-		fetchUsers();
+		api.getUsers()
+			.then((data) => setUsers([...data].sort(compareUsers)))
+			.catch((err) => console.error("Failed to fetch users:", err));
 	}, [currentUser]);
 
 	useEffect(() => {
 		if (currentUser?.role !== "admin") return;
 
-		const fetchLogs = async () => {
+		let isMounted = true;
+		const timer = setTimeout(async () => {
 			try {
 				setLoading(true);
-				const logsData = await api.getActivityLogs({
+				const data = await api.getActivityLogs({
 					userId: filters.userId || undefined,
 					entityType: filters.entityType || undefined,
 					operationType: filters.operationType || undefined,
@@ -159,26 +167,402 @@ export default function LogsPage({
 					endDate: filters.endDate || undefined,
 					limit: 100,
 				});
-				setLogs(logsData);
+				if (isMounted) {
+					setLogs(data);
+				}
 			} catch (err) {
 				console.error("Failed to fetch logs:", err);
 			} finally {
-				setLoading(false);
+				if (isMounted) setLoading(false);
 			}
-		};
-
-		const debounceTimer = setTimeout(() => {
-			fetchLogs();
 		}, 200);
 
-		return () => clearTimeout(debounceTimer);
+		return () => {
+			isMounted = false;
+			clearTimeout(timer);
+		};
 	}, [currentUser, filters]);
+
+	return { logs, loading, users };
+}
+
+function LogsHeader({ count, hasFilters, onReset, t }) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				padding: "2px 0",
+			}}
+		>
+			<div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+				<h1
+					style={{
+						fontSize: "15px",
+						fontWeight: font.weight.big,
+						color: colors.textHeading,
+						margin: 0,
+					}}
+				>
+					{t.logs || "Dziennik Aktywności"}
+				</h1>
+				<span style={{ fontSize: "11px", color: colors.textSecondary }}>
+					({count})
+				</span>
+			</div>
+			{hasFilters && (
+				<button
+					type="button"
+					onClick={onReset}
+					style={{
+						background: "transparent",
+						border: "none",
+						color: colors.primary,
+						fontSize: "12px",
+						cursor: "pointer",
+						padding: "4px 8px",
+						minHeight: "44px",
+						minWidth: "44px",
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						boxSizing: "border-box",
+						gap: "4px",
+					}}
+				>
+					{ICONS.x}
+					<span>{t.clearFilters || "Wyczyść filtry"}</span>
+				</button>
+			)}
+		</div>
+	);
+}
+
+function LogsCategoryBar({
+	categories,
+	currentCategory,
+	onSelectCategory,
+	searchQuery,
+	onSearchChange,
+	showAdvanced,
+	onToggleAdvanced,
+	t,
+}) {
+	return (
+		<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: "6px",
+					overflowX: "auto",
+					paddingBottom: "4px",
+				}}
+			>
+				{categories.map((cat) => {
+					const isSelected = currentCategory === cat.id;
+					return (
+						<button
+							key={cat.id}
+							type="button"
+							onClick={() => onSelectCategory(cat.id)}
+							style={{
+								padding: "6px 12px",
+								fontSize: "12px",
+								minHeight: "44px",
+								minWidth: "44px",
+								boxSizing: "border-box",
+								borderRadius: radius.full,
+								border: `1px solid ${isSelected ? colors.primary : colors.borderSubtle}`,
+								background: isSelected ? colors.primary : colors.cardBg,
+								color: isSelected ? "#ffffff" : colors.textSecondary,
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								gap: "6px",
+								cursor: "pointer",
+								whiteSpace: "nowrap",
+								fontWeight: isSelected ? font.weight.big : font.weight.medium,
+							}}
+						>
+							{cat.icon}
+							<span>{cat.label}</span>
+						</button>
+					);
+				})}
+			</div>
+
+			<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+				<div
+					style={{
+						position: "relative",
+						display: "flex",
+						alignItems: "center",
+						flex: 1,
+					}}
+				>
+					<span
+						style={{
+							position: "absolute",
+							left: "8px",
+							color: colors.textSecondary,
+							display: "flex",
+							alignItems: "center",
+						}}
+					>
+						{ICONS.search}
+					</span>
+					<input
+						type="text"
+						placeholder={t.searchLogs || "Szukaj w akcjach..."}
+						value={searchQuery}
+						onChange={(e) => onSearchChange(e.target.value)}
+						style={{
+							...components.input,
+							paddingLeft: "26px",
+							paddingTop: "4px",
+							paddingBottom: "4px",
+							fontSize: "12px",
+							borderRadius: radius.sm,
+							width: "100%",
+							boxSizing: "border-box",
+							height: "44px",
+						}}
+					/>
+				</div>
+				<button
+					type="button"
+					onClick={onToggleAdvanced}
+					style={{
+						...components.ghostButton,
+						padding: "6px 12px",
+						fontSize: "12px",
+						minHeight: "44px",
+						minWidth: "44px",
+						boxSizing: "border-box",
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						gap: "6px",
+						borderRadius: radius.sm,
+						background: showAdvanced ? `${colors.primary}12` : "transparent",
+						color: showAdvanced ? colors.primary : colors.textSecondary,
+					}}
+				>
+					{ICONS.filter}
+					<span>{t.filters || "Więcej"}</span>
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
+	return (
+		<div
+			style={{
+				background: colors.cardBg,
+				borderRadius: radius.sm,
+				padding: "8px 10px",
+				border: `1px solid ${colors.borderSubtle}`,
+				display: "grid",
+				gridTemplateColumns: "1fr 1fr",
+				gap: "6px",
+			}}
+		>
+			<div>
+				<label
+					htmlFor="logs-filter-user"
+					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+				>
+					{t.user || "Użytkownik"}
+				</label>
+				<select
+					id="logs-filter-user"
+					value={filters.userId}
+					onChange={(e) => onFilterChange("userId", e.target.value)}
+					style={{
+						...components.input,
+						fontSize: "11px",
+						padding: "2px 4px",
+						height: "24px",
+						borderRadius: radius.sm,
+						width: "100%",
+						boxSizing: "border-box",
+					}}
+				>
+					<option value="">{t.allUsers || "Wszyscy użytkownicy"}</option>
+					{users.map((u) => (
+						<option key={u.id} value={u.id}>
+							{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.login}
+						</option>
+					))}
+				</select>
+			</div>
+
+			<div>
+				<label
+					htmlFor="logs-filter-operation"
+					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+				>
+					{t.operationType || "Typ operacji"}
+				</label>
+				<select
+					id="logs-filter-operation"
+					value={filters.operationType}
+					onChange={(e) => onFilterChange("operationType", e.target.value)}
+					style={{
+						...components.input,
+						fontSize: "11px",
+						padding: "2px 4px",
+						height: "24px",
+						borderRadius: radius.sm,
+						width: "100%",
+						boxSizing: "border-box",
+					}}
+				>
+					<option value="">{t.allOperations || "Wszystkie operacje"}</option>
+					<option value="create">{t.op_create || "Utworzenie"}</option>
+					<option value="update">{t.op_update || "Edycja"}</option>
+					<option value="delete">{t.op_delete || "Usunięcie"}</option>
+					<option value="status_change">{t.op_status_change || "Zmiana statusu"}</option>
+					<option value="login_success">{t.op_login_success || "Logowanie udane"}</option>
+					<option value="login_failed">{t.op_login_failed || "Logowanie nieudane"}</option>
+				</select>
+			</div>
+
+			<div>
+				<label
+					htmlFor="logs-filter-start-date"
+					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+				>
+					{t.startDate || "Od daty"}
+				</label>
+				<input
+					id="logs-filter-start-date"
+					type="date"
+					value={filters.startDate}
+					onChange={(e) => onFilterChange("startDate", e.target.value)}
+					style={{
+						...components.input,
+						fontSize: "11px",
+						padding: "2px 4px",
+						height: "24px",
+						borderRadius: radius.sm,
+						width: "100%",
+						boxSizing: "border-box",
+					}}
+				/>
+			</div>
+
+			<div>
+				<label
+					htmlFor="logs-filter-end-date"
+					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+				>
+					{t.endDate || "Do daty"}
+				</label>
+				<input
+					id="logs-filter-end-date"
+					type="date"
+					value={filters.endDate}
+					onChange={(e) => onFilterChange("endDate", e.target.value)}
+					style={{
+						...components.input,
+						fontSize: "11px",
+						padding: "2px 4px",
+						height: "24px",
+						borderRadius: radius.sm,
+						width: "100%",
+						boxSizing: "border-box",
+					}}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function LogsList({
+	logs,
+	loading,
+	users,
+	expandedLogId,
+	onToggleLog,
+	language,
+	t,
+}) {
+	if (loading) {
+		return (
+			<div style={{ padding: "32px 0", textAlign: "center", color: colors.textSecondary, fontSize: "12px" }}>
+				{t.loading || "Ładowanie..."}
+			</div>
+		);
+	}
+
+	if (logs.length === 0) {
+		return (
+			<div style={{ padding: "32px 0", textAlign: "center", color: colors.textSecondary, fontSize: "12px" }}>
+				{t.noLogs || "Brak wpisów w dzienniku"}
+			</div>
+		);
+	}
+
+	return (
+		<div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+			{logs.map((log) => (
+				<LogEntry
+					key={log.id}
+					initialData={log}
+					language={language}
+					users={users}
+					expanded={expandedLogId === log.id}
+					onToggle={() => onToggleLog(log.id)}
+				/>
+			))}
+		</div>
+	);
+}
+
+export default function LogsPage({
+	language = "pl",
+	currentUser,
+}) {
+	const t = translations[language] || translations.pl;
+	const [filters, setFilters] = useState({
+		userId: "",
+		entityType: "",
+		operationType: "",
+		search: "",
+		startDate: "",
+		endDate: "",
+	});
+	const [expandedLogId, setExpandedLogId] = useState(null);
+	const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+	const { logs, loading, users } = useActivityLogs(currentUser, filters);
 
 	const handleFilterChange = (field, value) => {
 		setFilters((prev) => ({
 			...prev,
 			[field]: value,
 		}));
+	};
+
+	const handleCategorySelect = (entityType) => {
+		if (entityType === "auth") {
+			setFilters((prev) => ({
+				...prev,
+				entityType: "",
+				operationType: "login_success",
+			}));
+		} else {
+			setFilters((prev) => ({
+				...prev,
+				entityType,
+				operationType: prev.operationType === "login_success" ? "" : prev.operationType,
+			}));
+		}
 	};
 
 	const handleResetFilters = () => {
@@ -209,41 +593,17 @@ export default function LogsPage({
 		{ id: "auth", label: t.authOnly || "Logowania", icon: ICONS.key },
 	], [t]);
 
+	const currentCategory = filters.operationType === "login_success" ? "auth" : filters.entityType;
+
 	if (currentUser?.role !== "admin") {
-		return (
-			<div
-				style={{
-					padding: "32px 16px",
-					textAlign: "center",
-				}}
-			>
-				<h2
-					style={{
-						fontSize: "14px",
-						fontWeight: font.weight.big,
-						color: colors.textHeading,
-						marginBottom: "8px",
-					}}
-				>
-					{t.logs}
-				</h2>
-				<p
-					style={{
-						fontSize: "12px",
-						color: colors.textSecondary,
-					}}
-				>
-					{t.settingsAccessLimited || "Access is limited to administrators."}
-				</p>
-			</div>
-		);
+		return <Navigate to="/" replace />;
 	}
 
 	return (
 		<div
 			style={{
-				padding: "8px 12px",
-				maxWidth: "480px",
+				padding: "12px 16px",
+				maxWidth: "840px",
 				margin: "0 auto",
 				display: "flex",
 				flexDirection: "column",
@@ -251,338 +611,42 @@ export default function LogsPage({
 				boxSizing: "border-box",
 			}}
 		>
-			{/* Page Header */}
-			<div
-				style={{
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					padding: "2px 0",
-				}}
-			>
-				<h2
-					style={{
-						fontSize: "13px",
-						fontWeight: font.weight.big,
-						color: colors.textHeading,
-						margin: 0,
-					}}
-				>
-					{t.logs}
-				</h2>
-				<span
-					style={{
-						fontSize: "11px",
-						color: colors.textSecondary,
-						fontWeight: font.weight.medium,
-						background: colors.cardBg,
-						padding: "2px 8px",
-						borderRadius: radius.full,
-						border: `1px solid ${colors.borderSubtle}`,
-					}}
-				>
-					{loading ? t.loading : `${logs.length} ${t.logsCount || ""}`}
-				</span>
-			</div>
+			<LogsHeader
+				count={logs.length}
+				hasFilters={hasActiveFilters}
+				onReset={handleResetFilters}
+				t={t}
+			/>
 
-			{/* Quick Category Tabs (Task / Building / User / Auth) */}
-			<div
-				style={{
-					display: "flex",
-					gap: "4px",
-					overflowX: "auto",
-					paddingBottom: "2px",
-					scrollbarWidth: "none",
-				}}
-			>
-				{CATEGORIES.map((cat) => {
-					const isActive = filters.entityType === cat.id;
-					return (
-						<button
-							key={cat.id}
-							type="button"
-							onClick={() => handleFilterChange("entityType", cat.id)}
-							style={{
-								padding: "4px 10px",
-								fontSize: "11px",
-								fontFamily: font.family.sans,
-								fontWeight: isActive ? font.weight.big : font.weight.medium,
-								borderRadius: radius.full,
-								border: isActive
-									? `1px solid ${colors.primary}`
-									: `1px solid ${colors.borderDefault}`,
-								background: isActive ? colors.primary : colors.cardBg,
-								color: isActive ? colors.primaryText : colors.textBody,
-								cursor: "pointer",
-								display: "flex",
-								alignItems: "center",
-								gap: "4px",
-								whiteSpace: "nowrap",
-								transition: "all 0.15s ease",
-								boxShadow: isActive ? shadow.card : "none",
-							}}
-						>
-							{cat.icon}
-							<span>{cat.label}</span>
-						</button>
-					);
-				})}
-			</div>
+			<LogsCategoryBar
+				categories={CATEGORIES}
+				currentCategory={currentCategory}
+				onSelectCategory={handleCategorySelect}
+				searchQuery={filters.search}
+				onSearchChange={(search) => handleFilterChange("search", search)}
+				showAdvanced={showAdvancedFilters}
+				onToggleAdvanced={() => setShowAdvancedFilters(!showAdvancedFilters)}
+				t={t}
+			/>
 
-			{/* Main Search and Filter Card */}
-			<div
-				style={{
-					background: colors.cardBg,
-					border: `1px solid ${colors.borderSubtle}`,
-					borderRadius: radius.md,
-					padding: "8px 10px",
-					boxShadow: shadow.card,
-					display: "flex",
-					flexDirection: "column",
-					gap: "6px",
-				}}
-			>
-				{/* Search Input Bar */}
-				<div
-					style={{
-						position: "relative",
-						display: "flex",
-						alignItems: "center",
-					}}
-				>
-					<div
-						style={{
-							position: "absolute",
-							left: "8px",
-							color: colors.textSecondary,
-							display: "flex",
-							alignItems: "center",
-							pointerEvents: "none",
-						}}
-					>
-						{ICONS.search}
-					</div>
-					<input
-						type="text"
-						value={filters.search}
-						onChange={(e) => handleFilterChange("search", e.target.value)}
-						placeholder={t.searchLogs || "Szukaj w akcjach, zadaniach, użytkownikach..."}
-						style={{
-							...components.input,
-							paddingLeft: "28px",
-							paddingRight: filters.search ? "26px" : "8px",
-							fontSize: "11px",
-							paddingTop: "5px",
-							paddingBottom: "5px",
-							borderRadius: radius.sm,
-							background: colors.pageBg,
-						}}
-					/>
-					{filters.search && (
-						<button
-							type="button"
-							onClick={() => handleFilterChange("search", "")}
-							style={{
-								position: "absolute",
-								right: "6px",
-								background: "transparent",
-								border: "none",
-								color: colors.textSecondary,
-								cursor: "pointer",
-								padding: "2px",
-								display: "flex",
-								alignItems: "center",
-							}}
-						>
-							{ICONS.close}
-						</button>
-					)}
-				</div>
-
-				{/* Secondary Filters: User & Operation Type */}
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
-						gap: "6px",
-					}}
-				>
-					<div>
-						<select
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: "11px",
-								padding: "4px 6px",
-								borderRadius: radius.sm,
-								background: colors.pageBg,
-							}}
-							value={filters.userId}
-							onChange={(e) => handleFilterChange("userId", e.target.value)}
-						>
-							<option value="">{t.allUsers || "Wszyscy użytkownicy"}</option>
-							{users.map((user) => (
-								<option key={user.id} value={user.id}>
-									{user.first_name} {user.last_name} ({user.login})
-								</option>
-							))}
-						</select>
-					</div>
-
-					<div>
-						<select
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: "11px",
-								padding: "4px 6px",
-								borderRadius: radius.sm,
-								background: colors.pageBg,
-							}}
-							value={filters.operationType}
-							onChange={(e) => handleFilterChange("operationType", e.target.value)}
-						>
-							<option value="">{t.allOperations || "Wszystkie operacje"}</option>
-							<option value="status_change">{t.op_status_change || "Zmiana statusu"}</option>
-							<option value="create">{t.op_create || "Utworzenie"}</option>
-							<option value="update">{t.op_update || "Edycja"}</option>
-							<option value="delete">{t.op_delete || "Usunięcie"}</option>
-							<option value="login_success">{t.op_login_success || "Logowanie"}</option>
-							<option value="login_failed">{t.op_login_failed || "Błąd logowania"}</option>
-						</select>
-					</div>
-				</div>
-
-				{/* Optional Date Range Row */}
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "1fr 1fr",
-						gap: "6px",
-					}}
-				>
-					<div>
-						<input
-							type="date"
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: "11px",
-								padding: "4px 6px",
-								borderRadius: radius.sm,
-								background: colors.pageBg,
-							}}
-							value={filters.startDate}
-							onChange={(e) => handleFilterChange("startDate", e.target.value)}
-							placeholder={t.startDate || "Data od"}
-						/>
-					</div>
-
-					<div>
-						<input
-							type="date"
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: "11px",
-								padding: "4px 6px",
-								borderRadius: radius.sm,
-								background: colors.pageBg,
-							}}
-							value={filters.endDate}
-							onChange={(e) => handleFilterChange("endDate", e.target.value)}
-							placeholder={t.endDate || "Data do"}
-						/>
-					</div>
-				</div>
-
-				{/* Active Filter Bar / Reset */}
-				{hasActiveFilters && (
-					<div
-						style={{
-							display: "flex",
-							justifyContent: "space-between",
-							alignItems: "center",
-							paddingTop: "2px",
-							borderTop: `1px solid ${colors.borderSubtle}`,
-						}}
-					>
-						<span style={{ fontSize: "10px", color: colors.primary, fontWeight: font.weight.medium }}>
-							{t.showingFilteredLogs || "Wyniki filtrowania"}: {logs.length}
-						</span>
-						<button
-							type="button"
-							onClick={handleResetFilters}
-							style={{
-								...components.ghostButton,
-								padding: "2px 8px",
-								fontSize: "10px",
-								borderRadius: radius.sm,
-								display: "flex",
-								alignItems: "center",
-								gap: "3px",
-							}}
-						>
-							{ICONS.close}
-							{t.resetFilters || "Resetuj filtry"}
-						</button>
-					</div>
-				)}
-			</div>
-
-			{/* Logs Stream */}
-			{loading && logs.length === 0 ? (
-				<div
-					style={{
-						textAlign: "center",
-						padding: "24px 12px",
-						color: colors.textSecondary,
-						fontSize: "11px",
-						background: colors.cardBg,
-						borderRadius: radius.md,
-						border: `1px dashed ${colors.borderDefault}`,
-					}}
-				>
-					{t.loading || "Ładowanie..."}
-				</div>
-			) : logs.length === 0 ? (
-				<div
-					style={{
-						textAlign: "center",
-						padding: "24px 12px",
-						color: colors.textSecondary,
-						fontSize: "11px",
-						background: colors.cardBg,
-						borderRadius: radius.md,
-						border: `1px dashed ${colors.borderDefault}`,
-					}}
-				>
-					{t.noLogs || "Brak logów"}
-				</div>
-			) : (
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: "4px",
-					}}
-				>
-					{logs.map((log) => (
-						<LogEntry
-							key={log.id}
-							initialData={log}
-							language={language}
-							users={users}
-							expanded={expandedLogId === log.id}
-							onToggle={() => setExpandedLogId((prev) => (prev === log.id ? null : log.id))}
-						/>
-					))}
-				</div>
+			{showAdvancedFilters && (
+				<LogsAdvancedPanel
+					filters={filters}
+					onFilterChange={handleFilterChange}
+					users={users}
+					t={t}
+				/>
 			)}
+
+			<LogsList
+				logs={logs}
+				loading={loading}
+				users={users}
+				expandedLogId={expandedLogId}
+				onToggleLog={(id) => setExpandedLogId(expandedLogId === id ? null : id)}
+				language={language}
+				t={t}
+			/>
 		</div>
 	);
 }

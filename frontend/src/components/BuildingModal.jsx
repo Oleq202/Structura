@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
@@ -51,6 +52,267 @@ const ICONS = {
 		</svg>
 	),
 };
+
+function BuildingModalHeader({ isEdit, building, t, onClose }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				background: colors.shellDeep,
+				color: colors.shellText,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				flexShrink: 0,
+			}}
+		>
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
+				<div
+					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: "rgba(255,255,255,0.12)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						color: colors.primary,
+					}}
+				>
+					{ICONS.building}
+				</div>
+				<div>
+					<h3
+						style={{
+							margin: 0,
+							fontSize: font.size.md,
+							fontWeight: font.weight.big,
+							color: "#ffffff",
+						}}
+					>
+						{isEdit ? t.editBuilding : t.createBuilding}
+					</h3>
+					<p
+						style={{
+							margin: "2px 0 0 0",
+							fontSize: font.size.xs,
+							color: colors.shellTextMuted,
+						}}
+					>
+						{isEdit
+							? building.street_address || t.building
+							: t.addBuilding || "Enter building location"}
+					</p>
+				</div>
+			</div>
+			<button
+				type="button"
+				onClick={onClose}
+				style={{
+					background: "rgba(255,255,255,0.08)",
+					border: "none",
+					borderRadius: radius.full,
+					width: "44px",
+					height: "44px",
+					minWidth: "44px",
+					minHeight: "44px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					cursor: "pointer",
+					color: colors.shellTextMuted,
+					transition: "background 0.15s, color 0.15s",
+					boxSizing: "border-box",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+					e.currentTarget.style.color = "#ffffff";
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+					e.currentTarget.style.color = colors.shellTextMuted;
+				}}
+				aria-label={t.close || "Close"}
+			>
+				{ICONS.close}
+			</button>
+		</div>
+	);
+}
+
+function BuildingFormFields({
+	formData,
+	setFormData,
+	errors,
+	setErrors,
+	addressInputRef,
+	bodyRef,
+	t,
+}) {
+	return (
+		<div
+			ref={bodyRef}
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				overflowY: "auto",
+				flex: 1,
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[4],
+				background: colors.cardBg,
+			}}
+		>
+			<div>
+				<label
+					htmlFor="building-street-address"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: spacing[1],
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.streetAddress}
+				</label>
+				<input
+					id="building-street-address"
+					ref={addressInputRef}
+					type="text"
+					value={formData.street_address}
+					onChange={(e) => {
+						setFormData({
+							...formData,
+							street_address: e.target.value,
+						});
+						if (errors.street_address) {
+							setErrors({ ...errors, street_address: "" });
+						}
+					}}
+					placeholder={t.enterStreetAddress}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.md,
+						border: errors.street_address
+							? `1px solid ${status.danger.border}`
+							: `1px solid ${colors.borderDefault}`,
+						background: errors.street_address
+							? status.danger.bg
+							: colors.cardBg,
+					}}
+				/>
+				{errors.street_address && (
+					<p
+						style={{
+							fontSize: font.size.xs,
+							color: status.danger.text,
+							margin: `${spacing[1]} 0 0 0`,
+						}}
+					>
+						{errors.street_address}
+					</p>
+				)}
+			</div>
+
+			<div>
+				<label
+					htmlFor="building-district"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: spacing[1],
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.district}
+				</label>
+				<input
+					id="building-district"
+					type="text"
+					value={formData.district}
+					onChange={(e) =>
+						setFormData({
+							...formData,
+							district: e.target.value,
+						})
+					}
+					placeholder={t.enterDistrict}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.md,
+					}}
+				/>
+			</div>
+
+			<div>
+				<label
+					htmlFor="building-city"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: spacing[1],
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.city}
+				</label>
+				<input
+					id="building-city"
+					type="text"
+					value={formData.city}
+					onChange={(e) => {
+						setFormData({
+							...formData,
+							city: e.target.value,
+						});
+						if (errors.city) {
+							setErrors({ ...errors, city: "" });
+						}
+					}}
+					placeholder={t.enterCity}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.md,
+						border: errors.city
+							? `1px solid ${status.danger.border}`
+							: `1px solid ${colors.borderDefault}`,
+						background: errors.city
+							? status.danger.bg
+							: colors.cardBg,
+					}}
+				/>
+				{errors.city && (
+					<p
+						style={{
+							fontSize: font.size.xs,
+							color: status.danger.text,
+							margin: `${spacing[1]} 0 0 0`,
+						}}
+					>
+						{errors.city}
+					</p>
+				)}
+			</div>
+		</div>
+	);
+}
 
 export default function BuildingModal({
 	building = null,
@@ -134,7 +396,7 @@ export default function BuildingModal({
 		}
 	};
 
-	return (
+	return createPortal(
 		<div
 			style={{
 				position: "fixed",
@@ -142,113 +404,63 @@ export default function BuildingModal({
 				left: 0,
 				right: 0,
 				bottom: 0,
-				background: "rgba(9, 21, 42, 0.65)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
+				height: "100%",
+				minHeight: "100dvh",
+				maxHeight: "100dvh",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 2500,
-				padding: spacing[4],
+				zIndex: 99999,
+				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
+				boxSizing: "border-box",
 			}}
-			onClick={() => onClose?.()}
 		>
+			<button
+				type="button"
+				aria-label={t.close || "Zamknij"}
+				tabIndex={-1}
+				onClick={() => onClose?.()}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					background: "rgba(9, 21, 42, 0.65)",
+					backdropFilter: "blur(6px)",
+					WebkitBackdropFilter: "blur(6px)",
+					border: "none",
+					padding: 0,
+					margin: 0,
+					cursor: "default",
+					width: "100%",
+					height: "100%",
+				}}
+			/>
 			<div
 				style={{
+					position: "relative",
+					zIndex: 1,
 					background: colors.cardBg,
 					borderRadius: radius.xl,
 					boxShadow: shadow.modal,
 					border: `1px solid ${colors.borderSubtle}`,
 					width: "100%",
 					maxWidth: "460px",
-					maxHeight: "85vh",
+					maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
 					boxSizing: "border-box",
 					fontFamily: font.family.sans,
 				}}
-				onClick={(e) => e.stopPropagation()}
 			>
-				<div
-					style={{
-						padding: `${spacing[4]} ${spacing[5]}`,
-						background: colors.shellDeep,
-						color: colors.shellText,
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						flexShrink: 0,
-					}}
-				>
-					<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
-						<div
-							style={{
-								width: "36px",
-								height: "36px",
-								borderRadius: radius.md,
-								background: "rgba(255,255,255,0.12)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: colors.primary,
-							}}
-						>
-							{ICONS.building}
-						</div>
-						<div>
-							<h3
-								style={{
-									margin: 0,
-									fontSize: font.size.md,
-									fontWeight: font.weight.big,
-									color: "#ffffff",
-								}}
-							>
-								{isEdit ? t.editBuilding : t.createBuilding}
-							</h3>
-							<p
-								style={{
-									margin: "2px 0 0 0",
-									fontSize: font.size.xs,
-									color: colors.shellTextMuted,
-								}}
-							>
-								{isEdit
-									? (building.street_address || t.building)
-									: (t.addBuilding || "Enter building location")}
-							</p>
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						style={{
-							background: "rgba(255,255,255,0.08)",
-							border: "none",
-							borderRadius: radius.full,
-							width: "32px",
-							height: "32px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							color: colors.shellTextMuted,
-							transition: "background 0.15s, color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-							e.currentTarget.style.color = "#ffffff";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-							e.currentTarget.style.color = colors.shellTextMuted;
-						}}
-						aria-label={t.close || "Close"}
-					>
-						{ICONS.close}
-					</button>
-				</div>
+				<BuildingModalHeader
+					isEdit={isEdit}
+					building={building}
+					t={t}
+					onClose={onClose}
+				/>
 
 				<form
 					onSubmit={handleSubmit}
@@ -260,161 +472,15 @@ export default function BuildingModal({
 						margin: 0,
 					}}
 				>
-					<div
-						ref={bodyRef}
-						style={{
-							padding: `${spacing[4]} ${spacing[5]}`,
-							overflowY: "auto",
-							flex: 1,
-							display: "flex",
-							flexDirection: "column",
-							gap: spacing[4],
-							background: colors.cardBg,
-						}}
-					>
-						<div>
-							<label
-								style={{
-									fontSize: font.size.xs,
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: spacing[1],
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.streetAddress}
-							</label>
-							<input
-								ref={addressInputRef}
-								type="text"
-								value={formData.street_address}
-								onChange={(e) => {
-									setFormData({
-										...formData,
-										street_address: e.target.value,
-									});
-									if (errors.street_address) {
-										setErrors({ ...errors, street_address: "" });
-									}
-								}}
-								placeholder={t.enterStreetAddress}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: font.size.sm,
-									borderRadius: radius.md,
-									border: errors.street_address
-										? `1px solid ${status.danger.border}`
-										: `1px solid ${colors.borderDefault}`,
-									background: errors.street_address
-										? status.danger.bg
-										: colors.cardBg,
-								}}
-							/>
-							{errors.street_address && (
-								<p
-									style={{
-										fontSize: font.size.xs,
-										color: status.danger.text,
-										margin: `${spacing[1]} 0 0 0`,
-									}}
-								>
-									{errors.street_address}
-								</p>
-							)}
-						</div>
-
-						<div>
-							<label
-								style={{
-									fontSize: font.size.xs,
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: spacing[1],
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.district}
-							</label>
-							<input
-								type="text"
-								value={formData.district}
-								onChange={(e) =>
-									setFormData({
-										...formData,
-										district: e.target.value,
-									})
-								}
-								placeholder={t.enterDistrict}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: font.size.sm,
-									borderRadius: radius.md,
-								}}
-							/>
-						</div>
-
-						<div>
-							<label
-								style={{
-									fontSize: font.size.xs,
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: spacing[1],
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.city}
-							</label>
-							<input
-								type="text"
-								value={formData.city}
-								onChange={(e) => {
-									setFormData({
-										...formData,
-										city: e.target.value,
-									});
-									if (errors.city) {
-										setErrors({ ...errors, city: "" });
-									}
-								}}
-								placeholder={t.enterCity}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: font.size.sm,
-									borderRadius: radius.md,
-									border: errors.city
-										? `1px solid ${status.danger.border}`
-										: `1px solid ${colors.borderDefault}`,
-									background: errors.city
-										? status.danger.bg
-										: colors.cardBg,
-								}}
-							/>
-							{errors.city && (
-								<p
-									style={{
-										fontSize: font.size.xs,
-										color: status.danger.text,
-										margin: `${spacing[1]} 0 0 0`,
-									}}
-								>
-									{errors.city}
-								</p>
-							)}
-						</div>
-					</div>
+					<BuildingFormFields
+						formData={formData}
+						setFormData={setFormData}
+						errors={errors}
+						setErrors={setErrors}
+						addressInputRef={addressInputRef}
+						bodyRef={bodyRef}
+						t={t}
+					/>
 
 					<div
 						style={{
@@ -432,6 +498,12 @@ export default function BuildingModal({
 							onClick={onClose}
 							style={{
 								...components.ghostButton,
+								minHeight: "44px",
+								minWidth: "44px",
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								boxSizing: "border-box",
 								padding: `${spacing[2]} ${spacing[4]}`,
 								fontSize: font.size.sm,
 							}}
@@ -443,6 +515,12 @@ export default function BuildingModal({
 							disabled={loading}
 							style={{
 								...components.primaryButton,
+								minHeight: "44px",
+								minWidth: "44px",
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								boxSizing: "border-box",
 								padding: `${spacing[2]} ${spacing[5]}`,
 								fontSize: font.size.sm,
 								opacity: loading ? 0.6 : 1,
@@ -458,6 +536,7 @@ export default function BuildingModal({
 					</div>
 				</form>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

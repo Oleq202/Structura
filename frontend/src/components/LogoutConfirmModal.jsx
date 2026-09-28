@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
@@ -53,18 +54,22 @@ export default function LogoutConfirmModal({
 	const t = translations[language] || translations.pl;
 	const modalRef = useRef(null);
 
+	const handleKeyDownEvent = useEffectEvent((e) => {
+		if (e.key === "Escape") {
+			onClose?.();
+		}
+	});
+
 	useEffect(() => {
 		if (!isOpen) return;
 
 		const handleKeyDown = (e) => {
-			if (e.key === "Escape") {
-				onClose?.();
-			}
+			handleKeyDownEvent(e);
 		};
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, onClose]);
+	}, [isOpen]);
 
 	if (!isOpen) return null;
 
@@ -72,7 +77,7 @@ export default function LogoutConfirmModal({
 		.filter(Boolean)
 		.join(" ") || currentUser?.login;
 
-	return (
+	return createPortal(
 		<div
 			style={{
 				position: "fixed",
@@ -80,20 +85,44 @@ export default function LogoutConfirmModal({
 				left: 0,
 				right: 0,
 				bottom: 0,
-				background: "rgba(9, 21, 42, 0.65)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
+				height: "100%",
+				minHeight: "100dvh",
+				maxHeight: "100dvh",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 2500,
-				padding: spacing[4],
+				zIndex: 99999,
+				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
+				boxSizing: "border-box",
 			}}
-			onClick={() => onClose?.()}
 		>
+			<button
+				type="button"
+				aria-label={t.close || "Zamknij"}
+				tabIndex={-1}
+				onClick={() => onClose?.()}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					background: "rgba(9, 21, 42, 0.65)",
+					backdropFilter: "blur(6px)",
+					WebkitBackdropFilter: "blur(6px)",
+					border: "none",
+					padding: 0,
+					margin: 0,
+					cursor: "default",
+					width: "100%",
+					height: "100%",
+				}}
+			/>
 			<div
 				ref={modalRef}
 				style={{
+					position: "relative",
+					zIndex: 1,
 					background: colors.cardBg,
 					borderRadius: radius.xl,
 					boxShadow: shadow.modal,
@@ -106,7 +135,6 @@ export default function LogoutConfirmModal({
 					boxSizing: "border-box",
 					fontFamily: font.family.sans,
 				}}
-				onClick={(e) => e.stopPropagation()}
 			>
 				{/* Modal Header */}
 				<div
@@ -142,6 +170,7 @@ export default function LogoutConfirmModal({
 							{ICONS.logout}
 						</div>
 						<h3
+							id="logout-modal-title"
 							style={{
 								margin: 0,
 								fontSize: font.size.md,
@@ -162,9 +191,14 @@ export default function LogoutConfirmModal({
 							cursor: "pointer",
 							padding: spacing[1],
 							borderRadius: radius.sm,
+							width: "44px",
+							height: "44px",
+							minWidth: "44px",
+							minHeight: "44px",
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
+							boxSizing: "border-box",
 							transition: "color 0.15s, background 0.15s",
 						}}
 						onMouseEnter={(e) => {
@@ -234,6 +268,12 @@ export default function LogoutConfirmModal({
 							border: `1px solid ${colors.borderDefault}`,
 							borderRadius: radius.md,
 							padding: `${spacing[2]} ${spacing[4]}`,
+							minHeight: "44px",
+							minWidth: "44px",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							boxSizing: "border-box",
 							fontSize: font.size.base,
 							fontFamily: font.family.sans,
 							fontWeight: font.weight.medium,
@@ -264,14 +304,18 @@ export default function LogoutConfirmModal({
 							border: `1px solid ${status.danger.border}`,
 							borderRadius: radius.md,
 							padding: `${spacing[2]} ${spacing[4]}`,
+							minHeight: "44px",
+							minWidth: "44px",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							boxSizing: "border-box",
 							fontSize: font.size.base,
 							fontFamily: font.family.sans,
 							fontWeight: font.weight.big,
 							cursor: "pointer",
-							display: "flex",
-							alignItems: "center",
 							gap: spacing[2],
-							transition: "all 0.15s ease",
+							transition: "background 0.15s, border-color 0.15s",
 						}}
 						onMouseEnter={(e) => {
 							e.currentTarget.style.background = "#fbdada";
@@ -289,6 +333,7 @@ export default function LogoutConfirmModal({
 					</button>
 				</div>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }

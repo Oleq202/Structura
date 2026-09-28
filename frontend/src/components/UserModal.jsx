@@ -1,8 +1,5 @@
-import {
-	useRef,
-	useEffect,
-	useReducer,
-} from "react";
+import { useRef, useEffect, useReducer } from "react";
+import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
@@ -83,25 +80,17 @@ const initialState = (user) => ({
 		password: "",
 		first_name: user?.first_name || "",
 		last_name: user?.last_name || "",
-		role: user?.role || "manager",
+		role: user?.role || "contractor",
 	},
+	errors: {},
+	loading: false,
+	showPassword: false,
+	isChangingPassword: false,
 	passwordChange: {
 		currentPassword: "",
 		newPassword: "",
 		confirmPassword: "",
 	},
-	errors: {
-		login: "",
-		password: "",
-		first_name: "",
-		last_name: "",
-		currentPassword: "",
-		newPassword: "",
-		confirmPassword: "",
-	},
-	loading: false,
-	showPassword: false,
-	isChangingPassword: false,
 });
 
 function reducer(state, action) {
@@ -113,22 +102,18 @@ function reducer(state, action) {
 					...state.formData,
 					...action.payload,
 				},
-			};
-		case "SET_PASSWORD_CHANGE":
-			return {
-				...state,
-				passwordChange: {
-					...state.passwordChange,
-					...action.payload,
+				errors: {
+					...state.errors,
+					...Object.keys(action.payload).reduce((acc, key) => {
+						acc[key] = "";
+						return acc;
+					}, {}),
 				},
 			};
 		case "SET_ERRORS":
 			return {
 				...state,
-				errors: {
-					...state.errors,
-					...action.payload,
-				},
+				errors: action.payload,
 			};
 		case "SET_LOADING":
 			return {
@@ -144,10 +129,603 @@ function reducer(state, action) {
 			return {
 				...state,
 				isChangingPassword: !state.isChangingPassword,
+				passwordChange: {
+					currentPassword: "",
+					newPassword: "",
+					confirmPassword: "",
+				},
+			};
+		case "SET_PASSWORD_CHANGE":
+			return {
+				...state,
+				passwordChange: {
+					...state.passwordChange,
+					...action.payload,
+				},
 			};
 		default:
 			return state;
 	}
+}
+
+function UserModalHeader({ isEdit, user, t, onClose }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				background: colors.shellDeep,
+				color: colors.shellText,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				flexShrink: 0,
+			}}
+		>
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
+				<div
+					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: "rgba(255,255,255,0.12)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						color: colors.primary,
+					}}
+				>
+					{ICONS.user}
+				</div>
+				<div>
+					<h3
+						style={{
+							margin: 0,
+							fontSize: font.size.md,
+							fontWeight: font.weight.big,
+							color: "#ffffff",
+						}}
+					>
+						{isEdit ? t.editUser : t.createUser}
+					</h3>
+					<p
+						style={{
+							margin: "2px 0 0 0",
+							fontSize: font.size.xs,
+							color: colors.shellTextMuted,
+						}}
+					>
+						{isEdit
+							? user.login || t.settings
+							: t.addUser || "Fill in account details"}
+					</p>
+				</div>
+			</div>
+			<button
+				type="button"
+				onClick={onClose}
+				style={{
+					background: "rgba(255,255,255,0.08)",
+					border: "none",
+					borderRadius: radius.full,
+					width: "44px",
+					height: "44px",
+					minWidth: "44px",
+					minHeight: "44px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					cursor: "pointer",
+					color: colors.shellTextMuted,
+					transition: "background 0.15s, color 0.15s",
+					boxSizing: "border-box",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.2)";
+					e.currentTarget.style.color = "#ffffff";
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+					e.currentTarget.style.color = colors.shellTextMuted;
+				}}
+				aria-label={t.close || "Close"}
+			>
+				{ICONS.close}
+			</button>
+		</div>
+	);
+}
+
+function RoleSelector({ currentRole, onChange, t }) {
+	const roles = [
+		{ id: "manager", label: t.manager || "Manager" },
+		{ id: "contractor", label: t.contractor || "Contractor" },
+		{ id: "admin", label: t.admin || "Admin" },
+	];
+
+	return (
+		<div>
+			<span
+				style={{
+					fontSize: font.size.xs,
+					fontWeight: font.weight.big,
+					color: colors.textSecondary,
+					marginBottom: spacing[1],
+					display: "block",
+					textTransform: "uppercase",
+					letterSpacing: font.letterSpacing.wide,
+				}}
+			>
+				{t.role}
+			</span>
+			<div
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(3, 1fr)",
+					gap: spacing[2],
+				}}
+			>
+				{roles.map((r) => {
+					const isSelected = currentRole === r.id;
+					return (
+						<button
+							key={r.id}
+							type="button"
+							onClick={() => onChange(r.id)}
+							style={{
+								padding: `${spacing[2]} ${spacing[3]}`,
+								minHeight: "44px",
+								minWidth: "44px",
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								boxSizing: "border-box",
+								borderRadius: radius.md,
+								border: `1.5px solid ${isSelected ? colors.primary : colors.borderDefault}`,
+								background: isSelected ? `${colors.primary}12` : colors.pageBg,
+								color: isSelected ? colors.primary : colors.textBody,
+								fontWeight: isSelected ? font.weight.big : font.weight.medium,
+								fontSize: font.size.xs,
+								cursor: "pointer",
+								transition: "background-color 0.15s ease, border-color 0.15s ease",
+								textAlign: "center",
+							}}
+						>
+							{r.label}
+						</button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function PasswordSection({
+	isEdit,
+	state,
+	dispatch,
+	t,
+}) {
+	if (!isEdit) {
+		return (
+			<div>
+				<label
+					htmlFor="user-password"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: spacing[1],
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.password}
+				</label>
+				<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+					<input
+						id="user-password"
+						type={state.showPassword ? "text" : "password"}
+						value={state.formData.password}
+						onChange={(e) =>
+							dispatch({
+								type: "SET_FORM_DATA",
+								payload: { password: e.target.value },
+							})
+						}
+						placeholder={t.enterPassword}
+						style={{
+							...components.input,
+							width: "100%",
+							boxSizing: "border-box",
+							paddingRight: spacing[12],
+							fontSize: font.size.sm,
+							borderRadius: radius.md,
+							border: state.errors.password
+								? `1px solid ${status.danger.border}`
+								: `1px solid ${colors.borderDefault}`,
+							background: state.errors.password
+								? status.danger.bg
+								: colors.cardBg,
+						}}
+					/>
+					<button
+						type="button"
+						onClick={() => dispatch({ type: "TOGGLE_SHOW_PASSWORD" })}
+						style={{
+							position: "absolute",
+							right: spacing[1],
+							background: "none",
+							border: "none",
+							color: colors.textSecondary,
+							cursor: "pointer",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							minWidth: "44px",
+							minHeight: "44px",
+							boxSizing: "border-box",
+							padding: 0,
+						}}
+					>
+						{state.showPassword ? ICONS.eyeOff : ICONS.eye}
+					</button>
+				</div>
+				{state.errors.password && (
+					<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+						{state.errors.password}
+					</p>
+				)}
+			</div>
+		);
+	}
+
+	return (
+		<div
+			style={{
+				border: `1px solid ${colors.borderSubtle}`,
+				borderRadius: radius.md,
+				padding: spacing[3],
+				background: colors.pageBg,
+			}}
+		>
+			<button
+				type="button"
+				onClick={() => dispatch({ type: "TOGGLE_CHANGING_PASSWORD" })}
+				style={{
+					background: "none",
+					border: "none",
+					color: colors.primary,
+					fontWeight: font.weight.big,
+					fontSize: font.size.xs,
+					cursor: "pointer",
+					padding: "0",
+					minHeight: "44px",
+					display: "inline-flex",
+					alignItems: "center",
+					boxSizing: "border-box",
+				}}
+			>
+				{state.isChangingPassword
+					? "✕ Anuluj zmianę hasła"
+					: "+ Zmień hasło"}
+			</button>
+
+			{state.isChangingPassword && (
+				<div style={{ marginTop: spacing[3], display: "flex", flexDirection: "column", gap: spacing[3] }}>
+					<div>
+						<input
+							id="user-current-pw"
+							type="password"
+							placeholder="Aktualne hasło"
+							aria-label="Aktualne hasło"
+							value={state.passwordChange.currentPassword}
+							onChange={(e) =>
+								dispatch({
+									type: "SET_PASSWORD_CHANGE",
+									payload: { currentPassword: e.target.value },
+								})
+							}
+							style={{
+								...components.input,
+								width: "100%",
+								boxSizing: "border-box",
+								fontSize: font.size.sm,
+								borderRadius: radius.md,
+							}}
+						/>
+					</div>
+					<div>
+						<input
+							id="user-new-pw"
+							type="password"
+							placeholder="Nowe hasło"
+							aria-label="Nowe hasło"
+							value={state.passwordChange.newPassword}
+							onChange={(e) =>
+								dispatch({
+									type: "SET_PASSWORD_CHANGE",
+									payload: { newPassword: e.target.value },
+								})
+							}
+							style={{
+								...components.input,
+								width: "100%",
+								boxSizing: "border-box",
+								fontSize: font.size.sm,
+								borderRadius: radius.md,
+							}}
+						/>
+					</div>
+					<div>
+						<input
+							id="user-confirm-pw"
+							type="password"
+							placeholder="Powtórz nowe hasło"
+							aria-label="Powtórz nowe hasło"
+							value={state.passwordChange.confirmPassword}
+							onChange={(e) =>
+								dispatch({
+									type: "SET_PASSWORD_CHANGE",
+									payload: { confirmPassword: e.target.value },
+								})
+							}
+							style={{
+								...components.input,
+								width: "100%",
+								boxSizing: "border-box",
+								fontSize: font.size.sm,
+								borderRadius: radius.md,
+							}}
+						/>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function UserFormFields({
+	state,
+	dispatch,
+	bodyRef,
+	loginRef,
+	isEdit,
+	t,
+}) {
+	return (
+		<div
+			ref={bodyRef}
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				overflowY: "auto",
+				flex: 1,
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[4],
+				background: colors.cardBg,
+			}}
+		>
+			<RoleSelector
+				currentRole={state.formData.role}
+				onChange={(role) =>
+					dispatch({
+						type: "SET_FORM_DATA",
+						payload: { role },
+					})
+				}
+				t={t}
+			/>
+
+			<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing[3] }}>
+				<div>
+					<label
+						htmlFor="user-first-name"
+						style={{
+							fontSize: font.size.xs,
+							fontWeight: font.weight.big,
+							color: colors.textSecondary,
+							marginBottom: spacing[1],
+							display: "block",
+							textTransform: "uppercase",
+							letterSpacing: font.letterSpacing.wide,
+						}}
+					>
+						{t.firstName}
+					</label>
+					<input
+						id="user-first-name"
+						type="text"
+						value={state.formData.first_name}
+						onChange={(e) =>
+							dispatch({
+								type: "SET_FORM_DATA",
+								payload: { first_name: e.target.value },
+							})
+						}
+						placeholder={t.enterFirstName}
+						style={{
+							...components.input,
+							width: "100%",
+							boxSizing: "border-box",
+							fontSize: font.size.sm,
+							borderRadius: radius.md,
+							border: state.errors.first_name
+								? `1px solid ${status.danger.border}`
+								: `1px solid ${colors.borderDefault}`,
+							background: state.errors.first_name
+								? status.danger.bg
+								: colors.cardBg,
+						}}
+					/>
+					{state.errors.first_name && (
+						<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+							{state.errors.first_name}
+						</p>
+					)}
+				</div>
+
+				<div>
+					<label
+						htmlFor="user-last-name"
+						style={{
+							fontSize: font.size.xs,
+							fontWeight: font.weight.big,
+							color: colors.textSecondary,
+							marginBottom: spacing[1],
+							display: "block",
+							textTransform: "uppercase",
+							letterSpacing: font.letterSpacing.wide,
+						}}
+					>
+						{t.lastName}
+					</label>
+					<input
+						id="user-last-name"
+						type="text"
+						value={state.formData.last_name}
+						onChange={(e) =>
+							dispatch({
+								type: "SET_FORM_DATA",
+								payload: { last_name: e.target.value },
+							})
+						}
+						placeholder={t.enterLastName}
+						style={{
+							...components.input,
+							width: "100%",
+							boxSizing: "border-box",
+							fontSize: font.size.sm,
+							borderRadius: radius.md,
+							border: state.errors.last_name
+								? `1px solid ${status.danger.border}`
+								: `1px solid ${colors.borderDefault}`,
+							background: state.errors.last_name
+								? status.danger.bg
+								: colors.cardBg,
+						}}
+					/>
+					{state.errors.last_name && (
+						<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+							{state.errors.last_name}
+						</p>
+					)}
+				</div>
+			</div>
+
+			<div>
+				<label
+					htmlFor="user-login"
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.big,
+						color: colors.textSecondary,
+						marginBottom: spacing[1],
+						display: "block",
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{t.login}
+				</label>
+				<input
+					id="user-login"
+					ref={loginRef}
+					type="text"
+					value={state.formData.login}
+					onChange={(e) =>
+						dispatch({
+							type: "SET_FORM_DATA",
+							payload: { login: e.target.value },
+						})
+					}
+					placeholder={t.enterLogin}
+					style={{
+						...components.input,
+						width: "100%",
+						boxSizing: "border-box",
+						fontSize: font.size.sm,
+						borderRadius: radius.md,
+						border: state.errors.login
+							? `1px solid ${status.danger.border}`
+							: `1px solid ${colors.borderDefault}`,
+						background: state.errors.login
+							? status.danger.bg
+							: colors.cardBg,
+					}}
+				/>
+				{state.errors.login && (
+					<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
+						{state.errors.login}
+					</p>
+				)}
+			</div>
+
+			<PasswordSection
+				isEdit={isEdit}
+				state={state}
+				dispatch={dispatch}
+				t={t}
+			/>
+		</div>
+	);
+}
+
+function UserModalFooter({ isEdit, loading, onClose, t }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[3]} ${spacing[5]}`,
+				background: colors.pageBg,
+				borderTop: `1px solid ${colors.borderSubtle}`,
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: spacing[2],
+				flexShrink: 0,
+			}}
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				style={{
+					...components.ghostButton,
+					minHeight: "44px",
+					minWidth: "44px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					padding: `${spacing[2]} ${spacing[4]}`,
+					fontSize: font.size.sm,
+				}}
+			>
+				{t.cancel}
+			</button>
+			<button
+				type="submit"
+				disabled={loading}
+				style={{
+					...components.primaryButton,
+					minHeight: "44px",
+					minWidth: "44px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					padding: `${spacing[2]} ${spacing[5]}`,
+					fontSize: font.size.sm,
+					opacity: loading ? 0.6 : 1,
+					cursor: loading ? "not-allowed" : "pointer",
+				}}
+			>
+				{loading
+					? t.saving
+					: isEdit
+						? t.update
+						: t.create}
+			</button>
+		</div>
+	);
 }
 
 export default function UserModal({
@@ -270,13 +848,7 @@ export default function UserModal({
 		}
 	};
 
-	const roles = [
-		{ id: "manager", label: t.manager || "Manager" },
-		{ id: "contractor", label: t.contractor || "Contractor" },
-		{ id: "admin", label: t.admin || "Admin" },
-	];
-
-	return (
+	return createPortal(
 		<div
 			style={{
 				position: "fixed",
@@ -284,113 +856,63 @@ export default function UserModal({
 				left: 0,
 				right: 0,
 				bottom: 0,
-				background: "rgba(9, 21, 42, 0.65)",
-				backdropFilter: "blur(6px)",
-				WebkitBackdropFilter: "blur(6px)",
+				height: "100%",
+				minHeight: "100dvh",
+				maxHeight: "100dvh",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 2500,
-				padding: spacing[4],
+				zIndex: 99999,
+				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
+				boxSizing: "border-box",
 			}}
-			onClick={() => onClose?.()}
 		>
+			<button
+				type="button"
+				aria-label={t.close || "Zamknij"}
+				tabIndex={-1}
+				onClick={() => onClose?.()}
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					background: "rgba(9, 21, 42, 0.65)",
+					backdropFilter: "blur(6px)",
+					WebkitBackdropFilter: "blur(6px)",
+					border: "none",
+					padding: 0,
+					margin: 0,
+					cursor: "default",
+					width: "100%",
+					height: "100%",
+				}}
+			/>
 			<div
 				style={{
+					position: "relative",
+					zIndex: 1,
 					background: colors.cardBg,
 					borderRadius: radius.xl,
 					boxShadow: shadow.modal,
 					border: `1px solid ${colors.borderSubtle}`,
 					width: "100%",
 					maxWidth: "500px",
-					maxHeight: "85vh",
+					maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
 					boxSizing: "border-box",
 					fontFamily: font.family.sans,
 				}}
-				onClick={(e) => e.stopPropagation()}
 			>
-				<div
-					style={{
-						padding: `${spacing[4]} ${spacing[5]}`,
-						background: colors.shellDeep,
-						color: colors.shellText,
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						flexShrink: 0,
-					}}
-				>
-					<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
-						<div
-							style={{
-								width: "36px",
-								height: "36px",
-								borderRadius: radius.md,
-								background: "rgba(255,255,255,0.12)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: colors.primary,
-							}}
-						>
-							{ICONS.user}
-						</div>
-						<div>
-							<h3
-								style={{
-									margin: 0,
-									fontSize: font.size.md,
-									fontWeight: font.weight.big,
-									color: "#ffffff",
-								}}
-							>
-								{isEdit ? t.editUser : t.createUser}
-							</h3>
-							<p
-								style={{
-									margin: "2px 0 0 0",
-									fontSize: font.size.xs,
-									color: colors.shellTextMuted,
-								}}
-							>
-								{isEdit
-									? (user.login || t.settings)
-									: (t.addUser || "Fill in account details")}
-							</p>
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						style={{
-							background: "rgba(255,255,255,0.08)",
-							border: "none",
-							borderRadius: radius.full,
-							width: "32px",
-							height: "32px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							color: colors.shellTextMuted,
-							transition: "background 0.15s, color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-							e.currentTarget.style.color = "#ffffff";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-							e.currentTarget.style.color = colors.shellTextMuted;
-						}}
-						aria-label={t.close || "Close"}
-					>
-						{ICONS.close}
-					</button>
-				</div>
+				<UserModalHeader
+					isEdit={isEdit}
+					user={user}
+					t={t}
+					onClose={onClose}
+				/>
 
 				<form
 					onSubmit={handleSubmit}
@@ -402,413 +924,24 @@ export default function UserModal({
 						margin: 0,
 					}}
 				>
-					<div
-						ref={bodyRef}
-						style={{
-							padding: `${spacing[4]} ${spacing[5]}`,
-							overflowY: "auto",
-							flex: 1,
-							display: "flex",
-							flexDirection: "column",
-							gap: spacing[4],
-							background: colors.cardBg,
-						}}
-					>
-						<div>
-							<label
-								style={{
-									fontSize: font.size.xs,
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: spacing[1],
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.role}
-							</label>
-							<div
-								style={{
-									display: "grid",
-									gridTemplateColumns: "repeat(3, 1fr)",
-									gap: spacing[2],
-								}}
-							>
-								{roles.map((r) => {
-									const isSelected = state.formData.role === r.id;
-									return (
-										<button
-											key={r.id}
-											type="button"
-											onClick={() =>
-												dispatch({
-													type: "SET_FORM_DATA",
-													payload: { role: r.id },
-												})
-											}
-											style={{
-												padding: `${spacing[2]} ${spacing[3]}`,
-												borderRadius: radius.md,
-												border: `1.5px solid ${isSelected ? colors.primary : colors.borderDefault}`,
-												background: isSelected ? `${colors.primary}12` : colors.pageBg,
-												color: isSelected ? colors.primary : colors.textBody,
-												fontWeight: isSelected ? font.weight.big : font.weight.medium,
-												fontSize: font.size.xs,
-												cursor: "pointer",
-												transition: "all 0.15s ease",
-												textAlign: "center",
-											}}
-										>
-											{r.label}
-										</button>
-									);
-								})}
-							</div>
-						</div>
+					<UserFormFields
+						state={state}
+						dispatch={dispatch}
+						bodyRef={bodyRef}
+						loginRef={loginRef}
+						isEdit={isEdit}
+						t={t}
+					/>
 
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing[3] }}>
-							<div>
-								<label
-									style={{
-										fontSize: font.size.xs,
-										fontWeight: font.weight.big,
-										color: colors.textSecondary,
-										marginBottom: spacing[1],
-										display: "block",
-										textTransform: "uppercase",
-										letterSpacing: font.letterSpacing.wide,
-									}}
-								>
-									{t.firstName}
-								</label>
-								<input
-									type="text"
-									value={state.formData.first_name}
-									onChange={(e) =>
-										dispatch({
-											type: "SET_FORM_DATA",
-											payload: { first_name: e.target.value },
-										})
-									}
-									placeholder={t.enterFirstName}
-									style={{
-										...components.input,
-										width: "100%",
-										boxSizing: "border-box",
-										fontSize: font.size.sm,
-										borderRadius: radius.md,
-										border: state.errors.first_name
-											? `1px solid ${status.danger.border}`
-											: `1px solid ${colors.borderDefault}`,
-										background: state.errors.first_name
-											? status.danger.bg
-											: colors.cardBg,
-									}}
-								/>
-								{state.errors.first_name && (
-									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-										{state.errors.first_name}
-									</p>
-								)}
-							</div>
-
-							<div>
-								<label
-									style={{
-										fontSize: font.size.xs,
-										fontWeight: font.weight.big,
-										color: colors.textSecondary,
-										marginBottom: spacing[1],
-										display: "block",
-										textTransform: "uppercase",
-										letterSpacing: font.letterSpacing.wide,
-									}}
-								>
-									{t.lastName}
-								</label>
-								<input
-									type="text"
-									value={state.formData.last_name}
-									onChange={(e) =>
-										dispatch({
-											type: "SET_FORM_DATA",
-											payload: { last_name: e.target.value },
-										})
-									}
-									placeholder={t.enterLastName}
-									style={{
-										...components.input,
-										width: "100%",
-										boxSizing: "border-box",
-										fontSize: font.size.sm,
-										borderRadius: radius.md,
-										border: state.errors.last_name
-											? `1px solid ${status.danger.border}`
-											: `1px solid ${colors.borderDefault}`,
-										background: state.errors.last_name
-											? status.danger.bg
-											: colors.cardBg,
-									}}
-								/>
-								{state.errors.last_name && (
-									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-										{state.errors.last_name}
-									</p>
-								)}
-							</div>
-						</div>
-
-						<div>
-							<label
-								style={{
-									fontSize: font.size.xs,
-									fontWeight: font.weight.big,
-									color: colors.textSecondary,
-									marginBottom: spacing[1],
-									display: "block",
-									textTransform: "uppercase",
-									letterSpacing: font.letterSpacing.wide,
-								}}
-							>
-								{t.login}
-							</label>
-							<input
-								ref={loginRef}
-								type="text"
-								value={state.formData.login}
-								onChange={(e) =>
-									dispatch({
-										type: "SET_FORM_DATA",
-										payload: { login: e.target.value },
-									})
-								}
-								placeholder={t.enterLogin}
-								style={{
-									...components.input,
-									width: "100%",
-									boxSizing: "border-box",
-									fontSize: font.size.sm,
-									borderRadius: radius.md,
-									border: state.errors.login
-										? `1px solid ${status.danger.border}`
-										: `1px solid ${colors.borderDefault}`,
-									background: state.errors.login
-										? status.danger.bg
-										: colors.cardBg,
-								}}
-							/>
-							{state.errors.login && (
-								<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-									{state.errors.login}
-								</p>
-							)}
-						</div>
-
-						{!isEdit && (
-							<div>
-								<label
-									style={{
-										fontSize: font.size.xs,
-										fontWeight: font.weight.big,
-										color: colors.textSecondary,
-										marginBottom: spacing[1],
-										display: "block",
-										textTransform: "uppercase",
-										letterSpacing: font.letterSpacing.wide,
-									}}
-								>
-									{t.password}
-								</label>
-								<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-									<input
-										type={state.showPassword ? "text" : "password"}
-										value={state.formData.password}
-										onChange={(e) =>
-											dispatch({
-												type: "SET_FORM_DATA",
-												payload: { password: e.target.value },
-											})
-										}
-										placeholder={t.enterPassword}
-										style={{
-											...components.input,
-											width: "100%",
-											boxSizing: "border-box",
-											paddingRight: spacing[9],
-											fontSize: font.size.sm,
-											borderRadius: radius.md,
-											border: state.errors.password
-												? `1px solid ${status.danger.border}`
-												: `1px solid ${colors.borderDefault}`,
-											background: state.errors.password
-												? status.danger.bg
-												: colors.cardBg,
-										}}
-									/>
-									<button
-										type="button"
-										onClick={() => dispatch({ type: "TOGGLE_SHOW_PASSWORD" })}
-										style={{
-											position: "absolute",
-											right: spacing[3],
-											background: "none",
-											border: "none",
-											color: colors.textSecondary,
-											cursor: "pointer",
-											display: "flex",
-											alignItems: "center",
-											padding: 0,
-										}}
-									>
-										{state.showPassword ? ICONS.eyeOff : ICONS.eye}
-									</button>
-								</div>
-								{state.errors.password && (
-									<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-										{state.errors.password}
-									</p>
-								)}
-							</div>
-						)}
-
-						{isEdit && (
-							<div
-								style={{
-									border: `1px solid ${colors.borderSubtle}`,
-									borderRadius: radius.md,
-									padding: spacing[3],
-									background: colors.pageBg,
-								}}
-							>
-								<button
-									type="button"
-									onClick={() => dispatch({ type: "TOGGLE_CHANGING_PASSWORD" })}
-									style={{
-										background: "none",
-										border: "none",
-										color: colors.primary,
-										fontWeight: font.weight.big,
-										fontSize: font.size.xs,
-										cursor: "pointer",
-										padding: 0,
-									}}
-								>
-									{state.isChangingPassword
-										? "✕ Anuluj zmianę hasła"
-										: "+ Zmień hasło"}
-								</button>
-
-								{state.isChangingPassword && (
-									<div style={{ marginTop: spacing[3], display: "flex", flexDirection: "column", gap: spacing[3] }}>
-										<div>
-											<input
-												type="password"
-												placeholder="Aktualne hasło"
-												value={state.passwordChange.currentPassword}
-												onChange={(e) =>
-													dispatch({
-														type: "SET_PASSWORD_CHANGE",
-														payload: { currentPassword: e.target.value },
-													})
-												}
-												style={{
-													...components.input,
-													width: "100%",
-													boxSizing: "border-box",
-													fontSize: font.size.sm,
-													borderRadius: radius.md,
-												}}
-											/>
-										</div>
-										<div>
-											<input
-												type="password"
-												placeholder="Nowe hasło"
-												value={state.passwordChange.newPassword}
-												onChange={(e) =>
-													dispatch({
-														type: "SET_PASSWORD_CHANGE",
-														payload: { newPassword: e.target.value },
-													})
-												}
-												style={{
-													...components.input,
-													width: "100%",
-													boxSizing: "border-box",
-													fontSize: font.size.sm,
-													borderRadius: radius.md,
-												}}
-											/>
-										</div>
-										<div>
-											<input
-												type="password"
-												placeholder="Powtórz nowe hasło"
-												value={state.passwordChange.confirmPassword}
-												onChange={(e) =>
-													dispatch({
-														type: "SET_PASSWORD_CHANGE",
-														payload: { confirmPassword: e.target.value },
-													})
-												}
-												style={{
-													...components.input,
-													width: "100%",
-													boxSizing: "border-box",
-													fontSize: font.size.sm,
-													borderRadius: radius.md,
-												}}
-											/>
-										</div>
-									</div>
-								)}
-							</div>
-						)}
-					</div>
-
-					<div
-						style={{
-							padding: `${spacing[3]} ${spacing[5]}`,
-							background: colors.pageBg,
-							borderTop: `1px solid ${colors.borderSubtle}`,
-							display: "flex",
-							justifyContent: "flex-end",
-							gap: spacing[2],
-							flexShrink: 0,
-						}}
-					>
-						<button
-							type="button"
-							onClick={onClose}
-							style={{
-								...components.ghostButton,
-								padding: `${spacing[2]} ${spacing[4]}`,
-								fontSize: font.size.sm,
-							}}
-						>
-							{t.cancel}
-						</button>
-						<button
-							type="submit"
-							disabled={state.loading}
-							style={{
-								...components.primaryButton,
-								padding: `${spacing[2]} ${spacing[5]}`,
-								fontSize: font.size.sm,
-								opacity: state.loading ? 0.6 : 1,
-								cursor: state.loading ? "not-allowed" : "pointer",
-							}}
-						>
-							{state.loading
-								? t.saving
-								: isEdit
-									? t.update
-									: t.create}
-						</button>
-					</div>
+					<UserModalFooter
+						isEdit={isEdit}
+						loading={state.loading}
+						onClose={onClose}
+						t={t}
+					/>
 				</form>
 			</div>
-		</div>
+		</div>,
+		document.body
 	);
 }
