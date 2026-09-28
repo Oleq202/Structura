@@ -369,7 +369,7 @@ export default function ManagerPage({
 			return;
 		}
 		try {
-			await api.deleteTask(taskId, currentUser.id);
+			await api.deleteTask(taskId);
 			refreshTasks();
 		} catch (err) {
 			console.error("Error deleting task", err);

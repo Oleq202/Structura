@@ -1,57 +1,47 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
+let inMemoryAccessToken = null;
 let refreshPromise = null;
 
-function getAuthHeaders() {
-	const token = localStorage.getItem("accessToken");
-	if (token) {
-		return {
-			"Content-Type": "application/json",
-			Authorization: `Bearer ${token}`,
-		};
-	}
-	return {
-		"Content-Type": "application/json",
-	};
+export function getAccessToken() {
+	return inMemoryAccessToken;
 }
 
-async function doRefreshToken() {
+export function setAccessToken(token) {
+	inMemoryAccessToken = token;
+}
+
+function getAuthHeaders() {
+	const headers = {
+		"Content-Type": "application/json",
+	};
+	if (inMemoryAccessToken) {
+		headers["Authorization"] = `Bearer ${inMemoryAccessToken}`;
+	}
+	return headers;
+}
+
+export async function doRefreshToken() {
 	if (refreshPromise) return refreshPromise;
-	const token = localStorage.getItem("refreshToken");
-	if (!token) return null;
 
 	refreshPromise = (async () => {
 		try {
 			const res = await fetch(`${API_BASE}/refresh`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ refresh_token: token }),
+				credentials: "include",
+				body: JSON.stringify({}),
 			});
 			if (!res.ok) {
 				throw new Error("Refresh failed");
 			}
 			const data = await res.json();
 			if (data.access_token) {
-				localStorage.setItem("accessToken", data.access_token);
-			}
-			if (data.refresh_token) {
-				localStorage.setItem("refreshToken", data.refresh_token);
-			}
-			const storedUser = localStorage.getItem("currentUser:v1");
-			if (storedUser) {
-				try {
-					const userObj = JSON.parse(storedUser);
-					userObj.access_token = data.access_token;
-					if (data.refresh_token) userObj.refresh_token = data.refresh_token;
-					localStorage.setItem("currentUser:v1", JSON.stringify(userObj));
-				} catch (e) {
-					console.error("Failed to parse stored user during token refresh:", e);
-				}
+				inMemoryAccessToken = data.access_token;
 			}
 			return data.access_token;
 		} catch (err) {
-			localStorage.removeItem("accessToken");
-			localStorage.removeItem("refreshToken");
+			inMemoryAccessToken = null;
 			window.dispatchEvent(new CustomEvent("auth:unauthorized"));
 			return null;
 		} finally {
@@ -68,7 +58,13 @@ async function authFetch(url, options = {}) {
 		...(options.headers || {}),
 	};
 
-	let response = await fetch(url, { ...options, headers });
+	const fetchOptions = {
+		...options,
+		headers,
+		credentials: "include",
+	};
+
+	let response = await fetch(url, fetchOptions);
 
 	if (response.status === 401 && !url.endsWith("/login") && !url.endsWith("/refresh")) {
 		const newToken = await doRefreshToken();
@@ -77,7 +73,7 @@ async function authFetch(url, options = {}) {
 				...headers,
 				Authorization: `Bearer ${newToken}`,
 			};
-			response = await fetch(url, { ...options, headers: retryHeaders });
+			response = await fetch(url, { ...fetchOptions, headers: retryHeaders });
 		} else {
 			window.dispatchEvent(new CustomEvent("auth:unauthorized"));
 		}
@@ -92,6 +88,7 @@ export async function login(login, password) {
 		headers: {
 			"Content-Type": "application/json",
 		},
+		credentials: "include",
 		body: JSON.stringify({
 			login,
 			password,
@@ -100,8 +97,37 @@ export async function login(login, password) {
 	if (!response.ok) {
 		throw new Error("Login failed");
 	}
-	return response.json();
+	const data = await response.json();
+	if (data.access_token) {
+		inMemoryAccessToken = data.access_token;
+	}
+	return data;
 }
+
+export async function logout() {
+	try {
+		await authFetch(`${API_BASE}/logout`, {
+			method: "POST",
+		});
+	} catch (e) {
+		console.warn("Logout request failed:", e);
+	} finally {
+		inMemoryAccessToken = null;
+	}
+}
+
+export async function initSession() {
+	try {
+		const token = await doRefreshToken();
+		if (!token) return null;
+		const user = await getMe();
+		return user;
+	} catch (e) {
+		inMemoryAccessToken = null;
+		return null;
+	}
+}
+
 
 export async function getUsers() {
 	const response = await authFetch(`${API_BASE}/users`, {
@@ -257,8 +283,8 @@ export async function updateTask(taskId, taskData) {
 	return response.json();
 }
 
-export async function deleteTask(taskId, userId) {
-	const response = await authFetch(`${API_BASE}/tasks/${taskId}?user_id=${userId}`, {
+export async function deleteTask(taskId) {
+	const response = await authFetch(`${API_BASE}/tasks/${taskId}`, {
 		method: "DELETE",
 	});
 	if (!response.ok) {

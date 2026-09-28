@@ -15,40 +15,58 @@ import { defaultLanguage } from "./i18n";
 import * as api from "./services/api";
 
 export default function App() {
-	const [currentUser, setCurrentUser] = useState(() => {
-		const stored = localStorage.getItem("currentUser:v1");
-		if (stored) {
-			try {
-				return JSON.parse(stored);
-			} catch (error) {
-				console.error("Failed to parse stored user:", error);
-				localStorage.removeItem("currentUser:v1");
-				return null;
-			}
-		}
-		return null;
-	});
-
-	const [isLoggedIn, setIsLoggedIn] = useState(() => {
-		return Boolean(localStorage.getItem("accessToken") && localStorage.getItem("currentUser:v1"));
-	});
-
+	const [currentUser, setCurrentUser] = useState(null);
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [isInitializing, setIsInitializing] = useState(true);
 	const [language, setLanguage] = useState(defaultLanguage);
 
-	const handleLogout = () => {
-		localStorage.removeItem("currentUser:v1");
-		localStorage.removeItem("accessToken");
-		localStorage.removeItem("refreshToken");
+	const handleLogout = async () => {
+		try {
+			await api.logout();
+		} catch (e) {
+			console.warn("Logout error:", e);
+		}
 		setCurrentUser(null);
 		setIsLoggedIn(false);
 	};
 
 	useEffect(() => {
+		let isMounted = true;
+		const initAuth = async () => {
+			try {
+				const user = await api.initSession();
+				if (user && isMounted) {
+					setCurrentUser(user);
+					setIsLoggedIn(true);
+					try {
+						const prefs = await api.getUserPreferences();
+						if (prefs && prefs.language && isMounted) {
+							setLanguage(prefs.language);
+						}
+					} catch (prefErr) {
+						console.warn("Could not load preferences on session init", prefErr);
+					}
+				}
+			} catch (err) {
+				console.info("No active session found:", err);
+			} finally {
+				if (isMounted) {
+					setIsInitializing(false);
+				}
+			}
+		};
+
+		initAuth();
+
 		const onUnauthorized = () => {
-			handleLogout();
+			setCurrentUser(null);
+			setIsLoggedIn(false);
 		};
 		window.addEventListener("auth:unauthorized", onUnauthorized);
-		return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+		return () => {
+			isMounted = false;
+			window.removeEventListener("auth:unauthorized", onUnauthorized);
+		};
 	}, []);
 
 	const handleLoginSuccess = async (
@@ -60,20 +78,6 @@ export default function App() {
 				loginInput,
 				passwordInput
 			);
-			localStorage.setItem(
-				"currentUser:v1",
-				JSON.stringify(user)
-			);
-			localStorage.setItem(
-				"accessToken",
-				user.access_token
-			);
-			if (user.refresh_token) {
-				localStorage.setItem(
-					"refreshToken",
-					user.refresh_token
-				);
-			}
 			setCurrentUser(user);
 			setIsLoggedIn(true);
 
@@ -92,6 +96,25 @@ export default function App() {
 			);
 		}
 	};
+
+	if (isInitializing) {
+		return (
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "center",
+					alignItems: "center",
+					height: "100vh",
+					background: "#0f172a",
+					color: "#94a3b8",
+					fontFamily: "Inter, sans-serif",
+					fontSize: "1rem",
+				}}
+			>
+				Loading Structura...
+			</div>
+		);
+	}
 
 	return (
 		<BrowserRouter>
@@ -118,6 +141,7 @@ export default function App() {
 								minHeight: 0,
 								overflowY: "auto",
 							}}
+
 						>
 							<Routes>
 								<Route
