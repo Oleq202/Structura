@@ -58,12 +58,35 @@ async def init_db_schema():
         """,
         "ALTER TABLE user_preferences ALTER COLUMN language SET DEFAULT 'pl';",
         """
+        CREATE TABLE IF NOT EXISTS building_managers (
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+            PRIMARY KEY (user_id, building_id)
+        );
+        """,
+        """
         CREATE TABLE IF NOT EXISTS user_selected_buildings (
             user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
             building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
             PRIMARY KEY (user_id, building_id)
         );
         """,
+        """
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash VARCHAR(255) NOT NULL UNIQUE,
+            family_id UUID NOT NULL,
+            user_agent TEXT,
+            ip_address VARCHAR(45),
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            revoked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);",
+        "CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash);",
+        "CREATE INDEX IF NOT EXISTS idx_user_sessions_family_id ON user_sessions(family_id);",
         "CREATE INDEX IF NOT EXISTS idx_tasks_active ON tasks(status, created_at DESC) WHERE deleted_at IS NULL;",
         "CREATE INDEX IF NOT EXISTS idx_tasks_building_active ON tasks(building_id) WHERE deleted_at IS NULL;",
         "CREATE INDEX IF NOT EXISTS idx_buildings_active ON buildings(city, district) WHERE deleted_at IS NULL AND is_active = TRUE;",
@@ -653,3 +676,66 @@ async def update_user_preferences(
                     )
 
     return await get_user_preferences(user_id)
+
+
+async def create_user_session(
+    user_id: int,
+    token_hash: str,
+    family_id: Any,
+    expires_at: datetime,
+    user_agent: Optional[str] = None,
+    ip_address: Optional[str] = None,
+):
+    query = """
+        INSERT INTO user_sessions (user_id, token_hash, family_id, expires_at, user_agent, ip_address)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+    """
+    return await _fetch_row(
+        query, user_id, token_hash, family_id, expires_at, user_agent, ip_address
+    )
+
+
+async def get_user_session(token_hash: str):
+    query = """
+        SELECT * FROM user_sessions
+        WHERE token_hash = $1 AND expires_at > NOW()
+    """
+    return await _fetch_row(query, token_hash)
+
+
+async def revoke_user_session(token_hash: str):
+    query = """
+        UPDATE user_sessions
+        SET revoked_at = NOW()
+        WHERE token_hash = $1 AND revoked_at IS NULL
+        RETURNING *
+    """
+    return await _fetch_row(query, token_hash)
+
+
+async def revoke_session_family(family_id: Any):
+    query = """
+        UPDATE user_sessions
+        SET revoked_at = NOW()
+        WHERE family_id = $1 AND revoked_at IS NULL
+    """
+    await _execute(query, family_id)
+
+
+async def revoke_all_user_sessions(user_id: int):
+    query = """
+        UPDATE user_sessions
+        SET revoked_at = NOW()
+        WHERE user_id = $1 AND revoked_at IS NULL
+    """
+    await _execute(query, user_id)
+
+
+async def cleanup_expired_sessions():
+    query = """
+        DELETE FROM user_sessions
+        WHERE expires_at < NOW() OR (revoked_at IS NOT NULL AND revoked_at < NOW() - INTERVAL '30 days')
+    """
+    await _execute(query)
+

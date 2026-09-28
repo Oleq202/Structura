@@ -53,11 +53,12 @@ CREATE TABLE activity_logs (
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- CREATE TABLE building_managers (
---     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
---     building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
---     PRIMARY KEY (user_id, building_id)
--- );
+CREATE TABLE building_managers (
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, building_id)
+);
+
 
 CREATE TABLE user_preferences (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -90,6 +91,22 @@ CREATE INDEX idx_tasks_building_active ON tasks(building_id) WHERE deleted_at IS
 CREATE INDEX idx_buildings_active ON buildings(city, district) WHERE deleted_at IS NULL AND is_active = TRUE;
 CREATE INDEX idx_users_active ON users(role) WHERE deleted_at IS NULL AND is_active = TRUE;
 
+CREATE TABLE user_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    family_id UUID NOT NULL,
+    user_agent TEXT,
+    ip_address VARCHAR(45),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_token_hash ON user_sessions(token_hash);
+CREATE INDEX idx_user_sessions_family_id ON user_sessions(family_id);
+
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -102,3 +119,4 @@ CREATE TRIGGER update_task_modtime
     BEFORE UPDATE ON tasks
     FOR EACH ROW
     EXECUTE FUNCTION update_modified_column();
+

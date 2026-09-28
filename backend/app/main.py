@@ -2,6 +2,7 @@ import os
 import uuid
 import time
 import logging
+from datetime import datetime, timezone, timedelta
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, Header, Request, Response
@@ -39,14 +40,22 @@ from .db.queries import (
     add_activity_log,
     get_user_preferences,
     update_user_preferences,
+    create_user_session,
+    get_user_session,
+    revoke_user_session,
+    revoke_session_family,
+    revoke_all_user_sessions,
 )
 from .auth import (
+    SECRET_KEY,
     hash_password,
     verify_password,
+    hash_token,
     create_access_token,
     create_refresh_token,
     verify_token,
 )
+from .rate_limiter import login_rate_limiter, refresh_rate_limiter
 from .models import (
     UserCreate,
     UserUpdate,
@@ -62,6 +71,7 @@ from .models import (
     UserPreferencesUpdate,
     TaskCreate,
     TaskUpdate,
+    TaskStatusUpdate,
     Task,
     ActivityLog,
 )
@@ -79,8 +89,9 @@ if sentry_dsn:
         import sentry_sdk
         sentry_sdk.init(
             dsn=sentry_dsn,
-            traces_sample_rate=1.0,
-            profiles_sample_rate=1.0,
+            send_default_pii=False,
+            traces_sample_rate=0.1,
+            profiles_sample_rate=0.1,
         )
         logger.info("Sentry monitoring successfully initialized.")
     except Exception as e:
@@ -88,6 +99,12 @@ if sentry_dsn:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    env = (os.getenv("ENVIRONMENT") or os.getenv("ENV") or "development").lower()
+    if env == "production":
+        if SECRET_KEY == "structura-secure-default-dev-secret-key-32-chars" or len(SECRET_KEY) < 32:
+            raise RuntimeError(
+                "CRITICAL: Production startup aborted. SECRET_KEY must be a securely generated random secret with at least 32 characters."
+            )
 
     try:
         await init_db_schema()
@@ -102,7 +119,21 @@ async def lifespan(app: FastAPI):
     if pool:
         await pool.close()
 
-app = FastAPI(title="Structura API", lifespan=lifespan)
+
+is_prod = os.getenv("ENVIRONMENT", "development").lower() == "production"
+app = FastAPI(
+    title="Structura API",
+    lifespan=lifespan,
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json",
+)
+
+def sanitize_log_value(value: str) -> str:
+    """Strip control characters from user-supplied strings before embedding in log action fields (SEC-14)."""
+    if not isinstance(value, str):
+        return str(value)
+    return "".join(ch for ch in value if ch.isprintable())
 
 @app.middleware("http")
 async def request_observability_middleware(request: Request, call_next):
@@ -116,6 +147,9 @@ async def request_observability_middleware(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'none'"
+    if is_prod:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
     if not request.url.path.startswith("/health"):
         logger.info(
@@ -153,7 +187,7 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 security = HTTPBearer()
@@ -175,11 +209,13 @@ def require_role(*allowed_roles):
 
 @app.get("/")
 async def root():
-    return {
+    resp = {
         "status": "online",
         "service": "Structura API",
-        "docs": "/docs",
     }
+    if not is_prod:
+        resp["docs"] = "/docs"
+    return resp
 
 @app.get("/health/live")
 async def health_live():
@@ -198,17 +234,17 @@ async def health_ready():
         raise HTTPException(status_code=503, detail="Database unavailable")
 
 @app.post("/login", response_model=LoginResponse)
-async def login(request_body: LoginRequest, request: Request):
+async def login(request_body: LoginRequest, request: Request, response: Response):
+    await login_rate_limiter.check(request, "login")
     ip, ua = get_client_info(request)
     user = await get_user_by_login(request_body.login)
 
     if not user or not verify_password(request_body.password, user["password_hash"]):
-
         await add_activity_log(
             task_id=None,
             user_id=user["id"] if user else None,
             operation_type="login_failed",
-            action=f"Failed login attempt for username '{request_body.login}'",
+            action=f"Failed login attempt for username '{sanitize_log_value(request_body.login)}'",
             entity_type="auth",
             entity_id=user["id"] if user else None,
             ip_address=ip,
@@ -218,13 +254,42 @@ async def login(request_body: LoginRequest, request: Request):
 
     token_data = {"sub": user["login"], "id": user["id"], "role": user["role"]}
     access_token = create_access_token(data=token_data)
-    refresh_token = create_refresh_token(data=token_data)
+    family_id = uuid.uuid4()
+    refresh_token = create_refresh_token(data=token_data, family_id=str(family_id))
+    token_hash = hash_token(refresh_token)
+
+    refresh_payload = verify_token(refresh_token, expected_type="refresh")
+    expires_at = (
+        datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc)
+        if refresh_payload and "exp" in refresh_payload
+        else datetime.now(timezone.utc) + timedelta(days=7)
+    )
+
+    await create_user_session(
+        user_id=user["id"],
+        token_hash=token_hash,
+        family_id=family_id,
+        expires_at=expires_at,
+        user_agent=ua,
+        ip_address=ip,
+    )
+
+    is_https = request.url.scheme == "https" or os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=is_https,
+        samesite="strict",
+        max_age=7 * 24 * 3600,
+        path="/refresh",
+    )
 
     await add_activity_log(
         task_id=None,
         user_id=user["id"],
         operation_type="login_success",
-        action=f"User '{user['login']}' successfully logged in",
+        action=f"User '{sanitize_log_value(user['login'])}' successfully logged in",
         entity_type="auth",
         entity_id=user["id"],
         ip_address=ip,
@@ -238,29 +303,122 @@ async def login(request_body: LoginRequest, request: Request):
         last_name=user["last_name"],
         role=user["role"],
         access_token=access_token,
-        refresh_token=refresh_token,
         token_type="bearer",
     )
 
 @app.post("/refresh")
-async def refresh_token_endpoint(request_body: RefreshTokenRequest):
-    payload = verify_token(request_body.refresh_token, expected_type="refresh")
+async def refresh_token_endpoint(
+    request: Request,
+    response: Response,
+    request_body: Optional[RefreshTokenRequest] = None,
+):
+    await refresh_rate_limiter.check(request, "refresh")
+    ip, ua = get_client_info(request)
+    raw_token = None
+    if request_body and request_body.refresh_token:
+        raw_token = request_body.refresh_token
+    elif "refresh_token" in request.cookies:
+        raw_token = request.cookies.get("refresh_token")
+
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="Refresh token required")
+
+    payload = verify_token(raw_token, expected_type="refresh")
     if payload is None:
+        response.delete_cookie(key="refresh_token", path="/refresh")
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
-    user = await get_user(payload.get("id"))
+    token_hash = hash_token(raw_token)
+    session = await get_user_session(token_hash)
+
+    if session is None:
+        response.delete_cookie(key="refresh_token", path="/refresh")
+        raise HTTPException(status_code=401, detail="Session not found or expired")
+
+    family_id = session.get("family_id") or payload.get("family_id")
+
+    if session.get("revoked_at") is not None:
+        if family_id:
+            await revoke_session_family(family_id)
+        response.delete_cookie(key="refresh_token", path="/refresh")
+        await add_activity_log(
+            task_id=None,
+            user_id=session.get("user_id"),
+            operation_type="token_reuse_detected",
+            action=f"Detected revoked refresh token reuse for user id {session.get('user_id')}. Invalidated session family.",
+            entity_type="auth",
+            entity_id=session.get("user_id"),
+            ip_address=ip,
+            user_agent=ua,
+        )
+        raise HTTPException(
+            status_code=401, detail="Revoked token reuse detected. Session invalidated."
+        )
+
+    user = await get_user(session["user_id"])
     if not user:
+        response.delete_cookie(key="refresh_token", path="/refresh")
         raise HTTPException(status_code=401, detail="User no longer exists")
+
+    await revoke_user_session(token_hash)
 
     token_data = {"sub": user["login"], "id": user["id"], "role": user["role"]}
     new_access_token = create_access_token(data=token_data)
-    new_refresh_token = create_refresh_token(data=token_data)
+    new_refresh_token = create_refresh_token(data=token_data, family_id=str(family_id))
+    new_token_hash = hash_token(new_refresh_token)
+
+    new_payload = verify_token(new_refresh_token, expected_type="refresh")
+    expires_at = (
+        datetime.fromtimestamp(new_payload["exp"], tz=timezone.utc)
+        if new_payload and "exp" in new_payload
+        else datetime.now(timezone.utc) + timedelta(days=7)
+    )
+
+    await create_user_session(
+        user_id=user["id"],
+        token_hash=new_token_hash,
+        family_id=family_id,
+        expires_at=expires_at,
+        user_agent=ua,
+        ip_address=ip,
+    )
+
+    is_https = request.url.scheme == "https" or os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=is_https,
+        samesite="strict",
+        max_age=7 * 24 * 3600,
+        path="/refresh",
+    )
 
     return {
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
     }
+
+@app.post("/logout")
+async def logout(request: Request, response: Response, current_user=Depends(get_current_user)):
+    raw_token = request.cookies.get("refresh_token")
+    if raw_token:
+        token_hash = hash_token(raw_token)
+        await revoke_user_session(token_hash)
+    response.delete_cookie(key="refresh_token", path="/refresh")
+    return {"message": "Successfully logged out"}
+
+@app.post("/logout-all")
+async def logout_all(
+    request: Request, response: Response, current_user=Depends(get_current_user)
+):
+    user_id = current_user.get("id")
+    if user_id:
+        await revoke_all_user_sessions(user_id)
+    response.delete_cookie(key="refresh_token", path="/refresh")
+    return {"message": "All sessions successfully revoked"}
+
 
 @app.get("/users/me", response_model=User)
 async def get_me(current_user=Depends(get_current_user)):
@@ -316,7 +474,7 @@ async def create_user_endpoint(
             task_id=None,
             user_id=current_user.get("id"),
             operation_type="create",
-            action=f"Created user '{user.login}' with role '{user.role}'",
+            action=f"Created user '{sanitize_log_value(user.login)}' with role '{sanitize_log_value(user.role)}'",
             changes_json={"login": {"new": user.login}, "role": {"new": user.role}},
             entity_type="user",
             entity_id=user_id,
@@ -354,7 +512,7 @@ async def update_user_endpoint(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="update",
-        action=f"Updated user '{existing['login']}'",
+        action=f"Updated user '{sanitize_log_value(existing['login'])}'",
         changes_json={"login": {"old": existing["login"], "new": user.login}, "role": {"old": existing["role"], "new": user.role}},
         entity_type="user",
         entity_id=user_id,
@@ -380,7 +538,7 @@ async def delete_user_endpoint(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="delete",
-        action=f"Deleted user '{existing['login']}'",
+        action=f"Deleted user '{sanitize_log_value(existing['login'])}'",
         entity_type="user",
         entity_id=user_id,
         ip_address=ip,
@@ -419,7 +577,7 @@ async def create_building_endpoint(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="create",
-        action=f"Created building at {building.street_address}, {building.city}",
+        action=f"Created building at {sanitize_log_value(building.street_address)}, {sanitize_log_value(building.city)}",
         changes_json={"city": {"new": building.city}, "address": {"new": building.street_address}},
         entity_type="building",
         entity_id=building_id,
@@ -445,7 +603,7 @@ async def update_building_endpoint(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="update",
-        action=f"Updated building #{building_id} ({building.city})",
+        action=f"Updated building #{building_id} ({sanitize_log_value(building.city)})",
         entity_type="building",
         entity_id=building_id,
         ip_address=ip,
@@ -470,7 +628,7 @@ async def delete_building_endpoint(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="delete",
-        action=f"Deleted building #{building_id} ({existing['street_address']}, {existing['city']})",
+        action=f"Deleted building #{building_id} ({sanitize_log_value(existing['street_address'])}, {sanitize_log_value(existing['city'])})",
         entity_type="building",
         entity_id=building_id,
         ip_address=ip,
@@ -639,7 +797,7 @@ async def update_task_endpoint(
         task.title,
         task.description,
         task.building_id,
-        task.created_by,
+        None,
         task.assigned_to,
     )
 
@@ -726,12 +884,10 @@ async def delete_task_endpoint(
 
 @app.put("/tasks/{task_id}/status")
 async def update_task_status_endpoint(
-    task_id: int, status_data: dict, request: Request, current_user=Depends(get_current_user)
+    task_id: int, status_data: TaskStatusUpdate, request: Request, current_user=Depends(get_current_user)
 ):
     ip, ua = get_client_info(request)
-    status = status_data.get("status")
-    if not status:
-        raise HTTPException(status_code=400, detail="Missing status field")
+    status = status_data.status
 
     task = await get_task(task_id)
     if not task:
@@ -749,7 +905,7 @@ async def update_task_status_endpoint(
             task_id=task_id,
             user_id=current_user.get("id"),
             operation_type="status_change",
-            action=f"Changed status to {status}",
+            action=f"Changed status to {sanitize_log_value(status)}",
             changes_json={"status": {"old": task["status"], "new": status}},
             entity_type="task",
             entity_id=task_id,

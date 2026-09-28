@@ -26,7 +26,8 @@ async def _process_notification(job: Dict[str, Any]):
     recipient = job["recipient"]
     message = job["message"]
     await asyncio.sleep(0.01)
-    logger.info(f"[BACKGROUND WORKER] Notification sent ({event_type}) to {recipient}: {message}")
+    masked_recipient = recipient[:2] + "***" if len(recipient) > 2 else "***"
+    logger.info(f"[BACKGROUND WORKER] Notification sent ({event_type}) to {masked_recipient}")
 
 async def _worker_loop():
     """Background worker consumer processing jobs from the queue."""

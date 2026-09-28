@@ -3,16 +3,16 @@ from typing import Optional, List, Literal, Dict, Any
 from datetime import datetime
 
 class UserBase(BaseModel):
-    login: str
-    first_name: str
-    last_name: str
+    login: str = Field(min_length=1, max_length=64)
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
     role: Literal["admin", "manager", "contractor"]
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(min_length=8, max_length=128)
 
     class Config:
-        extra = "allow"
+        extra = "forbid"
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
@@ -26,9 +26,9 @@ class User(UserBase):
         populate_by_name = True
 
 class BuildingBase(BaseModel):
-    city: str
-    district: Optional[str] = None
-    street_address: str
+    city: str = Field(min_length=1, max_length=200)
+    district: Optional[str] = Field(default=None, max_length=200)
+    street_address: str = Field(min_length=1, max_length=200)
 
 class BuildingCreate(BuildingBase):
     pass
@@ -49,8 +49,8 @@ class BuildingManager(BaseModel):
     building_id: int
 
 class LoginRequest(BaseModel):
-    login: str
-    password: str
+    login: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
 
 class LoginResponse(BaseModel):
     id: int
@@ -59,14 +59,14 @@ class LoginResponse(BaseModel):
     last_name: str
     role: str
     access_token: str
-    refresh_token: Optional[str] = None
     token_type: str = "bearer"
 
     class Config:
         populate_by_name = True
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: Optional[str] = None
+
 
 class UserPreferences(BaseModel):
     user_id: int
@@ -78,7 +78,7 @@ class UserPreferences(BaseModel):
         populate_by_name = True
 
 class UserPreferencesUpdate(BaseModel):
-    language: Optional[str] = None
+    language: Optional[str] = Field(default=None, max_length=10)
     selected_building_ids: Optional[List[int]] = None
 
 class UserNested(BaseModel):
@@ -103,8 +103,8 @@ class BuildingNested(BaseModel):
         populate_by_name = True
 
 class TaskBase(BaseModel):
-    title: str
-    description: Optional[str] = None
+    title: str = Field(min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=5000)
     building_id: int
     created_by: int
     assigned_to: int
@@ -112,13 +112,15 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     pass
 
+class TaskStatusUpdate(BaseModel):
+    status: Literal["pending", "completed"]
+
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     building_id: Optional[int] = None
-    created_by: Optional[int] = None
     assigned_to: Optional[int] = None
-    status: Optional[str] = None
+    status: Optional[Literal["pending", "completed"]] = None
 
 class Task(BaseModel):
     id: int

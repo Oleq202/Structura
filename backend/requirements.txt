@@ -25,6 +25,9 @@ aiofiles==24.1.0
  
 # Caching utilities
 cachetools==7.1.4
+
+# Distributed rate limiting (optional — falls back to in-memory if REDIS_URL is not set)
+redis[asyncio]>=5.0.0
  
 # Password hashing
 bcrypt==5.0.0
