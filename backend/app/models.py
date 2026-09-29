@@ -44,9 +44,6 @@ class Building(BuildingBase):
         from_attributes = True
         populate_by_name = True
 
-class BuildingManager(BaseModel):
-    user_id: int
-    building_id: int
 
 class LoginRequest(BaseModel):
     login: str = Field(min_length=1, max_length=64)

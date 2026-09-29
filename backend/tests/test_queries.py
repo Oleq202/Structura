@@ -174,20 +174,14 @@ async def test_updated_at_trigger(conn):
     assert after >= before, "updated_at should not decrease"
 
 @pytest.mark.asyncio
-async def test_get_pending_tasks_manager(conn):
+async def test_get_all_tasks_for_manager(conn):
     manager = await _insert_user(conn, login="mgr2", role="manager")
     bid = await _insert_building(conn)
-    await conn.execute(
-        "INSERT INTO building_managers (user_id, building_id) VALUES ($1, $2)",
-        manager, bid,
-    )
     await _insert_task(conn, building_id=bid, created_by=manager)
 
     rows = await conn.fetch(
         """SELECT t.* FROM tasks t
-           JOIN building_managers bm ON t.building_id = bm.building_id
-           WHERE bm.user_id = $1 AND t.status = 'pending'""",
-        manager,
+           WHERE t.status = 'pending' AND t.deleted_at IS NULL""",
     )
     assert len(rows) >= 1
 
@@ -230,52 +224,36 @@ async def test_activity_log_deleted_on_task_cascade(conn):
     assert rows == [], "CASCADE delete from tasks to activity_logs did not work"
 
 @pytest.mark.asyncio
-async def test_add_building_manager(conn):
-    uid = await _insert_user(conn, login="bm", role="manager")
+async def test_add_user_selected_building(conn):
+    uid = await _insert_user(conn, login="usb1", role="manager")
     bid = await _insert_building(conn)
     await conn.execute(
-        "INSERT INTO building_managers (user_id, building_id) VALUES ($1, $2)",
+        "INSERT INTO user_selected_buildings (user_id, building_id) VALUES ($1, $2)",
         uid, bid,
     )
     row = await conn.fetchrow(
-        "SELECT * FROM building_managers WHERE user_id = $1 AND building_id = $2",
+        "SELECT * FROM user_selected_buildings WHERE user_id = $1 AND building_id = $2",
         uid, bid,
     )
     assert row is not None
 
 @pytest.mark.asyncio
-async def test_delete_building_manager(conn):
-    uid = await _insert_user(conn, login="bm2", role="manager")
+async def test_delete_user_selected_building(conn):
+    uid = await _insert_user(conn, login="usb2", role="manager")
     bid = await _insert_building(conn)
     await conn.execute(
-        "INSERT INTO building_managers (user_id, building_id) VALUES ($1, $2)",
+        "INSERT INTO user_selected_buildings (user_id, building_id) VALUES ($1, $2)",
         uid, bid,
     )
     await conn.execute(
-        "DELETE FROM building_managers WHERE user_id = $1 AND building_id = $2",
+        "DELETE FROM user_selected_buildings WHERE user_id = $1 AND building_id = $2",
         uid, bid,
     )
     row = await conn.fetchrow(
-        "SELECT * FROM building_managers WHERE user_id = $1 AND building_id = $2",
+        "SELECT * FROM user_selected_buildings WHERE user_id = $1 AND building_id = $2",
         uid, bid,
     )
     assert row is None
-
-@pytest.mark.asyncio
-async def test_get_buildings_by_manager(conn):
-    uid = await _insert_user(conn, login="bm3", role="manager")
-    bid1 = await _insert_building(conn, city="City 1")
-    bid2 = await _insert_building(conn, city="City 2")
-    await conn.execute("INSERT INTO building_managers VALUES ($1,$2)", uid, bid1)
-    await conn.execute("INSERT INTO building_managers VALUES ($1,$2)", uid, bid2)
-
-    rows = await conn.fetch(
-        """SELECT b.* FROM buildings b
-           JOIN building_managers bm ON b.id = bm.building_id
-           WHERE bm.user_id = $1""",
-        uid,
-    )
-    assert len(rows) == 2
 
 @pytest.mark.asyncio
 async def test_task_time_filtering(conn):

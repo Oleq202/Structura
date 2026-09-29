@@ -13,11 +13,10 @@ The schema is built for a **PostgreSQL** instance (e.g., local PostgreSQL, Supab
    - **Manager**: Visibility across all buildings; can create, edit, prioritize, and dispatch tasks for any building and assign them to contractors. Managers cannot view activity logs or manage users/buildings.
    - **Contractor**: Field technicians with scoped visibility limited strictly to tasks assigned to their account, with permissions to update task completion status.
 2. **Unified Task & Work Order Registry:** All maintenance requests live inside a single, indexed `tasks` table with foreign key references to buildings, creators, and assigned contractors.
-3. **Many-to-Many Manager-to-Building Mapping:** Managers can be linked to physical locations via a junction table (`building_managers`) for organizational mapping.
-4. **Active Workspace Filtering:** The `user_selected_buildings` table stores the user's active workspace building filter selections across sessions.
-5. **Session Security & Refresh Token Rotation:** The `user_sessions` table tracks refresh token families (`family_id`, `token_hash`, `revoked_at`, `expires_at`) to enable secure token rotation and replay detection.
-6. **Soft Deletion & Data Retention:** Entities (`users`, `buildings`, `tasks`) support soft deletion via `deleted_at` timestamps and `is_active` flags, maintaining historical integrity for audit trails.
-7. **Comprehensive Event & Audit Logging (Admin Exclusive):** The `activity_logs` ledger captures granular operational events, entity types, IP addresses, user agents, and JSON changes.
+3. **Active Workspace Filtering:** The `user_selected_buildings` table stores the user's active workspace building filter selections across sessions.
+4. **Session Security & Refresh Token Rotation:** The `user_sessions` table tracks refresh token families (`family_id`, `token_hash`, `revoked_at`, `expires_at`) to enable secure token rotation and replay detection.
+5. **Soft Deletion & Data Retention:** Entities (`users`, `buildings`, `tasks`) support soft deletion via `deleted_at` timestamps and `is_active` flags, maintaining historical integrity for audit trails.
+6. **Comprehensive Event & Audit Logging (Admin Exclusive):** The `activity_logs` ledger captures granular operational events, entity types, IP addresses, user agents, and JSON changes.
 
 ---
 
@@ -46,20 +45,13 @@ The schema is built for a **PostgreSQL** instance (e.g., local PostgreSQL, Supab
 │ deleted_at (TIMESTAMPTZ)        │           └────────────────▲────────────────┘
 └───────┬──────────┬──────────▲───┘                            │
         │          │          │                                │
-        │          │          ├───────────────────────┐        │
-        │          │          │   building_managers   │        │
-        │          │          ├───────────────────────┤        │
-        │          │          │ user_id (PK, FK)      ├────────┼────────┐
-        │          │          │ building_id (PK, FK)  ├────────┘        │
-        │          │          └───────────────────────┘                 │
-        │          │                                                    │
-        │          │          ┌──────────────────────────────┐          │
-        │          │          │   user_selected_buildings    │          │
-        │          │          ├──────────────────────────────┤          │
-        │          │          │ user_id (PK, FK)             │          │
-        │          │          │ building_id (PK, FK) ────────┼──────────┤
-        │          │          └──────────────────────────────┘          │
-        │          │                                                    │
+        │          │          ┌──────────────────────────────┐ │
+        │          │          │   user_selected_buildings    │ │
+        │          │          ├──────────────────────────────┤ │
+        │          │          │ user_id (PK, FK)             │ │
+        │          │          │ building_id (PK, FK) ────────┼─┘
+        │          │          └──────────────────────────────┘  
+        │          │                                            
         │          ▼                                                    │
         │ ┌─────────────────────────────────┐                           │
         │ │          user_sessions          │                           │
@@ -190,17 +182,7 @@ Audit ledger capturing system operations, entity updates, and user activities (a
 
 ---
 
-### 5. `building_managers`
-Junction table managing the many-to-many relationship between property managers and buildings.
-
-| Column Name | Data Type | Constraints | Description |
-| :--- | :--- | :--- | :--- |
-| `user_id` | `INTEGER` | `PRIMARY KEY`, `REFERENCES users(id) ON DELETE CASCADE` | Manager's user ID |
-| `building_id` | `INTEGER` | `PRIMARY KEY`, `REFERENCES buildings(id) ON DELETE CASCADE` | Building ID |
-
----
-
-### 6. `user_preferences`
+### 5. `user_preferences`
 Persists user-level settings (e.g. language preferences).
 
 | Column Name | Data Type | Constraints | Default | Description |
@@ -212,7 +194,7 @@ Persists user-level settings (e.g. language preferences).
 
 ---
 
-### 7. `user_selected_buildings`
+### 6. `user_selected_buildings`
 Tracks the persistent set of buildings a manager or admin has selected in their workspace filter.
 
 | Column Name | Data Type | Constraints | Description |
@@ -222,7 +204,7 @@ Tracks the persistent set of buildings a manager or admin has selected in their 
 
 ---
 
-### 8. `user_sessions`
+### 7. `user_sessions`
 Manages authenticated refresh token sessions with token family tracking for replay attack prevention.
 
 | Column Name | Data Type | Constraints | Default | Description |

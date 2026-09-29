@@ -3,8 +3,6 @@ export const translations = {
 		settings: "Ustawienia",
 		addUser: "Dodaj użytkownika",
 		addBuilding: "Dodaj budynek",
-		manageBuildingManagers:
-			"Zarządzaj zarządcami budynków",
 		login: "Login",
 		password: "Hasło",
 		firstName: "Imię",
@@ -240,8 +238,6 @@ export const translations = {
 		settings: "Settings",
 		addUser: "Add User",
 		addBuilding: "Add Building",
-		manageBuildingManagers:
-			"Manage Building Managers",
 		login: "Login",
 		password: "Password",
 		firstName: "First Name",

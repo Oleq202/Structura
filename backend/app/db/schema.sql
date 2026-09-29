@@ -53,13 +53,6 @@ CREATE TABLE activity_logs (
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE building_managers (
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
-    PRIMARY KEY (user_id, building_id)
-);
-
-
 CREATE TABLE user_preferences (
     user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     language VARCHAR(10) NOT NULL DEFAULT 'pl',
@@ -83,8 +76,6 @@ CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
 
 CREATE INDEX idx_activity_logs_entity ON activity_logs(entity_type, entity_id);
 CREATE INDEX idx_activity_logs_timestamp ON activity_logs(timestamp);
-
--- CREATE INDEX idx_building_managers_user ON building_managers(user_id);
 
 CREATE INDEX idx_tasks_active ON tasks(status, created_at DESC) WHERE deleted_at IS NULL;
 CREATE INDEX idx_tasks_building_active ON tasks(building_id) WHERE deleted_at IS NULL;

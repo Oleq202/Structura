@@ -58,13 +58,6 @@ async def init_db_schema():
         """,
         "ALTER TABLE user_preferences ALTER COLUMN language SET DEFAULT 'pl';",
         """
-        CREATE TABLE IF NOT EXISTS building_managers (
-            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-            building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
-            PRIMARY KEY (user_id, building_id)
-        );
-        """,
-        """
         CREATE TABLE IF NOT EXISTS user_selected_buildings (
             user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
             building_id INTEGER REFERENCES buildings(id) ON DELETE CASCADE,
@@ -220,31 +213,6 @@ async def get_all_buildings(limit: int = 100, offset: int = 0, search: Optional[
     """
     return await _fetch_rows(query, limit, offset)
 
-async def get_buildings_by_manager(
-    user_id: int,
-    search: Optional[str] = None,
-    limit: int = 100,
-    offset: int = 0,
-):
-    if search:
-        query = """
-            SELECT b.* FROM buildings b
-            JOIN building_managers bm ON b.id = bm.building_id
-            WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
-            AND (b.city ILIKE $2 OR b.district ILIKE $2 OR b.street_address ILIKE $2)
-            ORDER BY city, district, street_address
-            LIMIT $3 OFFSET $4
-        """
-        return await _fetch_rows(query, user_id, f"%{search}%", limit, offset)
-
-    query = """
-        SELECT b.* FROM buildings b
-        JOIN building_managers bm ON b.id = bm.building_id
-        WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
-        ORDER BY city, district, street_address
-        LIMIT $2 OFFSET $3
-    """
-    return await _fetch_rows(query, user_id, limit, offset)
 
 async def add_building(city: str, district: str | None, street_address: str) -> int | None:
     query = """
@@ -288,7 +256,6 @@ async def get_all_tasks(
     building_id: Optional[int] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
-    manager_id: Optional[int] = None,
     completed_days: Optional[int] = 14,
     limit: int = 100,
     offset: int = 0,
@@ -296,11 +263,6 @@ async def get_all_tasks(
     conditions = ["t.deleted_at IS NULL"]
     params = []
     param_idx = 1
-
-    if manager_id is not None:
-        conditions.append(f"t.building_id IN (SELECT building_id FROM building_managers WHERE user_id = ${param_idx})")
-        params.append(manager_id)
-        param_idx += 1
 
     if building_id is not None:
         conditions.append(f"t.building_id = ${param_idx}")
@@ -387,31 +349,6 @@ async def get_task_by_contractor(
     """
     return await _fetch_rows(query, *params)
 
-async def get_pending_tasks_by_user(user_id: int, role: str, limit: int = 10):
-    if role == "admin":
-        query = "SELECT * FROM tasks WHERE status = 'pending' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $1"
-        return await _fetch_rows(query, limit)
-
-    query = """
-        SELECT t.* FROM tasks t
-        JOIN building_managers bm ON t.building_id = bm.building_id
-        WHERE bm.user_id = $1 AND t.status = 'pending' AND t.deleted_at IS NULL
-        ORDER BY t.created_at DESC LIMIT $2
-    """
-    return await _fetch_rows(query, user_id, limit)
-
-async def get_completed_tasks_by_user(user_id: int, role: str, limit: int = 10):
-    if role == "admin":
-        query = "SELECT * FROM tasks WHERE status = 'completed' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $1"
-        return await _fetch_rows(query, limit)
-
-    query = """
-        SELECT t.* FROM tasks t
-        JOIN building_managers bm ON t.building_id = bm.building_id
-        WHERE bm.user_id = $1 AND t.status = 'completed' AND t.deleted_at IS NULL
-        ORDER BY t.created_at DESC LIMIT $2
-    """
-    return await _fetch_rows(query, user_id, limit)
 
 async def add_task(
     title: str,
@@ -613,29 +550,6 @@ async def add_activity_log(
     )
     return row["id"] if row else None
 
-async def get_manager_for_building(building_id: int):
-    query = """
-        SELECT u.* FROM users u
-        JOIN building_managers bm ON u.id = bm.user_id
-        WHERE bm.building_id = $1 AND u.deleted_at IS NULL AND u.is_active = TRUE
-    """
-    return await _fetch_row(query, building_id)
-
-async def get_building_for_manager(user_id: int):
-    query = """
-        SELECT b.* FROM buildings b
-        JOIN building_managers bm ON b.id = bm.building_id
-        WHERE bm.user_id = $1 AND b.deleted_at IS NULL AND b.is_active = TRUE
-    """
-    return await _fetch_row(query, user_id)
-
-async def add_building_manager(building_id: int, user_id: int):
-    query = "INSERT INTO building_managers (building_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
-    await _execute(query, building_id, user_id)
-
-async def delete_building_manager(building_id: int, user_id: int):
-    query = "DELETE FROM building_managers WHERE building_id = $1 AND user_id = $2"
-    await _execute(query, building_id, user_id)
 
 async def get_user_preferences(user_id: int) -> dict:
     """Fetch user language preferences and selected building IDs."""

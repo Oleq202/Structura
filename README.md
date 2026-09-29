@@ -130,10 +130,9 @@ Structura uses a normalized PostgreSQL relational database with 8 core tables:
 2. **`buildings`** — Physical properties with geographic normalization (`city`, `district`, `street_address`), active status, and soft deletion.
 3. **`tasks`** — Work orders tracked with `pending`/`completed` statuses, building references, creator, assignee, and automatic trigger-managed `updated_at`.
 4. **`activity_logs`** — Granular audit trail capturing `create`/`update`/`delete`/`status_change` operations, `changes_json`, IP address, user agent, and timestamps.
-5. **`building_managers`** — Many-to-many junction table mapping property managers to assigned buildings.
-6. **`user_preferences`** — User-specific settings (e.g. persistent language preference `pl`/`en`).
-7. **`user_selected_buildings`** — Persists each user's active workspace building filter selections.
-8. **`user_sessions`** — Manages refresh token rotation with token family UUIDs (`family_id`) for secure session lifecycle and replay attack protection.
+5. **`user_preferences`** — User-specific settings (e.g. persistent language preference `pl`/`en`).
+6. **`user_selected_buildings`** — Persists each user's active workspace building filter selections.
+7. **`user_sessions`** — Manages refresh token rotation with token family UUIDs (`family_id`) for secure session lifecycle and replay attack protection.
 
 ```
 ┌─────────────────────────────────┐
@@ -156,20 +155,13 @@ Structura uses a normalized PostgreSQL relational database with 8 core tables:
 │ is_active, created_at, deleted_at           │ created_at, deleted_at          │
 └───────┬──────────┬──────────▲───┘           └────────────────▲────────────────┘
         │          │          │                                │
-        │          │          ├───────────────────────┐        │
-        │          │          │   building_managers   │        │
-        │          │          ├───────────────────────┤        │
-        │          │          │ user_id (PK, FK)      ├────────┼────────┐
-        │          │          │ building_id (PK, FK)  ├────────┘        │
-        │          │          └───────────────────────┘                 │
-        │          │                                                    │
-        │          │          ┌──────────────────────────────┐          │
-        │          │          │   user_selected_buildings    │          │
-        │          │          ├──────────────────────────────┤          │
-        │          │          │ user_id (PK, FK)             │          │
-        │          │          │ building_id (PK, FK) ────────┼──────────┤
-        │          │          └──────────────────────────────┘          │
-        │          │                                                    │
+        │          │          ┌──────────────────────────────┐ │
+        │          │          │   user_selected_buildings    │ │
+        │          │          ├──────────────────────────────┤ │
+        │          │          │ user_id (PK, FK)             │ │
+        │          │          │ building_id (PK, FK) ────────┼─┘
+        │          │          └──────────────────────────────┘  
+        │          │                                            
         │          ▼                                                    │
         │ ┌─────────────────────────────────┐                           │
         │ │          user_sessions          │                           │

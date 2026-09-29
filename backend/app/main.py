@@ -24,12 +24,9 @@ from .db.queries import (
     get_building_by_address,
     get_building,
     get_all_buildings,
-    get_buildings_by_manager,
     add_building,
     update_building,
     delete_building,
-    add_building_manager,
-    delete_building_manager,
     get_task,
     get_all_tasks,
     get_task_by_contractor,
@@ -64,7 +61,6 @@ from .models import (
     BuildingCreate,
     BuildingUpdate,
     Building,
-    BuildingManager,
     LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
@@ -602,12 +598,6 @@ async def delete_user_endpoint(
 
     return {"message": "User deleted successfully"}
 
-@app.get("/users/{user_id}/buildings", response_model=List[Building])
-async def get_user_buildings_endpoint(user_id: int, current_user=Depends(get_current_user)):
-    if current_user.get("role") not in ["admin", "manager"] and current_user.get("id") != user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    buildings = await get_buildings_by_manager(user_id)
-    return [Building(**b) for b in buildings]
 
 @app.get("/buildings", response_model=List[Building])
 async def get_buildings_endpoint(
@@ -692,19 +682,6 @@ async def delete_building_endpoint(
 
     return {"message": "Building deleted successfully"}
 
-@app.post("/building-managers")
-async def add_building_manager_endpoint(
-    manager: BuildingManager, current_user=Depends(require_role("admin"))
-):
-    await add_building_manager(manager.building_id, manager.user_id)
-    return {"message": "Building manager assigned successfully"}
-
-@app.delete("/building-managers")
-async def delete_building_manager_endpoint(
-    manager: BuildingManager, current_user=Depends(require_role("admin"))
-):
-    await delete_building_manager(manager.building_id, manager.user_id)
-    return {"message": "Building manager removed successfully"}
 
 def _format_task_dict(task: dict) -> dict:
     return {

@@ -143,15 +143,6 @@ export async function getUsers() {
 	return response.json();
 }
 
-export async function getUserBuildings(userId) {
-	const response = await authFetch(`${API_BASE}/users/${userId}/buildings`, {
-		method: "GET",
-	});
-	if (!response.ok) {
-		throw new Error("Failed to fetch user buildings");
-	}
-	return response.json();
-}
 
 export async function createUser(userData) {
 	const response = await authFetch(`${API_BASE}/users`, {
@@ -227,33 +218,6 @@ export async function deleteBuilding(buildingId) {
 	return response.json();
 }
 
-export async function assignBuildingManager(userId, buildingId) {
-	const response = await authFetch(`${API_BASE}/building-managers`, {
-		method: "POST",
-		body: JSON.stringify({
-			user_id: userId,
-			building_id: buildingId,
-		}),
-	});
-	if (!response.ok) {
-		throw new Error("Failed to assign building manager");
-	}
-	return response.json();
-}
-
-export async function removeBuildingManager(userId, buildingId) {
-	const response = await authFetch(`${API_BASE}/building-managers`, {
-		method: "DELETE",
-		body: JSON.stringify({
-			user_id: userId,
-			building_id: buildingId,
-		}),
-	});
-	if (!response.ok) {
-		throw new Error("Failed to remove building manager");
-	}
-	return response.json();
-}
 
 export async function getTasks(params = {}) {
 	const searchParams = new URLSearchParams();
