@@ -19,6 +19,7 @@ from .db.queries import (
     get_contractors,
     add_user,
     update_user,
+    update_user_password,
     delete_user,
     get_building_by_address,
     get_building,
@@ -67,6 +68,7 @@ from .models import (
     LoginRequest,
     LoginResponse,
     RefreshTokenRequest,
+    ChangePasswordRequest,
     UserPreferences,
     UserPreferencesUpdate,
     TaskCreate,
@@ -200,13 +202,23 @@ else:
         allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     )
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = credentials.credentials
     payload = verify_token(token, expected_type="access")
     if payload is None:
-        raise HTTPException(status_code=401, detail="Invalid or expired access token")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return payload
 
 def require_role(*allowed_roles):
@@ -452,6 +464,39 @@ async def update_my_preferences(
         selected_building_ids=prefs.selected_building_ids,
     )
     return UserPreferences(**updated)
+
+@app.put("/users/me/password")
+async def change_my_password_endpoint(
+    req: ChangePasswordRequest,
+    request: Request,
+    current_user=Depends(get_current_user),
+):
+    ip, ua = get_client_info(request)
+    user = await get_user(current_user.get("id"))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(req.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Invalid current password")
+
+    if req.current_password == req.new_password:
+        raise HTTPException(status_code=400, detail="New password must be different from current password")
+
+    hashed_new = hash_password(req.new_password)
+    await update_user_password(user["id"], hashed_new)
+
+    await add_activity_log(
+        task_id=None,
+        user_id=current_user.get("id"),
+        operation_type="update",
+        action=f"User '{sanitize_log_value(user['login'])}' changed password",
+        changes_json={"password": {"old": "***", "new": "***"}},
+        entity_type="user",
+        entity_id=user["id"],
+        ip_address=ip,
+        user_agent=ua,
+    )
+    return {"message": "Password updated successfully"}
 
 @app.get("/users", response_model=List[User])
 async def get_users_endpoint(

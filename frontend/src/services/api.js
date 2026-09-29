@@ -70,7 +70,7 @@ async function authFetch(url, options = {}) {
 
 	let response = await fetch(url, fetchOptions);
 
-	if (response.status === 401 && !url.endsWith("/login") && !url.endsWith("/refresh")) {
+	if ((response.status === 401 || (response.status === 403 && !inMemoryAccessToken)) && !url.endsWith("/login") && !url.endsWith("/refresh")) {
 		const newToken = await doRefreshToken();
 		if (newToken) {
 			const retryHeaders = {
@@ -358,6 +358,22 @@ export async function updateUserPreferences(preferences) {
 	}
 	return response.json();
 }
+
+export async function changePassword(currentPassword, newPassword) {
+	const response = await authFetch(`${API_BASE}/users/me/password`, {
+		method: "PUT",
+		body: JSON.stringify({
+			current_password: currentPassword,
+			new_password: newPassword,
+		}),
+	});
+	if (!response.ok) {
+		const errData = await response.json().catch(() => null);
+		throw new Error(errData?.detail || "Failed to change password");
+	}
+	return response.json();
+}
+
 
 export async function getMe() {
 	const response = await authFetch(`${API_BASE}/users/me`, {

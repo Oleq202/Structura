@@ -76,6 +76,248 @@ const ICONS = {
 	),
 };
 
+function DeleteModalHeader({ title, onClose, isDeleting, closeLabel }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				background: colors.shellDeep,
+				color: colors.shellText,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				flexShrink: 0,
+			}}
+		>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: spacing[3],
+				}}
+			>
+				<div
+					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: "rgba(240, 149, 149, 0.22)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						color: status.danger.border,
+						flexShrink: 0,
+					}}
+				>
+					{ICONS.trash}
+				</div>
+				<h3
+					style={{
+						margin: 0,
+						fontSize: font.size.md,
+						fontWeight: font.weight.big,
+						letterSpacing: font.letterSpacing.wide,
+					}}
+				>
+					{title}
+				</h3>
+			</div>
+			<button
+				type="button"
+				onClick={onClose}
+				disabled={isDeleting}
+				aria-label={closeLabel}
+				style={{
+					background: "transparent",
+					border: "none",
+					color: "rgba(255, 255, 255, 0.7)",
+					cursor: isDeleting ? "not-allowed" : "pointer",
+					padding: spacing[1],
+					borderRadius: radius.sm,
+					width: "44px",
+					height: "44px",
+					minWidth: "44px",
+					minHeight: "44px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					transition: "color 0.15s, background 0.15s",
+				}}
+			>
+				{ICONS.close}
+			</button>
+		</div>
+	);
+}
+
+function DeleteModalBody({ message, itemName, itemType, warningText }) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[5]} ${spacing[5]}`,
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[4],
+			}}
+		>
+			<p
+				style={{
+					margin: 0,
+					fontSize: font.size.base,
+					color: colors.textBody,
+					lineHeight: font.lineHeight.normal,
+				}}
+			>
+				{message}
+			</p>
+
+			{itemName && (
+				<div
+					style={{
+						background: colors.pageBg,
+						border: `1px solid ${colors.borderSubtle}`,
+						borderRadius: radius.lg,
+						padding: `${spacing[3]} ${spacing[4]}`,
+						display: "flex",
+						flexDirection: "column",
+						gap: spacing[1],
+					}}
+				>
+					{itemType && (
+						<span
+							style={{
+								fontSize: font.size.xs,
+								color: colors.textSecondary,
+								textTransform: "uppercase",
+								letterSpacing: font.letterSpacing.caps,
+								fontWeight: font.weight.big,
+							}}
+						>
+							{itemType}
+						</span>
+					)}
+					<span
+						style={{
+							fontSize: font.size.md,
+							fontWeight: font.weight.bold,
+							color: colors.textHeading,
+							wordBreak: "break-word",
+						}}
+					>
+						{itemName}
+					</span>
+				</div>
+			)}
+
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: spacing[2],
+					background: status.danger.bg,
+					border: `1px solid ${status.danger.border}`,
+					color: status.danger.text,
+					borderRadius: radius.md,
+					padding: `${spacing[2]} ${spacing[3]}`,
+					fontSize: font.size.xs,
+					fontWeight: font.weight.medium,
+				}}
+			>
+				<span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+					{ICONS.warning}
+				</span>
+				<span>{warningText}</span>
+			</div>
+		</div>
+	);
+}
+
+function DeleteModalFooter({
+	onClose,
+	onConfirm,
+	isDeleting,
+	cancelText,
+	confirmText,
+	deletingText,
+}) {
+	return (
+		<div
+			style={{
+				padding: `${spacing[3]} ${spacing[5]} ${spacing[5]}`,
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: spacing[3],
+				background: colors.cardBg,
+				borderTop: `1px solid ${colors.borderSubtle}`,
+			}}
+		>
+			<button
+				type="button"
+				onClick={onClose}
+				disabled={isDeleting}
+				style={{
+					background: "transparent",
+					border: `1px solid ${colors.borderDefault}`,
+					borderRadius: radius.md,
+					padding: `${spacing[2]} ${spacing[4]}`,
+					minHeight: "44px",
+					minWidth: "80px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					fontSize: font.size.base,
+					fontFamily: font.family.sans,
+					fontWeight: font.weight.medium,
+					color: colors.textBody,
+					cursor: isDeleting ? "not-allowed" : "pointer",
+					opacity: isDeleting ? 0.6 : 1,
+				}}
+			>
+				{cancelText}
+			</button>
+
+			<button
+				type="button"
+				onClick={onConfirm}
+				disabled={isDeleting}
+				style={{
+					background: isDeleting ? "#fca5a5" : "#dc2626",
+					color: "#ffffff",
+					border: "1px solid #b91c1c",
+					borderRadius: radius.md,
+					padding: `${spacing[2]} ${spacing[4]}`,
+					minHeight: "44px",
+					minWidth: "110px",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					boxSizing: "border-box",
+					fontSize: font.size.base,
+					fontFamily: font.family.sans,
+					fontWeight: font.weight.big,
+					cursor: isDeleting ? "not-allowed" : "pointer",
+					gap: spacing[2],
+					boxShadow: "0 1px 3px rgba(220, 38, 38, 0.3)",
+				}}
+			>
+				{isDeleting ? (
+					<>
+						{ICONS.spinner}
+						{deletingText}
+					</>
+				) : (
+					<>
+						{ICONS.trash}
+						{confirmText}
+					</>
+				)}
+			</button>
+		</div>
+	);
+}
+
 export default function DeleteConfirmModal({
 	isOpen,
 	onClose,
@@ -115,6 +357,9 @@ export default function DeleteConfirmModal({
 	const modalMessage = message || t.deleteConfirmWarning || "Czy na pewno chcesz usunąć ten element?";
 	const confirmText = confirmButtonText || t.deleteConfirmButton || "Tak, usuń";
 	const cancelText = cancelButtonText || t.cancel || "Anuluj";
+	const warningText = t.deleteConfirmWarning || "Tej operacji nie można cofnąć.";
+	const deletingText = t.deleting || "Usuwanie...";
+	const closeLabel = t.close || "Zamknij";
 
 	return createPortal(
 		<div
@@ -135,10 +380,9 @@ export default function DeleteConfirmModal({
 				boxSizing: "border-box",
 			}}
 		>
-			{/* Backdrop */}
 			<button
 				type="button"
-				aria-label={t.close || "Zamknij"}
+				aria-label={closeLabel}
 				tabIndex={-1}
 				onClick={() => {
 					if (!isDeleting) onClose?.();
@@ -161,12 +405,8 @@ export default function DeleteConfirmModal({
 				}}
 			/>
 
-			{/* Modal Dialog Card */}
 			<div
 				ref={modalRef}
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="delete-confirm-title"
 				style={{
 					position: "relative",
 					zIndex: 1,
@@ -184,278 +424,26 @@ export default function DeleteConfirmModal({
 					animation: "popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
 				}}
 			>
-				{/* Header */}
-				<div
-					style={{
-						padding: `${spacing[4]} ${spacing[5]}`,
-						background: colors.shellDeep,
-						color: colors.shellText,
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						flexShrink: 0,
-					}}
-				>
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: spacing[3],
-						}}
-					>
-						<div
-							style={{
-								width: "36px",
-								height: "36px",
-								borderRadius: radius.md,
-								background: "rgba(240, 149, 149, 0.22)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: status.danger.border,
-								flexShrink: 0,
-							}}
-						>
-							{ICONS.trash}
-						</div>
-						<h3
-							id="delete-confirm-title"
-							style={{
-								margin: 0,
-								fontSize: font.size.md,
-								fontWeight: font.weight.big,
-								letterSpacing: font.letterSpacing.wide,
-							}}
-						>
-							{modalTitle}
-						</h3>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						disabled={isDeleting}
-						aria-label={t.close || "Zamknij"}
-						style={{
-							background: "transparent",
-							border: "none",
-							color: "rgba(255, 255, 255, 0.7)",
-							cursor: isDeleting ? "not-allowed" : "pointer",
-							padding: spacing[1],
-							borderRadius: radius.sm,
-							width: "44px",
-							height: "44px",
-							minWidth: "44px",
-							minHeight: "44px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							transition: "color 0.15s, background 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							if (!isDeleting) {
-								e.currentTarget.style.color = "#ffffff";
-								e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-							}
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)";
-							e.currentTarget.style.background = "transparent";
-						}}
-					>
-						{ICONS.close}
-					</button>
-				</div>
-
-				{/* Body Content */}
-				<div
-					style={{
-						padding: `${spacing[5]} ${spacing[5]}`,
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[4],
-					}}
-				>
-					<p
-						style={{
-							margin: 0,
-							fontSize: font.size.base,
-							color: colors.textBody,
-							lineHeight: font.lineHeight.normal,
-						}}
-					>
-						{modalMessage}
-					</p>
-
-					{/* Item preview card */}
-					{itemName && (
-						<div
-							style={{
-								background: colors.pageBg,
-								border: `1px solid ${colors.borderSubtle}`,
-								borderRadius: radius.lg,
-								padding: `${spacing[3]} ${spacing[4]}`,
-								display: "flex",
-								flexDirection: "column",
-								gap: spacing[1],
-							}}
-						>
-							{itemType && (
-								<span
-									style={{
-										fontSize: font.size.xs,
-										color: colors.textSecondary,
-										textTransform: "uppercase",
-										letterSpacing: font.letterSpacing.caps,
-										fontWeight: font.weight.big,
-									}}
-								>
-									{itemType}
-								</span>
-							)}
-							<span
-								style={{
-									fontSize: font.size.md,
-									fontWeight: font.weight.bold,
-									color: colors.textHeading,
-									wordBreak: "break-word",
-								}}
-							>
-								{itemName}
-							</span>
-						</div>
-					)}
-
-					{/* Danger notice */}
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: spacing[2],
-							background: status.danger.bg,
-							border: `1px solid ${status.danger.border}`,
-							color: status.danger.text,
-							borderRadius: radius.md,
-							padding: `${spacing[2]} ${spacing[3]}`,
-							fontSize: font.size.xs,
-							fontWeight: font.weight.medium,
-						}}
-					>
-						<span style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-							{ICONS.warning}
-						</span>
-						<span>{t.deleteConfirmWarning || "Tej operacji nie można cofnąć."}</span>
-					</div>
-				</div>
-
-				{/* Footer Actions */}
-				<div
-					style={{
-						padding: `${spacing[3]} ${spacing[5]} ${spacing[5]}`,
-						display: "flex",
-						justifyContent: "flex-end",
-						gap: spacing[3],
-						background: colors.cardBg,
-						borderTop: `1px solid ${colors.borderSubtle}`,
-					}}
-				>
-					<button
-						type="button"
-						onClick={onClose}
-						disabled={isDeleting}
-						style={{
-							background: "transparent",
-							border: `1px solid ${colors.borderDefault}`,
-							borderRadius: radius.md,
-							padding: `${spacing[2]} ${spacing[4]}`,
-							minHeight: "44px",
-							minWidth: "80px",
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							fontSize: font.size.base,
-							fontFamily: font.family.sans,
-							fontWeight: font.weight.medium,
-							color: colors.textBody,
-							cursor: isDeleting ? "not-allowed" : "pointer",
-							opacity: isDeleting ? 0.6 : 1,
-							transition: "background 0.15s, border-color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							if (!isDeleting) {
-								e.currentTarget.style.background = colors.pageBg;
-								e.currentTarget.style.borderColor = colors.borderStrong;
-							}
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "transparent";
-							e.currentTarget.style.borderColor = colors.borderDefault;
-						}}
-						onMouseDown={(e) => {
-							if (!isDeleting) e.currentTarget.style.transform = "scale(0.98)";
-						}}
-						onMouseUp={(e) => {
-							e.currentTarget.style.transform = "scale(1)";
-						}}
-					>
-						{cancelText}
-					</button>
-
-					<button
-						type="button"
-						onClick={onConfirm}
-						disabled={isDeleting}
-						style={{
-							background: isDeleting ? "#fca5a5" : "#dc2626",
-							color: "#ffffff",
-							border: "1px solid #b91c1c",
-							borderRadius: radius.md,
-							padding: `${spacing[2]} ${spacing[4]}`,
-							minHeight: "44px",
-							minWidth: "110px",
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							fontSize: font.size.base,
-							fontFamily: font.family.sans,
-							fontWeight: font.weight.big,
-							cursor: isDeleting ? "not-allowed" : "pointer",
-							gap: spacing[2],
-							boxShadow: "0 1px 3px rgba(220, 38, 38, 0.3)",
-							transition: "background 0.15s, transform 0.1s",
-						}}
-						onMouseEnter={(e) => {
-							if (!isDeleting) {
-								e.currentTarget.style.background = "#b91c1c";
-							}
-						}}
-						onMouseLeave={(e) => {
-							if (!isDeleting) {
-								e.currentTarget.style.background = "#dc2626";
-							}
-						}}
-						onMouseDown={(e) => {
-							if (!isDeleting) e.currentTarget.style.transform = "scale(0.98)";
-						}}
-						onMouseUp={(e) => {
-							e.currentTarget.style.transform = "scale(1)";
-						}}
-					>
-						{isDeleting ? (
-							<>
-								{ICONS.spinner}
-								{t.deleting || "Usuwanie..."}
-							</>
-						) : (
-							<>
-								{ICONS.trash}
-								{confirmText}
-							</>
-						)}
-					</button>
-				</div>
+				<DeleteModalHeader
+					title={modalTitle}
+					onClose={onClose}
+					isDeleting={isDeleting}
+					closeLabel={closeLabel}
+				/>
+				<DeleteModalBody
+					message={modalMessage}
+					itemName={itemName}
+					itemType={itemType}
+					warningText={warningText}
+				/>
+				<DeleteModalFooter
+					onClose={onClose}
+					onConfirm={onConfirm}
+					isDeleting={isDeleting}
+					cancelText={cancelText}
+					confirmText={confirmText}
+					deletingText={deletingText}
+				/>
 			</div>
 		</div>,
 		document.body

@@ -12,6 +12,7 @@ import { translations } from "../i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import UsersManagementModal from "../components/UsersManagementModal";
 import BuildingsManagementModal from "../components/BuildingsManagementModal";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 import LogoutConfirmModal from "../components/LogoutConfirmModal";
 import * as api from "../services/api";
 
@@ -37,6 +38,27 @@ const primaryButtonStyle = {
 	justifyContent: "center",
 	gap: spacing[2],
 	transition: "background 0.15s, transform 0.1s",
+};
+
+const secondaryButtonStyle = {
+	width: "100%",
+	minHeight: "44px",
+	padding: "10px 14px",
+	borderRadius: radius.md,
+	fontSize: "13px",
+	fontFamily: font.family.sans,
+	fontWeight: font.weight.medium,
+	letterSpacing: font.letterSpacing.wide,
+	cursor: "pointer",
+	boxSizing: "border-box",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	gap: spacing[2],
+	background: colors.cardBg,
+	color: colors.textHeading,
+	border: `1px solid ${colors.borderDefault}`,
+	transition: "background 0.15s, border-color 0.15s, transform 0.1s",
 };
 
 const logoutButtonStyle = {
@@ -100,6 +122,21 @@ const ICONS = {
 			<path d="M16 14h.01" />
 			<path d="M8 10h.01" />
 			<path d="M8 14h.01" />
+		</svg>
+	),
+	key: (
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+			<path d="M7 11V7a5 5 0 0 1 10 0v4" />
 		</svg>
 	),
 	logout: (
@@ -171,6 +208,8 @@ export default function SettingsPage({
 		isBuildingsModalOpen,
 		setBuildingsModalOpen,
 	] = useState(false);
+	const [isChangePasswordModalOpen, setChangePasswordModalOpen] =
+		useState(false);
 	const [isLogoutModalOpen, setLogoutModalOpen] =
 		useState(false);
 
@@ -305,6 +344,31 @@ export default function SettingsPage({
 
 				<button
 					type="button"
+					onClick={() => setChangePasswordModalOpen(true)}
+					style={secondaryButtonStyle}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = colors.pageBg;
+						e.currentTarget.style.borderColor = colors.borderStrong;
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = colors.cardBg;
+						e.currentTarget.style.borderColor = colors.borderDefault;
+					}}
+					onMouseDown={(e) =>
+						(e.currentTarget.style.transform =
+							"scale(0.98)")
+					}
+					onMouseUp={(e) =>
+						(e.currentTarget.style.transform =
+							"scale(1)")
+					}
+				>
+					{ICONS.key}
+					{t.changePassword}
+				</button>
+
+				<button
+					type="button"
 					onClick={() => setLogoutModalOpen(true)}
 					style={logoutButtonStyle}
 					onMouseEnter={(e) => {
@@ -345,6 +409,14 @@ export default function SettingsPage({
 							false
 						)
 					}
+					language={language}
+				/>
+			)}
+
+			{isChangePasswordModalOpen && (
+				<ChangePasswordModal
+					isOpen={isChangePasswordModalOpen}
+					onClose={() => setChangePasswordModalOpen(false)}
 					language={language}
 				/>
 			)}

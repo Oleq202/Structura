@@ -181,6 +181,14 @@ async def update_user(
     """
     await _execute(query, user_id, login, password, first_name, last_name, role)
 
+async def update_user_password(user_id: int, password_hash: str):
+    query = """
+        UPDATE users
+        SET password_hash = $2
+        WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE
+    """
+    await _execute(query, user_id, password_hash)
+
 async def get_building(building_id: int):
     query = "SELECT * FROM buildings WHERE id = $1 AND deleted_at IS NULL AND is_active = TRUE"
     return await _fetch_row(query, building_id)

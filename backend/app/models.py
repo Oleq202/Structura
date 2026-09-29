@@ -67,6 +67,10 @@ class LoginResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: Optional[str] = None
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=5, max_length=128)
+
 
 class UserPreferences(BaseModel):
     user_id: int
