@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer, useMemo } from "react";
+import { useState, useEffect, useReducer, useMemo, useCallback, useRef } from "react";
 import {
 	colors,
 	font,
@@ -67,15 +67,57 @@ const ICONS = {
 			<path d="M8 14h.01" />
 		</svg>
 	),
+	clock: (
+		<svg
+			width="13"
+			height="13"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<circle cx="12" cy="12" r="10" />
+			<polyline points="12 6 12 12 16 14" />
+		</svg>
+	),
+	chevronDown: (
+		<svg
+			width="12"
+			height="12"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<polyline points="6 9 12 15 18 9" />
+		</svg>
+	),
+	check: (
+		<svg
+			width="13"
+			height="13"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2.5"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<polyline points="20 6 9 17 4 12" />
+		</svg>
+	),
 };
 
 const filterTabsContainerStyle = {
 	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
 	gap: spacing[2],
-	overflowX: "auto",
-	paddingBottom: spacing[1],
-	scrollbarWidth: "none",
-	msOverflowStyle: "none",
+	flexWrap: "wrap",
 	width: "100%",
 	boxSizing: "border-box",
 };
@@ -170,6 +212,7 @@ function compareContractors(a, b) {
 
 function useManagerData(currentUser) {
 	const [state, dispatch] = useReducer(reducer, initialState);
+	const [completedDays, setCompletedDays] = useState(14);
 	const [selectedBuildingIds, setSelectedBuildingIds] = useState(() => {
 		if (currentUser?.id) {
 			try {
@@ -186,14 +229,19 @@ function useManagerData(currentUser) {
 		return null;
 	});
 
-	const loadTasks = () => {
-		api.getTasks().then((data) => {
+	const loadTasks = useCallback((days = completedDays) => {
+		api.getTasks({ completed_days: days }).then((data) => {
 			dispatch({ type: "SET_TASKS", payload: [...data].sort(compareTasks) });
 		});
+	}, [completedDays]);
+
+	const handleCompletedDaysChange = (days) => {
+		setCompletedDays(days);
+		loadTasks(days);
 	};
 
 	useEffect(() => {
-		loadTasks();
+		loadTasks(completedDays);
 		api.getBuildings().then((data) => {
 			dispatch({ type: "SET_BUILDINGS", payload: [...data].sort(compareBuildings) });
 		});
@@ -227,9 +275,217 @@ function useManagerData(currentUser) {
 					console.error("Failed to fetch preferences:", err);
 				});
 		}
-	}, [currentUser]);
+	}, [currentUser, completedDays, loadTasks]);
 
-	return { state, dispatch, loadTasks, selectedBuildingIds, setSelectedBuildingIds };
+	return {
+		state,
+		dispatch,
+		loadTasks,
+		completedDays,
+		setCompletedDays: handleCompletedDaysChange,
+		selectedBuildingIds,
+		setSelectedBuildingIds,
+	};
+}
+
+function WorkspaceFilterButton({
+	isWorkspaceFiltered,
+	isNoBuildingsSelected,
+	selectedBuildingCount,
+	totalBuildingCount,
+	onOpenWorkspaceModal,
+	t,
+}) {
+	const isActive = isWorkspaceFiltered || isNoBuildingsSelected;
+	const label = isNoBuildingsSelected
+		? t.noBuildingsSelected || "0 budynków"
+		: isWorkspaceFiltered
+			? `${selectedBuildingCount}/${totalBuildingCount}`
+			: t.allBuildings || "Wszystkie budynki";
+
+	return (
+		<button
+			type="button"
+			onClick={onOpenWorkspaceModal}
+			style={{
+				...getFilterTabStyle(isActive),
+				display: "flex",
+				alignItems: "center",
+				gap: spacing[1],
+				background: isActive ? `${colors.primary}18` : colors.cardBg,
+				color: isActive ? colors.primary : colors.textSecondary,
+				borderColor: isActive ? colors.primary : colors.borderSubtle,
+			}}
+		>
+			{ICONS.building}
+			<span>{label}</span>
+		</button>
+	);
+}
+
+function TimeRangeOptionItem({ option, isSelected, onSelect }) {
+	const [isHovered, setIsHovered] = useState(false);
+
+	return (
+		<button
+			type="button"
+			onClick={() => onSelect(option.value)}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+			style={{
+				width: "100%",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				padding: "8px 12px",
+				borderRadius: radius.md,
+				fontSize: font.size.sm,
+				fontWeight: isSelected ? font.weight.big : font.weight.medium,
+				color: isSelected ? colors.primary : colors.textPrimary,
+				backgroundColor: isSelected
+					? `${colors.primary}12`
+					: isHovered
+						? colors.pageBg
+						: "transparent",
+				border: "none",
+				cursor: "pointer",
+				transition: "background-color 0.12s ease, color 0.12s ease",
+				boxSizing: "border-box",
+				textAlign: "left",
+			}}
+		>
+			<span>{option.label}</span>
+			{isSelected && (
+				<span style={{ color: colors.primary, display: "flex", alignItems: "center" }}>
+					{ICONS.check}
+				</span>
+			)}
+		</button>
+	);
+}
+
+function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
+	const [isOpen, setIsOpen] = useState(false);
+	const containerRef = useRef(null);
+
+	const options = useMemo(
+		() => [
+			{ value: 14, label: t.timeRange2Weeks || "Ostatnie 2 tyg." },
+			{ value: 30, label: t.timeRangeMonth || "Ostatnie 30 dni" },
+			{ value: 90, label: t.timeRangeQuarter || "Ostatnie 90 dni" },
+			{ value: 0, label: t.timeRangeAll || "Wszystkie" },
+		],
+		[t]
+	);
+
+	const currentOption = options.find((opt) => opt.value === completedDays) || options[0];
+
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleClickOutside = (event) => {
+			if (containerRef.current && !containerRef.current.contains(event.target)) {
+				setIsOpen(false);
+			}
+		};
+
+		const handleKeyDown = (event) => {
+			if (event.key === "Escape") {
+				setIsOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [isOpen]);
+
+	return (
+		<div ref={containerRef} style={{ position: "relative" }}>
+			<button
+				type="button"
+				onClick={() => setIsOpen((prev) => !prev)}
+				aria-haspopup="listbox"
+				aria-expanded={isOpen}
+				aria-label={t.timeRangeLabel || "Zakres czasu"}
+				style={{
+					...getFilterTabStyle(isOpen),
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "8px",
+					padding: `0 ${spacing[3]}`,
+					height: "44px",
+					borderRadius: radius.full,
+					backgroundColor: isOpen ? `${colors.primary}12` : colors.cardBg,
+					borderColor: isOpen ? colors.primary : colors.borderSubtle,
+					color: isOpen ? colors.primary : colors.textPrimary,
+					boxSizing: "border-box",
+					cursor: "pointer",
+					transition: "border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease",
+					boxShadow: isOpen ? `0 0 0 2px ${colors.primary}20` : "none",
+				}}
+			>
+				<span style={{ color: isOpen ? colors.primary : colors.textSecondary, display: "flex", alignItems: "center" }}>
+					{ICONS.clock}
+				</span>
+				<span style={{ fontSize: font.size.xs, fontWeight: font.weight.medium, color: colors.textSecondary }}>
+					{t.timeRange}:
+				</span>
+				<span style={{ fontSize: font.size.xs, fontWeight: font.weight.big, color: isOpen ? colors.primary : colors.textPrimary }}>
+					{currentOption.label}
+				</span>
+				<span
+					style={{
+						color: isOpen ? colors.primary : colors.textSecondary,
+						display: "flex",
+						alignItems: "center",
+						transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+						transition: "transform 0.2s ease",
+					}}
+				>
+					{ICONS.chevronDown}
+				</span>
+			</button>
+
+			{isOpen && (
+				<div
+					role="listbox"
+					aria-label={t.timeRangeLabel || "Zakres czasu"}
+					style={{
+						position: "absolute",
+						top: "calc(100% + 6px)",
+						right: 0,
+						backgroundColor: colors.cardBg,
+						border: `1px solid ${colors.borderSubtle}`,
+						borderRadius: radius.lg,
+						boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+						padding: "6px",
+						minWidth: "180px",
+						zIndex: 1100,
+						display: "flex",
+						flexDirection: "column",
+						gap: "2px",
+						animation: "popIn 0.15s ease-out",
+					}}
+				>
+					{options.map((option) => (
+						<TimeRangeOptionItem
+							key={option.value}
+							option={option}
+							isSelected={completedDays === option.value}
+							onSelect={(val) => {
+								onCompletedDaysChange(val);
+								setIsOpen(false);
+							}}
+						/>
+					))}
+				</div>
+			)}
+		</div>
+	);
 }
 
 function ManagerFilterBar({
@@ -238,6 +494,8 @@ function ManagerFilterBar({
 	pendingCount,
 	completedCount,
 	totalCount,
+	completedDays,
+	onCompletedDaysChange,
 	isWorkspaceFiltered,
 	isNoBuildingsSelected,
 	selectedBuildingCount,
@@ -248,61 +506,56 @@ function ManagerFilterBar({
 }) {
 	return (
 		<div style={filterTabsContainerStyle}>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "all")}
-				onClick={() => onSelectFilter("all")}
+			<div
+				style={{
+					display: "flex",
+					gap: spacing[2],
+					alignItems: "center",
+					flexWrap: "wrap",
+					flex: 1,
+				}}
 			>
-				{t.all} ({totalCount})
-			</button>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "pending")}
-				onClick={() => onSelectFilter("pending")}
-			>
-				{t.pending} ({pendingCount})
-			</button>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "completed")}
-				onClick={() => onSelectFilter("completed")}
-			>
-				{t.completed} ({completedCount})
-			</button>
-
-			{showWorkspaceButton && (
 				<button
 					type="button"
-					onClick={onOpenWorkspaceModal}
-					style={{
-						...getFilterTabStyle(isWorkspaceFiltered || isNoBuildingsSelected),
-						display: "flex",
-						alignItems: "center",
-						gap: spacing[1],
-						background:
-							isWorkspaceFiltered || isNoBuildingsSelected
-								? `${colors.primary}18`
-								: colors.cardBg,
-						color:
-							isWorkspaceFiltered || isNoBuildingsSelected
-								? colors.primary
-								: colors.textSecondary,
-						borderColor:
-							isWorkspaceFiltered || isNoBuildingsSelected
-								? colors.primary
-								: colors.borderSubtle,
-					}}
+					style={getFilterTabStyle(activeFilter === "all")}
+					onClick={() => onSelectFilter("all")}
 				>
-					{ICONS.building}
-					<span>
-						{isNoBuildingsSelected
-							? (t.noBuildingsSelected || "0 budynków")
-							: isWorkspaceFiltered
-								? `${selectedBuildingCount}/${totalBuildingCount}`
-								: (t.allBuildings || "Wszystkie budynki")}
-					</span>
+					{t.all} ({totalCount})
 				</button>
-			)}
+				<button
+					type="button"
+					style={getFilterTabStyle(activeFilter === "pending")}
+					onClick={() => onSelectFilter("pending")}
+				>
+					{t.pending} ({pendingCount})
+				</button>
+				<button
+					type="button"
+					style={getFilterTabStyle(activeFilter === "completed")}
+					onClick={() => onSelectFilter("completed")}
+				>
+					{t.completed} ({completedCount})
+				</button>
+
+				{showWorkspaceButton && (
+					<WorkspaceFilterButton
+						isWorkspaceFiltered={isWorkspaceFiltered}
+						isNoBuildingsSelected={isNoBuildingsSelected}
+						selectedBuildingCount={selectedBuildingCount}
+						totalBuildingCount={totalBuildingCount}
+						onOpenWorkspaceModal={onOpenWorkspaceModal}
+						t={t}
+					/>
+				)}
+			</div>
+
+			<div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+				<TimeRangeSelector
+					completedDays={completedDays}
+					onCompletedDaysChange={onCompletedDaysChange}
+					t={t}
+				/>
+			</div>
 		</div>
 	);
 }
@@ -643,6 +896,8 @@ export default function ManagerPage({
 		state,
 		dispatch,
 		loadTasks,
+		completedDays,
+		setCompletedDays,
 		selectedBuildingIds,
 		setSelectedBuildingIds,
 	} = useManagerData(currentUser);
@@ -763,6 +1018,8 @@ export default function ManagerPage({
 				pendingCount={counts.pending}
 				completedCount={counts.completed}
 				totalCount={counts.total}
+				completedDays={completedDays}
+				onCompletedDaysChange={setCompletedDays}
 				isWorkspaceFiltered={isWorkspaceFiltered}
 				isNoBuildingsSelected={isNoBuildingsSelected}
 				selectedBuildingCount={selectedBuildingIds === null ? state.buildings.length : (selectedBuildingIds?.length || 0)}

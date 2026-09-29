@@ -755,6 +755,7 @@ async def get_tasks_endpoint(
     building_id: Optional[int] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
+    completed_days: Optional[int] = 14,
     limit: int = 100,
     offset: int = 0,
     current_user=Depends(get_current_user),
@@ -763,6 +764,7 @@ async def get_tasks_endpoint(
         tasks = await get_task_by_contractor(
             user_id=current_user.get("id"),
             status=status,
+            completed_days=completed_days,
             limit=limit,
             offset=offset,
         )
@@ -771,6 +773,7 @@ async def get_tasks_endpoint(
             building_id=building_id,
             status=status,
             search=search,
+            completed_days=completed_days,
             limit=limit,
             offset=offset,
         )

@@ -276,3 +276,88 @@ async def test_get_buildings_by_manager(conn):
         uid,
     )
     assert len(rows) == 2
+
+@pytest.mark.asyncio
+async def test_task_time_filtering(conn):
+    uid = await _insert_user(conn)
+    bid = await _insert_building(conn)
+
+    # 1. Pending task (created 100 days ago - must always show)
+    t_pending = await conn.fetchval(
+        """INSERT INTO tasks (title, building_id, created_by, status, created_at, updated_at)
+           VALUES ('Pending old task', $1, $2, 'pending', NOW() - INTERVAL '100 days', NOW() - INTERVAL '100 days')
+           RETURNING id""",
+        bid, uid
+    )
+
+    # 2. Completed 3 days ago
+    t_3d = await conn.fetchval(
+        """INSERT INTO tasks (title, building_id, created_by, status, created_at, updated_at)
+           VALUES ('Completed 3d ago', $1, $2, 'completed', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days')
+           RETURNING id""",
+        bid, uid
+    )
+
+    # 3. Completed 20 days ago
+    t_20d = await conn.fetchval(
+        """INSERT INTO tasks (title, building_id, created_by, status, created_at, updated_at)
+           VALUES ('Completed 20d ago', $1, $2, 'completed', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days')
+           RETURNING id""",
+        bid, uid
+    )
+
+    # 4. Completed 60 days ago
+    t_60d = await conn.fetchval(
+        """INSERT INTO tasks (title, building_id, created_by, status, created_at, updated_at)
+           VALUES ('Completed 60d ago', $1, $2, 'completed', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days')
+           RETURNING id""",
+        bid, uid
+    )
+
+    # 5. Completed 120 days ago
+    t_120d = await conn.fetchval(
+        """INSERT INTO tasks (title, building_id, created_by, status, created_at, updated_at)
+           VALUES ('Completed 120d ago', $1, $2, 'completed', NOW() - INTERVAL '120 days', NOW() - INTERVAL '120 days')
+           RETURNING id""",
+        bid, uid
+    )
+
+    all_test_ids = [t_pending, t_3d, t_20d, t_60d, t_120d]
+
+    # Helper to run the exact condition used by get_all_tasks and get_task_by_contractor
+    async def fetch_filtered(days):
+        if days and days > 0:
+            return await conn.fetch(
+                f"""SELECT id FROM tasks
+                   WHERE deleted_at IS NULL
+                   AND (status = 'pending' OR (status = 'completed' AND COALESCE(updated_at, created_at) >= NOW() - ($1::int * INTERVAL '1 day')))
+                   AND id = ANY($2::int[])""",
+                days, all_test_ids
+            )
+        else:
+            return await conn.fetch(
+                """SELECT id FROM tasks
+                   WHERE deleted_at IS NULL
+                   AND id = ANY($1::int[])""",
+                all_test_ids
+            )
+
+    # Test 14 days (Default): should return pending and 3d
+    rows_14 = await fetch_filtered(14)
+    ids_14 = {r["id"] for r in rows_14}
+    assert ids_14 == {t_pending, t_3d}, f"Expected {t_pending, t_3d}, got {ids_14}"
+
+    # Test 30 days: should return pending, 3d, 20d
+    rows_30 = await fetch_filtered(30)
+    ids_30 = {r["id"] for r in rows_30}
+    assert ids_30 == {t_pending, t_3d, t_20d}, f"Expected {t_pending, t_3d, t_20d}, got {ids_30}"
+
+    # Test 90 days: should return pending, 3d, 20d, 60d
+    rows_90 = await fetch_filtered(90)
+    ids_90 = {r["id"] for r in rows_90}
+    assert ids_90 == {t_pending, t_3d, t_20d, t_60d}, f"Expected {t_pending, t_3d, t_20d, t_60d}, got {ids_90}"
+
+    # Test 0 / All time: should return all 5 tasks
+    rows_0 = await fetch_filtered(0)
+    ids_0 = {r["id"] for r in rows_0}
+    assert ids_0 == {t_pending, t_3d, t_20d, t_60d, t_120d}, f"Expected all 5 tasks, got {ids_0}"

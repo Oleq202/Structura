@@ -255,8 +255,29 @@ export async function removeBuildingManager(userId, buildingId) {
 	return response.json();
 }
 
-export async function getTasks() {
-	const response = await authFetch(`${API_BASE}/tasks`, {
+export async function getTasks(params = {}) {
+	const searchParams = new URLSearchParams();
+	if (params.building_id !== undefined && params.building_id !== null) {
+		searchParams.append("building_id", params.building_id);
+	}
+	if (params.status) {
+		searchParams.append("status", params.status);
+	}
+	if (params.search) {
+		searchParams.append("search", params.search);
+	}
+	if (params.completed_days !== undefined && params.completed_days !== null) {
+		searchParams.append("completed_days", params.completed_days);
+	}
+	if (params.limit !== undefined && params.limit !== null) {
+		searchParams.append("limit", params.limit);
+	}
+	if (params.offset !== undefined && params.offset !== null) {
+		searchParams.append("offset", params.offset);
+	}
+	const queryString = searchParams.toString();
+	const url = queryString ? `${API_BASE}/tasks?${queryString}` : `${API_BASE}/tasks`;
+	const response = await authFetch(url, {
 		method: "GET",
 	});
 	if (!response.ok) {

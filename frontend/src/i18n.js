@@ -229,6 +229,12 @@ export const translations = {
 		clearFilters: "Wyczyść filtry",
 		filters: "Filtry",
 		operationType: "Typ operacji",
+		timeRange: "Zakres",
+		timeRange2Weeks: "Ostatnie 2 tyg.",
+		timeRangeMonth: "Ostatnie 30 dni",
+		timeRangeQuarter: "Ostatnie 90 dni",
+		timeRangeAll: "Wszystkie",
+		timeRangeLabel: "Zakres czasu",
 	},
 	en: {
 		settings: "Settings",
@@ -460,6 +466,12 @@ export const translations = {
 		clearFilters: "Clear filters",
 		filters: "Filters",
 		operationType: "Operation Type",
+		timeRange: "Range",
+		timeRange2Weeks: "Last 2 weeks",
+		timeRangeMonth: "Last 30 days",
+		timeRangeQuarter: "Last 90 days",
+		timeRangeAll: "All time",
+		timeRangeLabel: "Time range",
 	},
 };
 

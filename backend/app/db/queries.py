@@ -289,6 +289,7 @@ async def get_all_tasks(
     status: Optional[str] = None,
     search: Optional[str] = None,
     manager_id: Optional[int] = None,
+    completed_days: Optional[int] = 14,
     limit: int = 100,
     offset: int = 0,
 ):
@@ -309,6 +310,16 @@ async def get_all_tasks(
     if status is not None:
         conditions.append(f"t.status = ${param_idx}")
         params.append(status)
+        param_idx += 1
+        if status == "completed" and completed_days is not None and completed_days > 0:
+            conditions.append(f"COALESCE(t.updated_at, t.created_at) >= NOW() - (${param_idx}::int * INTERVAL '1 day')")
+            params.append(completed_days)
+            param_idx += 1
+    elif completed_days is not None and completed_days > 0:
+        conditions.append(
+            f"(t.status = 'pending' OR (t.status = 'completed' AND COALESCE(t.updated_at, t.created_at) >= NOW() - (${param_idx}::int * INTERVAL '1 day')))"
+        )
+        params.append(completed_days)
         param_idx += 1
 
     if search is not None:
@@ -336,6 +347,7 @@ async def get_all_tasks(
 async def get_task_by_contractor(
     user_id: int,
     status: Optional[str] = None,
+    completed_days: Optional[int] = 14,
     limit: int = 100,
     offset: int = 0,
 ):
@@ -346,6 +358,16 @@ async def get_task_by_contractor(
     if status is not None:
         conditions.append(f"t.status = ${param_idx}")
         params.append(status)
+        param_idx += 1
+        if status == "completed" and completed_days is not None and completed_days > 0:
+            conditions.append(f"COALESCE(t.updated_at, t.created_at) >= NOW() - (${param_idx}::int * INTERVAL '1 day')")
+            params.append(completed_days)
+            param_idx += 1
+    elif completed_days is not None and completed_days > 0:
+        conditions.append(
+            f"(t.status = 'pending' OR (t.status = 'completed' AND COALESCE(t.updated_at, t.created_at) >= NOW() - (${param_idx}::int * INTERVAL '1 day')))"
+        )
+        params.append(completed_days)
         param_idx += 1
 
     params.extend([limit, offset])
