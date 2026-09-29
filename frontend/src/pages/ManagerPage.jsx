@@ -11,6 +11,7 @@ import * as api from "../services/api";
 import Task from "../components/Task";
 import TaskModal from "../components/TaskModal";
 import WorkspaceFilterModal from "../components/WorkspaceFilterModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 const ICONS = {
 	plus: (
@@ -452,7 +453,7 @@ function ManagerTaskList({
 							onEdit={() => onEditTask(task)}
 							onMarkCompleted={() => onMarkCompleted(task.id)}
 							onRevertCompleted={() => onRevertCompleted(task.id)}
-							onDeleteTask={() => onDeleteTask(task.id)}
+							onDeleteTask={() => onDeleteTask(task)}
 							isUpdating={updatingTaskIds?.has(task.id)}
 							language={language}
 							userRole={userRole}
@@ -479,7 +480,7 @@ function ManagerTaskList({
 							onEdit={() => onEditTask(task)}
 							onMarkCompleted={() => onMarkCompleted(task.id)}
 							onRevertCompleted={() => onRevertCompleted(task.id)}
-							onDeleteTask={() => onDeleteTask(task.id)}
+							onDeleteTask={() => onDeleteTask(task)}
 							isUpdating={updatingTaskIds?.has(task.id)}
 							language={language}
 							userRole={userRole}
@@ -720,14 +721,24 @@ export default function ManagerPage({
 		}
 	};
 
-	const handleDeleteTask = async (taskId) => {
-		if (confirm(t.deleteTaskConfirm)) {
-			try {
-				await api.deleteTask(taskId);
-				loadTasks();
-			} catch (err) {
-				console.error("Failed to delete task", err);
-			}
+	const [taskToDelete, setTaskToDelete] = useState(null);
+	const [isDeletingTask, setIsDeletingTask] = useState(false);
+
+	const handleDeleteTask = (task) => {
+		setTaskToDelete(task);
+	};
+
+	const handleConfirmDeleteTask = async () => {
+		if (!taskToDelete) return;
+		try {
+			setIsDeletingTask(true);
+			await api.deleteTask(taskToDelete.id);
+			setTaskToDelete(null);
+			loadTasks();
+		} catch (err) {
+			console.error("Failed to delete task", err);
+		} finally {
+			setIsDeletingTask(false);
 		}
 	};
 
@@ -828,6 +839,20 @@ export default function ManagerPage({
 						dispatch({ type: "SET_CREATE_TASK_OPEN", payload: true })
 					}
 					t={t}
+				/>
+			)}
+
+			{taskToDelete && (
+				<DeleteConfirmModal
+					isOpen={!!taskToDelete}
+					onClose={() => setTaskToDelete(null)}
+					onConfirm={handleConfirmDeleteTask}
+					isDeleting={isDeletingTask}
+					title={t.deleteTaskConfirmTitle || "Usunięcie zadania"}
+					message={t.deleteTaskModalMsg || t.deleteTaskConfirm}
+					itemName={taskToDelete.title}
+					itemType={t.entityTask || "Zadanie"}
+					language={language}
 				/>
 			)}
 		</div>

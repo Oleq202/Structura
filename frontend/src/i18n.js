@@ -48,13 +48,31 @@ export const translations = {
 		loginRequired: "Login jest wymagany",
 		passwordRequired: "Hasło jest wymagane",
 		wrongEmailOrPassword:
-			"Nieprawidłowy email lub hasło",
+			"Nieprawidłowy login lub hasło",
+		loginErrorTitle: "Błąd logowania",
+		loginErrorInvalid:
+			"Nieprawidłowy login lub hasło. Sprawdź poprawność danych.",
+		loginErrorRequired:
+			"Wypełnij wszystkie wymagane pola przed zalogowaniem.",
 		underConstruction: "są w budowie!",
 		workingHard:
 			"Ciężko pracujemy, aby przynieść Ci tę funkcję. Czekaj na więcej!",
 		settingsAccessLimited:
 			"Dostęp do ustawień jest ograniczony do administratorów.",
 		unassigned: "Nieprzypisany",
+		deleteConfirmTitle: "Potwierdzenie usunięcia",
+		deleteConfirmWarning: "Tej operacji nie można cofnąć.",
+		deleteConfirmButton: "Tak, usuń",
+		deleting: "Usuwanie...",
+		deleteTaskConfirmTitle: "Usunięcie zadania",
+		deleteUserConfirmTitle: "Usunięcie użytkownika",
+		deleteBuildingConfirmTitle: "Usunięcie budynku",
+		deleteTaskModalMsg:
+			"Czy na pewno chcesz usunąć to zadanie?",
+		deleteUserModalMsg:
+			"Czy na pewno chcesz usunąć tego użytkownika?",
+		deleteBuildingModalMsg:
+			"Czy na pewno chcesz usunąć ten budynek?",
 		deleteUserConfirm:
 			"Czy na pewno chcesz usunąć tego użytkownika?",
 		deleteBuildingConfirm:
@@ -247,7 +265,12 @@ export const translations = {
 		loginRequired: "Login is required",
 		passwordRequired: "Password is required",
 		wrongEmailOrPassword:
-			"Wrong email or password",
+			"Invalid login or password",
+		loginErrorTitle: "Login Error",
+		loginErrorInvalid:
+			"Invalid username or password. Please verify your credentials.",
+		loginErrorRequired:
+			"Please fill in all required fields before signing in.",
 		underConstruction:
 			"is under construction!",
 		workingHard:
@@ -255,6 +278,19 @@ export const translations = {
 		settingsAccessLimited:
 			"Settings access is limited to administrators.",
 		unassigned: "Unassigned",
+		deleteConfirmTitle: "Confirm Deletion",
+		deleteConfirmWarning: "This action cannot be undone.",
+		deleteConfirmButton: "Yes, delete",
+		deleting: "Deleting...",
+		deleteTaskConfirmTitle: "Delete Task",
+		deleteUserConfirmTitle: "Delete User",
+		deleteBuildingConfirmTitle: "Delete Building",
+		deleteTaskModalMsg:
+			"Are you sure you want to delete this task?",
+		deleteUserModalMsg:
+			"Are you sure you want to delete this user?",
+		deleteBuildingModalMsg:
+			"Are you sure you want to delete this building?",
 		deleteUserConfirm:
 			"Are you sure you want to delete this user?",
 		deleteBuildingConfirm:

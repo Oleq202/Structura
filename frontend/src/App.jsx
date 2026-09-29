@@ -98,11 +98,10 @@ export default function App() {
 			} catch (prefErr) {
 				console.warn("Could not load preferences on login", prefErr);
 			}
+			return user;
 		} catch (error) {
 			console.error("Login failed:", error);
-			alert(
-				"Login failed. Please check your credentials."
-			);
+			throw error;
 		}
 	};
 

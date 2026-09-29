@@ -12,6 +12,7 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 import BuildingModal from "./BuildingModal";
+import DeleteConfirmModal from "./DeleteConfirmModal";
 
 const ICONS = {
 	buildings: (
@@ -357,7 +358,7 @@ function BuildingListItem({ building, onEdit, onDelete, t }) {
 				</button>
 				<button
 					type="button"
-					onClick={() => onDelete(building.id)}
+					onClick={() => onDelete(building)}
 					title={t.delete || "Delete"}
 					aria-label={t.delete || "Delete"}
 					style={{
@@ -399,6 +400,8 @@ export default function BuildingsManagementModal({
 	const [buildings, setBuildings] = useState([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [editingBuilding, setEditingBuilding] = useState(null);
+	const [buildingToDelete, setBuildingToDelete] = useState(null);
+	const [isDeletingBuilding, setIsDeletingBuilding] = useState(false);
 	const bodyRef = useRef(null);
 
 	useEffect(() => {
@@ -411,7 +414,7 @@ export default function BuildingsManagementModal({
 	}, []);
 
 	const handleKeyDownEvent = useEffectEvent((e) => {
-		if (e.key === "Escape" && !editingBuilding) {
+		if (e.key === "Escape" && !editingBuilding && !buildingToDelete) {
 			onClose?.();
 		}
 	});
@@ -428,10 +431,21 @@ export default function BuildingsManagementModal({
 		setEditingBuilding(building);
 	};
 
-	const handleDelete = async (buildingId) => {
-		if (confirm(t.deleteBuildingConfirm)) {
-			await api.deleteBuilding(buildingId);
-			setBuildings(buildings.filter((b) => b.id !== buildingId));
+	const handleDelete = (building) => {
+		setBuildingToDelete(building);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!buildingToDelete) return;
+		try {
+			setIsDeletingBuilding(true);
+			await api.deleteBuilding(buildingToDelete.id);
+			setBuildings(buildings.filter((b) => b.id !== buildingToDelete.id));
+			setBuildingToDelete(null);
+		} catch (err) {
+			console.error("Error deleting building", err);
+		} finally {
+			setIsDeletingBuilding(false);
 		}
 	};
 
@@ -607,6 +621,24 @@ export default function BuildingsManagementModal({
 					building={editingBuilding.id ? editingBuilding : null}
 					onClose={() => setEditingBuilding(null)}
 					onSave={handleBuildingSaved}
+					language={language}
+				/>
+			)}
+
+			{buildingToDelete && (
+				<DeleteConfirmModal
+					isOpen={!!buildingToDelete}
+					onClose={() => setBuildingToDelete(null)}
+					onConfirm={handleConfirmDelete}
+					isDeleting={isDeletingBuilding}
+					title={t.deleteBuildingConfirmTitle || "Usunięcie budynku"}
+					message={t.deleteBuildingModalMsg || t.deleteBuildingConfirm}
+					itemName={
+						[buildingToDelete.street_address, buildingToDelete.district, buildingToDelete.city]
+							.filter(Boolean)
+							.join(", ") || buildingToDelete.street_address
+					}
+					itemType={t.building || "Budynek"}
 					language={language}
 				/>
 			)}

@@ -12,6 +12,7 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 import UserModal from "./UserModal";
+import DeleteConfirmModal from "./DeleteConfirmModal";
 
 const ICONS = {
 	users: (
@@ -269,7 +270,7 @@ function UserListItem({ user, onEdit, onDelete, t }) {
 				</button>
 				<button
 					type="button"
-					onClick={() => onDelete(user.id)}
+					onClick={() => onDelete(user)}
 					title={t.delete || "Delete"}
 					aria-label={t.delete || "Delete"}
 					style={{
@@ -467,6 +468,8 @@ export default function UsersManagementModal({
 	const [users, setUsers] = useState([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [editingUser, setEditingUser] = useState(null);
+	const [userToDelete, setUserToDelete] = useState(null);
+	const [isDeletingUser, setIsDeletingUser] = useState(false);
 	const bodyRef = useRef(null);
 
 	useEffect(() => {
@@ -479,7 +482,7 @@ export default function UsersManagementModal({
 	}, []);
 
 	const handleKeyDownEvent = useEffectEvent((e) => {
-		if (e.key === "Escape" && !editingUser) {
+		if (e.key === "Escape" && !editingUser && !userToDelete) {
 			onClose?.();
 		}
 	});
@@ -496,10 +499,21 @@ export default function UsersManagementModal({
 		setEditingUser(user);
 	};
 
-	const handleDelete = async (userId) => {
-		if (confirm(t.deleteUserConfirm)) {
-			await api.deleteUser(userId);
-			setUsers(users.filter((u) => u.id !== userId));
+	const handleDelete = (user) => {
+		setUserToDelete(user);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!userToDelete) return;
+		try {
+			setIsDeletingUser(true);
+			await api.deleteUser(userToDelete.id);
+			setUsers(users.filter((u) => u.id !== userToDelete.id));
+			setUserToDelete(null);
+		} catch (err) {
+			console.error("Error deleting user", err);
+		} finally {
+			setIsDeletingUser(false);
 		}
 	};
 
@@ -675,6 +689,24 @@ export default function UsersManagementModal({
 					user={editingUser.id ? editingUser : null}
 					onClose={() => setEditingUser(null)}
 					onSave={handleUserSaved}
+					language={language}
+				/>
+			)}
+
+			{userToDelete && (
+				<DeleteConfirmModal
+					isOpen={!!userToDelete}
+					onClose={() => setUserToDelete(null)}
+					onConfirm={handleConfirmDelete}
+					isDeleting={isDeletingUser}
+					title={t.deleteUserConfirmTitle || "Usunięcie użytkownika"}
+					message={t.deleteUserModalMsg || t.deleteUserConfirm}
+					itemName={
+						[userToDelete.first_name, userToDelete.last_name].filter(Boolean).join(" ")
+							? `${[userToDelete.first_name, userToDelete.last_name].filter(Boolean).join(" ")} (@${userToDelete.login})`
+							: `@${userToDelete.login}`
+					}
+					itemType={t.user || "Użytkownik"}
 					language={language}
 				/>
 			)}

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useReducer } from "react";
-import { colors, font, spacing, radius, shadow } from "../theme";
+import { colors, font, spacing, radius, shadow, status } from "../theme";
 import { translations } from "../i18n";
 
 const cardContainerStyle = {
@@ -28,7 +28,7 @@ const headingStyle = {
 const formStyle = {
 	display: "flex",
 	flexDirection: "column",
-	gap: spacing[5],
+	gap: spacing[4],
 };
 
 const formFieldStyle = {
@@ -58,14 +58,20 @@ const inputBaseStyle = {
 
 const inputStyle = (hasError, isFocused) => ({
 	...inputBaseStyle,
-	border: `1px solid ${
+	border: `1.5px solid ${
 		hasError
-			? colors.danger
+			? "#ef4444"
 			: isFocused
 				? colors.primary
 				: colors.borderDefault
 	}`,
-	boxShadow: isFocused ? shadow.focus : "none",
+	boxShadow: hasError
+		? isFocused
+			? "0 0 0 3px rgba(239, 68, 68, 0.25)"
+			: "none"
+		: isFocused
+			? shadow.focus
+			: "none",
 });
 
 const passwordInputContainerStyle = {
@@ -77,14 +83,20 @@ const passwordInputContainerStyle = {
 const passwordInputStyle = (hasError, isFocused) => ({
 	...inputBaseStyle,
 	paddingRight: spacing[12],
-	border: `1px solid ${
+	border: `1.5px solid ${
 		hasError
-			? colors.danger
+			? "#ef4444"
 			: isFocused
 				? colors.primary
 				: colors.borderDefault
 	}`,
-	boxShadow: isFocused ? shadow.focus : "none",
+	boxShadow: hasError
+		? isFocused
+			? "0 0 0 3px rgba(239, 68, 68, 0.25)"
+			: "none"
+		: isFocused
+			? shadow.focus
+			: "none",
 });
 
 const togglePasswordButtonStyle = {
@@ -106,18 +118,10 @@ const togglePasswordButtonStyle = {
 	fontFamily: font.family.sans,
 };
 
-const errorStyle = {
-	color: colors.danger,
+const fieldErrorStyle = {
+	color: "#dc2626",
 	fontSize: font.size.xs,
 	margin: 0,
-	fontWeight: font.weight.medium,
-};
-
-const errorMessageStyle = {
-	color: colors.danger,
-	fontSize: font.size.sm,
-	margin: 0,
-	textAlign: "center",
 	fontWeight: font.weight.medium,
 };
 
@@ -140,6 +144,25 @@ const submitButtonStyle = (loading) => ({
 	fontFamily: font.family.sans,
 	transition: "background-color 0.15s ease, transform 0.1s ease",
 });
+
+const ICONS = {
+	alertTriangle: (
+		<svg
+			width="20"
+			height="20"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+		>
+			<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+			<line x1="12" y1="9" x2="12" y2="13" />
+			<line x1="12" y1="17" x2="12.01" y2="17" />
+		</svg>
+	),
+};
 
 const initialState = {
 	login: "",
@@ -180,14 +203,75 @@ function reducer(state, action) {
 
 function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 	return (
-		<form onSubmit={onSubmit} style={formStyle}>
+		<form onSubmit={onSubmit} style={formStyle} noValidate>
+			{/* Prominent Red Error Alert Banner ("red thingy") */}
+			{state.error && (
+				<div
+					role="alert"
+					aria-live="assertive"
+					style={{
+						background: "#fef2f2",
+						border: "1.5px solid #f87171",
+						borderRadius: radius.lg,
+						padding: `${spacing[3]} ${spacing[4]}`,
+						display: "flex",
+						alignItems: "flex-start",
+						gap: spacing[3],
+						boxShadow: "0 2px 8px rgba(239, 68, 68, 0.12)",
+						animation: "shake 0.35s ease-in-out, popIn 0.2s ease-out",
+						boxSizing: "border-box",
+					}}
+				>
+					<div
+						style={{
+							color: "#dc2626",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
+							marginTop: "1px",
+						}}
+					>
+						{ICONS.alertTriangle}
+					</div>
+					<div
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							gap: "2px",
+							flex: 1,
+						}}
+					>
+						<span
+							style={{
+								fontSize: font.size.sm,
+								fontWeight: font.weight.bold,
+								color: "#991b1b",
+							}}
+						>
+							{t.loginErrorTitle || "Błąd logowania"}
+						</span>
+						<span
+							style={{
+								fontSize: font.size.xs,
+								fontWeight: font.weight.medium,
+								color: "#b91c1c",
+								lineHeight: font.lineHeight.tight,
+							}}
+						>
+							{state.error}
+						</span>
+					</div>
+				</div>
+			)}
+
 			<div style={formFieldStyle}>
 				<label htmlFor="login-username" style={labelStyle}>
 					{t.login}
 				</label>
 				<input
 					id="login-username"
-					style={inputStyle(!!state.loginError, state.loginFocused)}
+					style={inputStyle(!!state.loginError || !!state.error, state.loginFocused)}
 					ref={loginRef}
 					type="text"
 					value={state.login}
@@ -196,11 +280,18 @@ function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 							type: "SET_LOGIN",
 							payload: e.target.value,
 						});
-						if (state.loginError)
+						if (state.loginError) {
 							dispatch({
 								type: "SET_LOGIN_ERROR",
 								payload: "",
 							});
+						}
+						if (state.error) {
+							dispatch({
+								type: "SET_ERROR",
+								payload: "",
+							});
+						}
 					}}
 					onFocus={() =>
 						dispatch({
@@ -218,7 +309,7 @@ function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 					aria-label={t.login}
 				/>
 				{state.loginError && (
-					<p style={errorStyle}>{state.loginError}</p>
+					<p style={fieldErrorStyle}>{state.loginError}</p>
 				)}
 			</div>
 
@@ -230,7 +321,7 @@ function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 					<input
 						id="login-password"
 						style={passwordInputStyle(
-							!!state.passwordError,
+							!!state.passwordError || !!state.error,
 							state.passwordFocused
 						)}
 						type={state.showPassword ? "text" : "password"}
@@ -240,11 +331,18 @@ function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 								type: "SET_PASSWORD",
 								payload: e.target.value,
 							});
-							if (state.passwordError)
+							if (state.passwordError) {
 								dispatch({
 									type: "SET_PASSWORD_ERROR",
 									payload: "",
 								});
+							}
+							if (state.error) {
+								dispatch({
+									type: "SET_ERROR",
+									payload: "",
+								});
+							}
 						}}
 						onFocus={() =>
 							dispatch({
@@ -279,11 +377,9 @@ function LoginForm({ state, dispatch, onSubmit, loginRef, t }) {
 					</button>
 				</div>
 				{state.passwordError && (
-					<p style={errorStyle}>{state.passwordError}</p>
+					<p style={fieldErrorStyle}>{state.passwordError}</p>
 				)}
 			</div>
-
-			{state.error && <p style={errorMessageStyle}>{state.error}</p>}
 
 			<button
 				type="submit"
@@ -328,7 +424,7 @@ export default function LoginPage({
 	const validate = () => {
 		let valid = true;
 
-		if (!state.login) {
+		if (!state.login.trim()) {
 			dispatch({
 				type: "SET_LOGIN_ERROR",
 				payload: t.loginRequired,
@@ -359,10 +455,18 @@ export default function LoginPage({
 				payload: "",
 			});
 		}
+
+		if (!valid) {
+			dispatch({
+				type: "SET_ERROR",
+				payload: t.loginErrorRequired || t.wrongEmailOrPassword,
+			});
+		}
+
 		return valid;
 	};
 
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		dispatch({
 			type: "SET_ERROR",
@@ -375,11 +479,12 @@ export default function LoginPage({
 			payload: true,
 		});
 		try {
-			onLoginSuccess(state.login, state.password);
+			await onLoginSuccess(state.login.trim(), state.password);
 		} catch (err) {
+			console.warn("Login failed error in LoginPage:", err);
 			dispatch({
 				type: "SET_ERROR",
-				payload: t.wrongEmailOrPassword,
+				payload: t.loginErrorInvalid || t.wrongEmailOrPassword,
 			});
 		} finally {
 			dispatch({
