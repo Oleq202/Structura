@@ -229,6 +229,16 @@ function LogsHeader({ count, hasFilters, onReset, t }) {
 						justifyContent: "center",
 						boxSizing: "border-box",
 						gap: "4px",
+						transition: "color 0.15s ease, transform 0.1s ease",
+					}}
+					onMouseDown={(e) => {
+						e.currentTarget.style.transform = "scale(0.95)";
+					}}
+					onMouseUp={(e) => {
+						e.currentTarget.style.transform = "scale(1)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.transform = "scale(1)";
 					}}
 				>
 					{ICONS.x}
@@ -284,6 +294,16 @@ function LogsCategoryBar({
 								cursor: "pointer",
 								whiteSpace: "nowrap",
 								fontWeight: isSelected ? font.weight.big : font.weight.medium,
+								transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+							}}
+							onMouseDown={(e) => {
+								e.currentTarget.style.transform = "scale(0.95)";
+							}}
+							onMouseUp={(e) => {
+								e.currentTarget.style.transform = "scale(1)";
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.transform = "scale(1)";
 							}}
 						>
 							{cat.icon}
@@ -348,9 +368,29 @@ function LogsCategoryBar({
 						borderRadius: radius.sm,
 						background: showAdvanced ? `${colors.primary}12` : "transparent",
 						color: showAdvanced ? colors.primary : colors.textSecondary,
+						border: `1px solid ${showAdvanced ? colors.primary : colors.borderSubtle}`,
+						transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+					}}
+					onMouseDown={(e) => {
+						e.currentTarget.style.transform = "scale(0.95)";
+					}}
+					onMouseUp={(e) => {
+						e.currentTarget.style.transform = "scale(1)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.transform = "scale(1)";
 					}}
 				>
-					{ICONS.filter}
+					<span
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							transform: showAdvanced ? "rotate(180deg)" : "rotate(0deg)",
+							transition: "transform 0.2s ease",
+						}}
+					>
+						{ICONS.filter}
+					</span>
 					<span>{t.filters || "Więcej"}</span>
 				</button>
 			</div>
@@ -629,14 +669,22 @@ export default function LogsPage({
 				t={t}
 			/>
 
-			{showAdvancedFilters && (
-				<LogsAdvancedPanel
-					filters={filters}
-					onFilterChange={handleFilterChange}
-					users={users}
-					t={t}
-				/>
-			)}
+			<div
+				style={{
+					display: "grid",
+					gridTemplateRows: showAdvancedFilters ? "1fr" : "0fr",
+					transition: "grid-template-rows 0.25s ease",
+				}}
+			>
+				<div style={{ overflow: "hidden" }}>
+					<LogsAdvancedPanel
+						filters={filters}
+						onFilterChange={handleFilterChange}
+						users={users}
+						t={t}
+					/>
+				</div>
+			</div>
 
 			<LogsList
 				logs={logs}
