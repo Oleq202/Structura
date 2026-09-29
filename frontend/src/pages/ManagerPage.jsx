@@ -1,4 +1,5 @@
 import { useState, useEffect, useReducer, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
@@ -115,9 +116,13 @@ const ICONS = {
 const filterTabsContainerStyle = {
 	display: "flex",
 	alignItems: "center",
-	justifyContent: "space-between",
 	gap: spacing[2],
-	flexWrap: "wrap",
+	overflowX: "auto",
+	whiteSpace: "nowrap",
+	flexWrap: "nowrap",
+	paddingBottom: spacing[1],
+	scrollbarWidth: "none",
+	msOverflowStyle: "none",
 	width: "100%",
 	boxSizing: "border-box",
 };
@@ -138,6 +143,7 @@ const getFilterTabStyle = (isActive) => ({
 	display: "inline-flex",
 	alignItems: "center",
 	justifyContent: "center",
+	flexShrink: 0,
 	boxSizing: "border-box",
 	transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease",
 });
@@ -366,7 +372,9 @@ function TimeRangeOptionItem({ option, isSelected, onSelect }) {
 
 function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 	const [isOpen, setIsOpen] = useState(false);
-	const containerRef = useRef(null);
+	const [coords, setCoords] = useState(null);
+	const buttonRef = useRef(null);
+	const menuRef = useRef(null);
 
 	const options = useMemo(
 		() => [
@@ -380,11 +388,37 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 
 	const currentOption = options.find((opt) => opt.value === completedDays) || options[0];
 
+	const updateCoords = useCallback(() => {
+		if (buttonRef.current) {
+			const rect = buttonRef.current.getBoundingClientRect();
+			setCoords({
+				top: rect.bottom + 6,
+				left: Math.max(8, Math.min(rect.left, window.innerWidth - 190)),
+			});
+		}
+	}, []);
+
+	const handleToggle = () => {
+		if (!isOpen) {
+			updateCoords();
+			setIsOpen(true);
+		} else {
+			setIsOpen(false);
+		}
+	};
+
 	useEffect(() => {
 		if (!isOpen) return;
 
+		updateCoords();
+
 		const handleClickOutside = (event) => {
-			if (containerRef.current && !containerRef.current.contains(event.target)) {
+			if (
+				buttonRef.current &&
+				!buttonRef.current.contains(event.target) &&
+				menuRef.current &&
+				!menuRef.current.contains(event.target)
+			) {
 				setIsOpen(false);
 			}
 		};
@@ -395,19 +429,29 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 			}
 		};
 
+		const handleScrollOrResize = () => {
+			updateCoords();
+		};
+
 		document.addEventListener("mousedown", handleClickOutside);
 		document.addEventListener("keydown", handleKeyDown);
+		window.addEventListener("scroll", handleScrollOrResize, true);
+		window.addEventListener("resize", handleScrollOrResize);
+
 		return () => {
 			document.removeEventListener("mousedown", handleClickOutside);
 			document.removeEventListener("keydown", handleKeyDown);
+			window.removeEventListener("scroll", handleScrollOrResize, true);
+			window.removeEventListener("resize", handleScrollOrResize);
 		};
-	}, [isOpen]);
+	}, [isOpen, updateCoords]);
 
 	return (
-		<div ref={containerRef} style={{ position: "relative" }}>
+		<div style={{ position: "relative", flexShrink: 0 }}>
 			<button
+				ref={buttonRef}
 				type="button"
-				onClick={() => setIsOpen((prev) => !prev)}
+				onClick={handleToggle}
 				aria-haspopup="listbox"
 				aria-expanded={isOpen}
 				aria-label={t.timeRangeLabel || "Zakres czasu"}
@@ -450,21 +494,22 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 				</span>
 			</button>
 
-			{isOpen && (
+			{isOpen && coords && createPortal(
 				<div
+					ref={menuRef}
 					role="listbox"
 					aria-label={t.timeRangeLabel || "Zakres czasu"}
 					style={{
-						position: "absolute",
-						top: "calc(100% + 6px)",
-						right: 0,
+						position: "fixed",
+						top: `${coords.top}px`,
+						left: `${coords.left}px`,
 						backgroundColor: colors.cardBg,
 						border: `1px solid ${colors.borderSubtle}`,
 						borderRadius: radius.lg,
-						boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+						boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.18), 0 4px 12px -2px rgba(0, 0, 0, 0.1)",
 						padding: "6px",
 						minWidth: "180px",
-						zIndex: 1100,
+						zIndex: 9999,
 						display: "flex",
 						flexDirection: "column",
 						gap: "2px",
@@ -482,7 +527,8 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 							}}
 						/>
 					))}
-				</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	);
@@ -506,56 +552,44 @@ function ManagerFilterBar({
 }) {
 	return (
 		<div style={filterTabsContainerStyle}>
-			<div
-				style={{
-					display: "flex",
-					gap: spacing[2],
-					alignItems: "center",
-					flexWrap: "wrap",
-					flex: 1,
-				}}
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "all")}
+				onClick={() => onSelectFilter("all")}
 			>
-				<button
-					type="button"
-					style={getFilterTabStyle(activeFilter === "all")}
-					onClick={() => onSelectFilter("all")}
-				>
-					{t.all} ({totalCount})
-				</button>
-				<button
-					type="button"
-					style={getFilterTabStyle(activeFilter === "pending")}
-					onClick={() => onSelectFilter("pending")}
-				>
-					{t.pending} ({pendingCount})
-				</button>
-				<button
-					type="button"
-					style={getFilterTabStyle(activeFilter === "completed")}
-					onClick={() => onSelectFilter("completed")}
-				>
-					{t.completed} ({completedCount})
-				</button>
+				{t.all} ({totalCount})
+			</button>
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "pending")}
+				onClick={() => onSelectFilter("pending")}
+			>
+				{t.pending} ({pendingCount})
+			</button>
+			<button
+				type="button"
+				style={getFilterTabStyle(activeFilter === "completed")}
+				onClick={() => onSelectFilter("completed")}
+			>
+				{t.completed} ({completedCount})
+			</button>
 
-				{showWorkspaceButton && (
-					<WorkspaceFilterButton
-						isWorkspaceFiltered={isWorkspaceFiltered}
-						isNoBuildingsSelected={isNoBuildingsSelected}
-						selectedBuildingCount={selectedBuildingCount}
-						totalBuildingCount={totalBuildingCount}
-						onOpenWorkspaceModal={onOpenWorkspaceModal}
-						t={t}
-					/>
-				)}
-			</div>
-
-			<div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-				<TimeRangeSelector
-					completedDays={completedDays}
-					onCompletedDaysChange={onCompletedDaysChange}
+			{showWorkspaceButton && (
+				<WorkspaceFilterButton
+					isWorkspaceFiltered={isWorkspaceFiltered}
+					isNoBuildingsSelected={isNoBuildingsSelected}
+					selectedBuildingCount={selectedBuildingCount}
+					totalBuildingCount={totalBuildingCount}
+					onOpenWorkspaceModal={onOpenWorkspaceModal}
 					t={t}
 				/>
-			</div>
+			)}
+
+			<TimeRangeSelector
+				completedDays={completedDays}
+				onCompletedDaysChange={onCompletedDaysChange}
+				t={t}
+			/>
 		</div>
 	);
 }
