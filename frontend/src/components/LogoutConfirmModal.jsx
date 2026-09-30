@@ -1,48 +1,12 @@
-import { useEffect, useEffectEvent, useRef } from "react";
-import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
 	spacing,
 	radius,
-	shadow,
-	status,
 } from "../theme";
 import { translations } from "../i18n";
-
-const ICONS = {
-	logout: (
-		<svg
-			width="20"
-			height="20"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-			<polyline points="16 17 21 12 16 7" />
-			<line x1="21" y1="12" x2="9" y2="12" />
-		</svg>
-	),
-	close: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="18" y1="6" x2="6" y2="18" />
-			<line x1="6" y1="6" x2="18" y2="18" />
-		</svg>
-	),
-};
+import { Modal, Button } from "./ui";
+import { IconLogout } from "./icons";
 
 export default function LogoutConfirmModal({
 	isOpen,
@@ -52,104 +16,85 @@ export default function LogoutConfirmModal({
 	currentUser,
 }) {
 	const t = translations[language] || translations.pl;
-	const modalRef = useRef(null);
-
-	const handleKeyDownEvent = useEffectEvent((e) => {
-		if (e.key === "Escape") {
-			onClose?.();
-		}
-	});
-
-	useEffect(() => {
-		if (!isOpen) return;
-
-		const handleKeyDown = (e) => {
-			handleKeyDownEvent(e);
-		};
-
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen]);
 
 	if (!isOpen) return null;
 
-	const userName = [currentUser?.first_name, currentUser?.last_name]
-		.filter(Boolean)
-		.join(" ") || currentUser?.login;
+	const userName =
+		[currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(" ") ||
+		currentUser?.login;
 
-	return createPortal(
-		<div
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				height: "100%",
-				minHeight: "100dvh",
-				maxHeight: "100dvh",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				zIndex: 99999,
-				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
-				boxSizing: "border-box",
-			}}
-		>
-			<button
-				type="button"
-				aria-label={t.close || "Zamknij"}
-				tabIndex={-1}
-				onClick={() => onClose?.()}
+	const modalTitle = t.logoutConfirmTitle || "Wylogowanie";
+
+	const modalFooter = (
+		<>
+			<Button variant="secondary" size="md" onClick={onClose}>
+				{t.cancel || "Anuluj"}
+			</Button>
+			<Button
+				variant="danger"
+				size="md"
+				onClick={onConfirm}
 				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					right: 0,
-					bottom: 0,
-					background: "rgba(9, 21, 42, 0.65)",
-					backdropFilter: "blur(6px)",
-					WebkitBackdropFilter: "blur(6px)",
-					border: "none",
-					padding: 0,
-					margin: 0,
-					cursor: "default",
-					width: "100%",
-					height: "100%",
-				}}
-			/>
-			<div
-				ref={modalRef}
-				style={{
-					position: "relative",
-					zIndex: 1,
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					boxShadow: shadow.modal,
-					border: `1px solid ${colors.borderSubtle}`,
-					width: "100%",
-					maxWidth: "420px",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					boxSizing: "border-box",
-					fontFamily: font.family.sans,
+					background: "#dc2626",
+					color: "#ffffff",
+					borderColor: "#b91c1c",
 				}}
 			>
-				{/* Modal Header */}
+				{t.logoutConfirmButton || t.logout || "Wyloguj się"}
+			</Button>
+		</>
+	);
+
+	return (
+		<Modal
+			isOpen={isOpen}
+			onClose={onClose}
+			title={modalTitle}
+			icon={
 				<div
 					style={{
-						padding: `${spacing[4]} ${spacing[5]}`,
-						background: colors.shellDeep,
-						color: colors.shellText,
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: "#fee2e2",
+						color: "#dc2626",
 						display: "flex",
-						justifyContent: "space-between",
 						alignItems: "center",
+						justifyContent: "center",
 						flexShrink: 0,
 					}}
 				>
+					<IconLogout size="md" />
+				</div>
+			}
+			footer={modalFooter}
+			maxWidth="420px"
+		>
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: spacing[4],
+				}}
+			>
+				<p
+					style={{
+						margin: 0,
+						fontSize: font.size.base,
+						color: colors.textBody,
+						lineHeight: font.lineHeight.normal,
+					}}
+				>
+					{t.logoutConfirmMsg || "Czy na pewno chcesz zakończyć bieżącą sesję?"}
+				</p>
+
+				{userName && (
 					<div
 						style={{
+							background: colors.pageBg,
+							border: `1px solid ${colors.borderSubtle}`,
+							borderRadius: radius.lg,
+							padding: `${spacing[3]} ${spacing[4]}`,
 							display: "flex",
 							alignItems: "center",
 							gap: spacing[3],
@@ -157,183 +102,40 @@ export default function LogoutConfirmModal({
 					>
 						<div
 							style={{
-								width: "36px",
-								height: "36px",
-								borderRadius: radius.md,
-								background: "rgba(240, 149, 149, 0.2)",
+								width: "32px",
+								height: "32px",
+								borderRadius: radius.full,
+								background: colors.primaryLight,
+								color: colors.primary,
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",
-								color: status.danger.border,
-							}}
-						>
-							{ICONS.logout}
-						</div>
-						<h3
-							id="logout-modal-title"
-							style={{
-								margin: 0,
-								fontSize: font.size.md,
-								fontWeight: font.weight.big,
-								letterSpacing: font.letterSpacing.wide,
-							}}
-						>
-							{t.logoutConfirmTitle || "Potwierdzenie wylogowania"}
-						</h3>
-					</div>
-					<button
-						type="button"
-						onClick={onClose}
-						style={{
-							background: "transparent",
-							border: "none",
-							color: "rgba(255, 255, 255, 0.7)",
-							cursor: "pointer",
-							padding: spacing[1],
-							borderRadius: radius.sm,
-							width: "44px",
-							height: "44px",
-							minWidth: "44px",
-							minHeight: "44px",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							transition: "color 0.15s, background 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.color = "#ffffff";
-							e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)";
-							e.currentTarget.style.background = "transparent";
-						}}
-					>
-						{ICONS.close}
-					</button>
-				</div>
-
-				{/* Modal Body */}
-				<div
-					style={{
-						padding: `${spacing[5]} ${spacing[5]}`,
-						display: "flex",
-						flexDirection: "column",
-						gap: spacing[3],
-					}}
-				>
-					<p
-						style={{
-							margin: 0,
-							fontSize: font.size.base,
-							color: colors.textBody,
-							lineHeight: font.lineHeight.normal,
-						}}
-					>
-						{t.logoutConfirmMessage || "Czy na pewno chcesz się wylogować ze swojego konta?"}
-					</p>
-
-					{userName && (
-						<div
-							style={{
 								fontSize: font.size.xs,
-								color: colors.textSecondary,
-								background: colors.pageBg,
-								padding: `${spacing[2]} ${spacing[3]}`,
-								borderRadius: radius.md,
-								border: `1px solid ${colors.borderSubtle}`,
+								fontWeight: font.weight.bold,
+								flexShrink: 0,
 							}}
 						>
-							{t.user || "Użytkownik"}: <strong style={{ color: colors.textHeading }}>{userName}</strong>
+							{userName[0]?.toUpperCase()}
 						</div>
-					)}
-				</div>
-
-				{/* Modal Footer Actions */}
-				<div
-					style={{
-						padding: `${spacing[3]} ${spacing[5]} ${spacing[5]}`,
-						display: "flex",
-						justifyContent: "flex-end",
-						gap: spacing[3],
-						background: colors.cardBg,
-					}}
-				>
-					<button
-						type="button"
-						onClick={onClose}
-						style={{
-							background: "transparent",
-							border: `1px solid ${colors.borderDefault}`,
-							borderRadius: radius.md,
-							padding: `${spacing[2]} ${spacing[4]}`,
-							minHeight: "44px",
-							minWidth: "44px",
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							fontSize: font.size.base,
-							fontFamily: font.family.sans,
-							fontWeight: font.weight.medium,
-							color: colors.textBody,
-							cursor: "pointer",
-							transition: "background 0.15s, border-color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = colors.pageBg;
-							e.currentTarget.style.borderColor = colors.borderStrong;
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = "transparent";
-							e.currentTarget.style.borderColor = colors.borderDefault;
-						}}
-						onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
-						onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-					>
-						{t.cancel || "Anuluj"}
-					</button>
-
-					<button
-						type="button"
-						onClick={onConfirm}
-						style={{
-							background: status.danger.bg,
-							color: status.danger.text,
-							border: `1px solid ${status.danger.border}`,
-							borderRadius: radius.md,
-							padding: `${spacing[2]} ${spacing[4]}`,
-							minHeight: "44px",
-							minWidth: "44px",
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							boxSizing: "border-box",
-							fontSize: font.size.base,
-							fontFamily: font.family.sans,
-							fontWeight: font.weight.big,
-							cursor: "pointer",
-							gap: spacing[2],
-							transition: "background 0.15s, border-color 0.15s",
-						}}
-						onMouseEnter={(e) => {
-							e.currentTarget.style.background = "#fbdada";
-							e.currentTarget.style.borderColor = "#e57373";
-						}}
-						onMouseLeave={(e) => {
-							e.currentTarget.style.background = status.danger.bg;
-							e.currentTarget.style.borderColor = status.danger.border;
-						}}
-						onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.98)")}
-						onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-					>
-						{ICONS.logout}
-						{t.logoutConfirmButton || "Tak, wyloguj"}
-					</button>
-				</div>
+						<div style={{ flex: 1, minWidth: 0 }}>
+							<div
+								style={{
+									fontWeight: font.weight.semibold,
+									color: colors.textHeading,
+									fontSize: font.size.base,
+								}}
+							>
+								{userName}
+							</div>
+							{currentUser?.role && (
+								<div style={{ fontSize: font.size.xs, color: colors.textSecondary }}>
+									{currentUser.role}
+								</div>
+							)}
+						</div>
+					</div>
+				)}
 			</div>
-		</div>,
-		document.body
+		</Modal>
 	);
 }

@@ -1,378 +1,47 @@
 import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import {
 	colors,
 	font,
 	spacing,
-	radius,
-	shadow,
-	components,
-	status,
 } from "../theme";
 import { translations } from "../i18n";
+import * as api from "../services/api";
+import { Modal, Button, Input } from "./ui";
+import { IconBuilding } from "./icons";
 
-const ICONS = {
-	building: (
-		<svg
-			width="18"
-			height="18"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-			<path d="M9 22v-4h6v4" />
-			<path d="M8 6h.01" />
-			<path d="M16 6h.01" />
-			<path d="M12 6h.01" />
-			<path d="M12 10h.01" />
-			<path d="M12 14h.01" />
-			<path d="M16 10h.01" />
-			<path d="M16 14h.01" />
-			<path d="M8 10h.01" />
-			<path d="M8 14h.01" />
-		</svg>
-	),
-	close: (
-		<svg
-			width="18"
-			height="18"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="18" y1="6" x2="6" y2="18" />
-			<line x1="6" y1="6" x2="18" y2="18" />
-		</svg>
-	),
-};
-
-function BuildingModalHeader({ isEdit, building, t, onClose }) {
-	return (
-		<div
-			style={{
-				padding: `${spacing[4]} ${spacing[5]}`,
-				background: colors.shellDeep,
-				color: colors.shellText,
-				display: "flex",
-				justifyContent: "space-between",
-				alignItems: "center",
-				flexShrink: 0,
-			}}
-		>
-			<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
-				<div
-					style={{
-						width: "36px",
-						height: "36px",
-						borderRadius: radius.md,
-						background: "rgba(255,255,255,0.12)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						color: colors.primary,
-					}}
-				>
-					{ICONS.building}
-				</div>
-				<div>
-					<h3
-						style={{
-							margin: 0,
-							fontSize: font.size.md,
-							fontWeight: font.weight.big,
-							color: "#ffffff",
-						}}
-					>
-						{isEdit ? t.editBuilding : t.createBuilding}
-					</h3>
-					<p
-						style={{
-							margin: "2px 0 0 0",
-							fontSize: font.size.xs,
-							color: colors.shellTextMuted,
-						}}
-					>
-						{isEdit
-							? building.street_address || t.building
-							: t.addBuilding || "Enter building location"}
-					</p>
-				</div>
-			</div>
-			<button
-				type="button"
-				onClick={onClose}
-				style={{
-					background: "rgba(255,255,255,0.08)",
-					border: "none",
-					borderRadius: radius.full,
-					width: "44px",
-					height: "44px",
-					minWidth: "44px",
-					minHeight: "44px",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					cursor: "pointer",
-					color: colors.shellTextMuted,
-					transition: "background 0.15s, color 0.15s",
-					boxSizing: "border-box",
-				}}
-				onMouseEnter={(e) => {
-					e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-					e.currentTarget.style.color = "#ffffff";
-				}}
-				onMouseLeave={(e) => {
-					e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-					e.currentTarget.style.color = colors.shellTextMuted;
-				}}
-				aria-label={t.close || "Close"}
-			>
-				{ICONS.close}
-			</button>
-		</div>
-	);
-}
-
-function BuildingFormFields({
-	formData,
-	setFormData,
-	errors,
-	setErrors,
-	addressInputRef,
-	bodyRef,
+function BuildingFormContent({
+	isEdit,
+	building,
 	t,
-}) {
-	return (
-		<div
-			ref={bodyRef}
-			style={{
-				padding: `${spacing[4]} ${spacing[5]}`,
-				overflowY: "auto",
-				flex: 1,
-				display: "flex",
-				flexDirection: "column",
-				gap: spacing[4],
-				background: colors.cardBg,
-			}}
-		>
-			<div>
-				<label
-					htmlFor="building-street-address"
-					style={{
-						fontSize: font.size.xs,
-						fontWeight: font.weight.big,
-						color: colors.textSecondary,
-						marginBottom: spacing[1],
-						display: "block",
-						textTransform: "uppercase",
-						letterSpacing: font.letterSpacing.wide,
-					}}
-				>
-					{t.streetAddress}
-				</label>
-				<input
-					id="building-street-address"
-					ref={addressInputRef}
-					type="text"
-					value={formData.street_address}
-					onChange={(e) => {
-						setFormData({
-							...formData,
-							street_address: e.target.value,
-						});
-						if (errors.street_address) {
-							setErrors({ ...errors, street_address: "" });
-						}
-					}}
-					placeholder={t.enterStreetAddress}
-					style={{
-						...components.input,
-						width: "100%",
-						boxSizing: "border-box",
-						fontSize: font.size.sm,
-						borderRadius: radius.md,
-						border: errors.street_address
-							? `1px solid ${status.danger.border}`
-							: `1px solid ${colors.borderDefault}`,
-						background: errors.street_address
-							? status.danger.bg
-							: colors.cardBg,
-					}}
-				/>
-				{errors.street_address && (
-					<p
-						style={{
-							fontSize: font.size.xs,
-							color: status.danger.text,
-							margin: `${spacing[1]} 0 0 0`,
-						}}
-					>
-						{errors.street_address}
-					</p>
-				)}
-			</div>
-
-			<div>
-				<label
-					htmlFor="building-district"
-					style={{
-						fontSize: font.size.xs,
-						fontWeight: font.weight.big,
-						color: colors.textSecondary,
-						marginBottom: spacing[1],
-						display: "block",
-						textTransform: "uppercase",
-						letterSpacing: font.letterSpacing.wide,
-					}}
-				>
-					{t.district}
-				</label>
-				<input
-					id="building-district"
-					type="text"
-					value={formData.district}
-					onChange={(e) =>
-						setFormData({
-							...formData,
-							district: e.target.value,
-						})
-					}
-					placeholder={t.enterDistrict}
-					style={{
-						...components.input,
-						width: "100%",
-						boxSizing: "border-box",
-						fontSize: font.size.sm,
-						borderRadius: radius.md,
-					}}
-				/>
-			</div>
-
-			<div>
-				<label
-					htmlFor="building-city"
-					style={{
-						fontSize: font.size.xs,
-						fontWeight: font.weight.big,
-						color: colors.textSecondary,
-						marginBottom: spacing[1],
-						display: "block",
-						textTransform: "uppercase",
-						letterSpacing: font.letterSpacing.wide,
-					}}
-				>
-					{t.city}
-				</label>
-				<input
-					id="building-city"
-					type="text"
-					value={formData.city}
-					onChange={(e) => {
-						setFormData({
-							...formData,
-							city: e.target.value,
-						});
-						if (errors.city) {
-							setErrors({ ...errors, city: "" });
-						}
-					}}
-					placeholder={t.enterCity}
-					style={{
-						...components.input,
-						width: "100%",
-						boxSizing: "border-box",
-						fontSize: font.size.sm,
-						borderRadius: radius.md,
-						border: errors.city
-							? `1px solid ${status.danger.border}`
-							: `1px solid ${colors.borderDefault}`,
-						background: errors.city
-							? status.danger.bg
-							: colors.cardBg,
-					}}
-				/>
-				{errors.city && (
-					<p
-						style={{
-							fontSize: font.size.xs,
-							color: status.danger.text,
-							margin: `${spacing[1]} 0 0 0`,
-						}}
-					>
-						{errors.city}
-					</p>
-				)}
-			</div>
-		</div>
-	);
-}
-
-export default function BuildingModal({
-	building = null,
 	onClose,
+	onBuildingCreated,
 	onSave,
-	language = "pl",
+	setLoadingState,
 }) {
-	const t = translations[language];
-	const isEdit = !!building;
-	const bodyRef = useRef(null);
 	const addressInputRef = useRef(null);
-
 	const [formData, setFormData] = useState({
+		street_address: building?.street_address || "",
 		city: building?.city || "",
 		district: building?.district || "",
-		street_address: building?.street_address || "",
 	});
-
-	const [errors, setErrors] = useState({
-		city: "",
-		street_address: "",
-	});
-
+	const [errors, setErrors] = useState({});
 	const [loading, setLoading] = useState(false);
 
 	useEffect(() => {
-		if (bodyRef.current) {
-			bodyRef.current.scrollTop = 0;
-		}
-		if (addressInputRef.current) {
-			addressInputRef.current.focus();
-		}
-	}, [building]);
-
-	useEffect(() => {
-		const handleKeyDown = (e) => {
-			if (e.key === "Escape") {
-				onClose?.();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [onClose]);
+		const timer = setTimeout(() => addressInputRef.current?.focus(), 50);
+		return () => clearTimeout(timer);
+	}, []);
 
 	const validate = () => {
 		const newErrors = {};
-		let valid = true;
-
 		if (!formData.street_address.trim()) {
-			newErrors.street_address = t.required;
-			valid = false;
+			newErrors.street_address = t.required || "Pole wymagane";
 		}
-
 		if (!formData.city.trim()) {
-			newErrors.city = t.required;
-			valid = false;
+			newErrors.city = t.required || "Pole wymagane";
 		}
-
 		setErrors(newErrors);
-		return valid;
+		return Object.keys(newErrors).length === 0;
 	};
 
 	const handleSubmit = async (e) => {
@@ -380,163 +49,191 @@ export default function BuildingModal({
 		if (!validate()) return;
 
 		setLoading(true);
+		setLoadingState?.(true);
 		try {
-			const savedBuilding = {
-				...(building?.id && { id: building.id }),
-				city: formData.city.trim(),
-				district: formData.district.trim(),
+			const payload = {
 				street_address: formData.street_address.trim(),
+				city: formData.city.trim(),
+				district: formData.district.trim() || null,
 			};
-			if (onSave) await onSave(savedBuilding);
-			if (onClose) onClose();
+
+			let saved;
+			if (isEdit) {
+				saved = await api.updateBuilding(building.id, payload);
+			} else {
+				saved = await api.createBuilding(payload);
+			}
+
+			(onBuildingCreated || onSave)?.(saved || payload);
+			onClose?.();
 		} catch (err) {
-			console.error("Error saving building", err);
+			console.error("Failed to save building:", err);
+			setErrors({ form: err.message || "Błąd zapisu" });
 		} finally {
 			setLoading(false);
+			setLoadingState?.(false);
 		}
 	};
 
-	return createPortal(
-		<div
+	return (
+		<form
+			id="building-form"
+			onSubmit={handleSubmit}
 			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				height: "100%",
-				minHeight: "100dvh",
-				maxHeight: "100dvh",
 				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				zIndex: 99999,
-				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
-				boxSizing: "border-box",
+				flexDirection: "column",
+				gap: spacing[4],
+				margin: 0,
 			}}
 		>
-			<button
-				type="button"
-				aria-label={t.close || "Zamknij"}
-				tabIndex={-1}
-				onClick={() => onClose?.()}
-				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					right: 0,
-					bottom: 0,
-					background: "rgba(9, 21, 42, 0.65)",
-					backdropFilter: "blur(6px)",
-					WebkitBackdropFilter: "blur(6px)",
-					border: "none",
-					padding: 0,
-					margin: 0,
-					cursor: "default",
-					width: "100%",
-					height: "100%",
-				}}
-			/>
-			<div
-				style={{
-					position: "relative",
-					zIndex: 1,
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					boxShadow: shadow.modal,
-					border: `1px solid ${colors.borderSubtle}`,
-					width: "100%",
-					maxWidth: "460px",
-					maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					boxSizing: "border-box",
-					fontFamily: font.family.sans,
-				}}
-			>
-				<BuildingModalHeader
-					isEdit={isEdit}
-					building={building}
-					t={t}
-					onClose={onClose}
-				/>
-
-				<form
-					onSubmit={handleSubmit}
+			{errors.form && (
+				<div
 					style={{
-						display: "flex",
-						flexDirection: "column",
-						flex: 1,
-						overflow: "hidden",
-						margin: 0,
+						padding: `${spacing[2]} ${spacing[3]}`,
+						borderRadius: "6px",
+						background: "#fef2f2",
+						border: "1px solid #fca5a5",
+						color: "#991b1b",
+						fontSize: font.size.xs,
 					}}
 				>
-					<BuildingFormFields
-						formData={formData}
-						setFormData={setFormData}
-						errors={errors}
-						setErrors={setErrors}
-						addressInputRef={addressInputRef}
-						bodyRef={bodyRef}
-						t={t}
-					/>
+					{errors.form}
+				</div>
+			)}
 
-					<div
-						style={{
-							padding: `${spacing[3]} ${spacing[5]}`,
-							background: colors.pageBg,
-							borderTop: `1px solid ${colors.borderSubtle}`,
-							display: "flex",
-							justifyContent: "flex-end",
-							gap: spacing[2],
-							flexShrink: 0,
-						}}
-					>
-						<button
-							type="button"
-							onClick={onClose}
-							style={{
-								...components.ghostButton,
-								minHeight: "44px",
-								minWidth: "44px",
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								boxSizing: "border-box",
-								padding: `${spacing[2]} ${spacing[4]}`,
-								fontSize: font.size.sm,
-							}}
-						>
-							{t.cancel}
-						</button>
-						<button
-							type="submit"
-							disabled={loading}
-							style={{
-								...components.primaryButton,
-								minHeight: "44px",
-								minWidth: "44px",
-								display: "inline-flex",
-								alignItems: "center",
-								justifyContent: "center",
-								boxSizing: "border-box",
-								padding: `${spacing[2]} ${spacing[5]}`,
-								fontSize: font.size.sm,
-								opacity: loading ? 0.6 : 1,
-								cursor: loading ? "not-allowed" : "pointer",
-							}}
-						>
-							{loading
-								? t.saving
-								: isEdit
-									? t.update
-									: t.create}
-						</button>
-					</div>
-				</form>
+			<Input
+				ref={addressInputRef}
+				label={t.streetAddress || "Adres ulicy"}
+				placeholder="np. ul. Marszałkowska 10/12"
+				value={formData.street_address}
+				onChange={(e) => {
+					setFormData((prev) => ({ ...prev, street_address: e.target.value }));
+					if (errors.street_address) {
+						setErrors((prev) => ({ ...prev, street_address: "" }));
+					}
+				}}
+				error={errors.street_address}
+				required
+			/>
+
+			<Input
+				label={t.city || "Miasto"}
+				placeholder="np. Warszawa"
+				value={formData.city}
+				onChange={(e) => {
+					setFormData((prev) => ({ ...prev, city: e.target.value }));
+					if (errors.city) {
+						setErrors((prev) => ({ ...prev, city: "" }));
+					}
+				}}
+				error={errors.city}
+				required
+			/>
+
+			<Input
+				label={t.district || "Dzielnica"}
+				placeholder="np. Mokotów (opcjonalnie)"
+				value={formData.district}
+				onChange={(e) =>
+					setFormData((prev) => ({ ...prev, district: e.target.value }))
+				}
+				helperText={t.enterDistrict || "Opcjonalna nazwa dzielnicy lub osiedla"}
+			/>
+
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "flex-end",
+					gap: spacing[2],
+					paddingTop: spacing[2],
+				}}
+			>
+				<Button
+					variant="secondary"
+					size="md"
+					disabled={loading}
+					onClick={onClose}
+				>
+					{t.cancel || "Anuluj"}
+				</Button>
+				<Button
+					variant="primary"
+					size="md"
+					type="submit"
+					loading={loading}
+				>
+					{loading
+						? (t.saving || "Zapisywanie...")
+						: isEdit
+							? (t.update || "Zaktualizuj")
+							: (t.create || "Utwórz")}
+				</Button>
 			</div>
-		</div>,
-		document.body
+		</form>
+	);
+}
+
+export default function BuildingModal({
+	isOpen = true,
+	onClose,
+	onBuildingCreated,
+	onSave,
+	building = null,
+	language = "pl",
+}) {
+	const t = translations[language] || translations.pl;
+	const isEdit = !!building?.id;
+	const [loading, setLoading] = useState(false);
+
+	if (!isOpen) return null;
+
+	const modalTitle = (
+		<div>
+			<div style={{ fontSize: font.size.lg, fontWeight: font.weight.semibold }}>
+				{isEdit ? t.editBuilding || "Edytuj budynek" : t.createBuilding || "Dodaj budynek"}
+			</div>
+			{isEdit && building?.street_address && (
+				<div style={{ fontSize: font.size.xs, color: colors.textSecondary, marginTop: "2px" }}>
+					{building.street_address}
+				</div>
+			)}
+		</div>
+	);
+
+	return (
+		<Modal
+			isOpen={isOpen}
+			onClose={loading ? undefined : onClose}
+			title={modalTitle}
+			icon={
+				<div
+					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: "8px",
+						background: colors.primaryLight,
+						color: colors.primary,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+					}}
+				>
+					<IconBuilding size="md" />
+				</div>
+			}
+			maxWidth="460px"
+		>
+			<BuildingFormContent
+				key={building?.id || "new"}
+				isEdit={isEdit}
+				building={building}
+				t={t}
+				onClose={onClose}
+				onBuildingCreated={onBuildingCreated}
+				onSave={onSave}
+				setLoadingState={setLoading}
+			/>
+		</Modal>
 	);
 }

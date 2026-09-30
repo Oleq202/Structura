@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
 	colors,
 	font,
 	radius,
 	shadow,
 	components,
-	badgeStyle,
 } from "../theme";
 import { translations } from "../i18n";
+import { Badge } from "./ui";
+import { IconChevronDown } from "./icons";
 
-const OPERATION_BADGE = {
-	create: "new",
-	update: "warning",
+const OPERATION_STATUS = {
+	create: "completed",
+	update: "pending",
 	delete: "danger",
 	status_change: "info",
 	login_success: "info",
@@ -26,6 +27,43 @@ const OPERATION_COLORS = {
 	login_success: colors.primary,
 	login_failed: colors.danger,
 };
+
+const EMPTY_USERS = [];
+const EMPTY_BUILDINGS = [];
+
+function buildUsersMap(users) {
+	const map = {};
+	if (!users) return map;
+	for (const u of users) {
+		const name = `${u.first_name || ""} ${u.last_name || ""}`.trim() || u.login;
+		map[u.id] = name;
+		map[String(u.id)] = name;
+	}
+	return map;
+}
+
+function buildBuildingsMap(buildings) {
+	const map = {};
+	if (!buildings) return map;
+	for (const b of buildings) {
+		const addr = [b.street_address, b.district, b.city].filter(Boolean).join(", ") || b.street_address;
+		map[b.id] = addr;
+		map[String(b.id)] = addr;
+	}
+	return map;
+}
+
+function getLogBuildingAddress(log, buildingsMap) {
+	return (
+		log.building_street_address ||
+		log.task?.building?.street_address ||
+		buildingsMap[log.changes_json?.building_id?.new] ||
+		buildingsMap[log.changes_json?.building?.new] ||
+		buildingsMap[log.changes_json?.building_id?.old] ||
+		buildingsMap[log.changes_json?.building?.old] ||
+		null
+	);
+}
 
 function Avatar({ first_name, last_name, login }) {
 	const initials =
@@ -97,7 +135,7 @@ function formatTimestamp(iso, language) {
 	});
 }
 
-function formatLogAction(log, t, language) {
+function formatLogAction(log, t, language, buildingsMap, _usersMap) {
 	const action = log.action || "";
 	const isPl = language === "pl";
 
@@ -117,58 +155,94 @@ function formatLogAction(log, t, language) {
 		return isPl ? "Nieudane logowanie" : "Failed login";
 	}
 
-	const userCreateMatch = action.match(/Created user '([^']+)'(?: with role '([^']+)')?/i);
+	const userCreateMatch = action.match(/Created user '([^']+)'(?: \(([^)]+)\))?(?: with role '([^']+)')?/i);
 	if (userCreateMatch) {
-		const [, username, role] = userCreateMatch;
+		const [, username, name, role] = userCreateMatch;
+		const displayName = name ? `${name} (@${username})` : `'${username}'`;
 		const roleName = role ? (t[role] || role) : "";
 		return isPl
-			? `Utworzono użytkownika '${username}'${roleName ? ` z rolą ${roleName}` : ""}`
-			: `Created user '${username}'${roleName ? ` with role ${roleName}` : ""}`;
+			? `Utworzono użytkownika ${displayName}${roleName ? ` z rolą ${roleName}` : ""}`
+			: `Created user ${displayName}${roleName ? ` with role ${roleName}` : ""}`;
 	}
 
-	const userUpdateMatch = action.match(/Updated user '([^']+)'/i);
+	const userUpdateMatch = action.match(/Updated user '([^']+)'(?: \(([^)]+)\))?/i);
 	if (userUpdateMatch) {
-		return isPl ? `Zaktualizowano użytkownika '${userUpdateMatch[1]}'` : `Updated user '${userUpdateMatch[1]}'`;
+		const [, username, name] = userUpdateMatch;
+		const displayName = name ? `${name} (@${username})` : `'${username}'`;
+		return isPl ? `Zaktualizowano użytkownika ${displayName}` : `Updated user ${displayName}`;
 	}
 
-	const userDeleteMatch = action.match(/Deleted user '([^']+)'/i);
+	const userDeleteMatch = action.match(/Deleted user '([^']+)'(?: \(([^)]+)\))?/i);
 	if (userDeleteMatch) {
-		return isPl ? `Usunięto użytkownika '${userDeleteMatch[1]}'` : `Deleted user '${userDeleteMatch[1]}'`;
+		const [, username, name] = userDeleteMatch;
+		const displayName = name ? `${name} (@${username})` : `'${username}'`;
+		return isPl ? `Usunięto użytkownika ${displayName}` : `Deleted user ${displayName}`;
 	}
 
 	const bCreateMatch = action.match(/Created building at ([^,]+),\s*(.+)/i);
 	if (bCreateMatch) {
-		return isPl ? `Utworzono budynek przy ${bCreateMatch[1]}, ${bCreateMatch[2]}` : `Created building at ${bCreateMatch[1]}, ${bCreateMatch[2]}`;
+		return isPl ? `Utworzono budynek: ${bCreateMatch[1]}, ${bCreateMatch[2]}` : `Created building: ${bCreateMatch[1]}, ${bCreateMatch[2]}`;
 	}
 
+	// Updated building at {addr} (#{id}) or Updated building #{id} ({addr})
+	const bUpdateAtMatch = action.match(/Updated building at (.+?)(?:\s*\(#\d+\))?$/i);
+	if (bUpdateAtMatch) {
+		return isPl ? `Zaktualizowano budynek: ${bUpdateAtMatch[1]}` : `Updated building: ${bUpdateAtMatch[1]}`;
+	}
 	const bUpdateMatch = action.match(/Updated building #(\d+)(?: \(([^)]+)\))?/i);
 	if (bUpdateMatch) {
-		return isPl ? `Zaktualizowano budynek #${bUpdateMatch[1]}${bUpdateMatch[2] ? ` (${bUpdateMatch[2]})` : ""}` : `Updated building #${bUpdateMatch[1]}${bUpdateMatch[2] ? ` (${bUpdateMatch[2]})` : ""}`;
+		const addr = bUpdateMatch[2] || buildingsMap?.[bUpdateMatch[1]] || `#${bUpdateMatch[1]}`;
+		return isPl ? `Zaktualizowano budynek: ${addr}` : `Updated building: ${addr}`;
 	}
 
+	// Deleted building at {addr} (#{id}) or Deleted building #{id} ({addr}) or Deleted building #{id}
+	const bDeleteAtMatch = action.match(/Deleted building at (.+?)(?:\s*\(#\d+\))?$/i);
+	if (bDeleteAtMatch) {
+		return isPl ? `Usunięto budynek: ${bDeleteAtMatch[1]}` : `Deleted building: ${bDeleteAtMatch[1]}`;
+	}
+	const bDeleteWithAddrMatch = action.match(/Deleted building #(\d+)\s*\(([^)]+)\)/i);
+	if (bDeleteWithAddrMatch) {
+		return isPl ? `Usunięto budynek: ${bDeleteWithAddrMatch[2]}` : `Deleted building: ${bDeleteWithAddrMatch[2]}`;
+	}
 	const bDeleteMatch = action.match(/Deleted building #(\d+)/i);
 	if (bDeleteMatch) {
+		const addr = buildingsMap?.[bDeleteMatch[1]] || log.changes_json?.address?.old;
+		if (addr) {
+			return isPl ? `Usunięto budynek: ${addr}` : `Deleted building: ${addr}`;
+		}
 		return isPl ? `Usunięto budynek #${bDeleteMatch[1]}` : `Deleted building #${bDeleteMatch[1]}`;
 	}
 
 	if (log.operation_type === "status_change") {
+		const taskName = log.task_title || log.task?.title;
+		const taskPrefix = taskName ? `"${taskName}": ` : "";
 		if (log.changes_json?.status?.new === "completed" || action.includes("completed")) {
-			return t.changedToCompleted || "Changed task to completed";
+			return isPl ? `${taskPrefix}Ukończono zadanie` : `${taskPrefix}Marked task as completed`;
 		}
 		if (log.changes_json?.status?.new === "pending" || action.includes("pending")) {
-			return t.revertedToPending || "Reverted task to pending";
+			return isPl ? `${taskPrefix}Przywrócono zadanie do oczekujących` : `${taskPrefix}Reverted task to pending`;
 		}
 		return t.changedStatus || action;
 	}
 
 	if (log.operation_type === "create" && log.entity_type === "task") {
 		const taskName = log.task_title || log.changes_json?.title?.new || log.task?.title;
-		return taskName ? (isPl ? `Utworzono zadanie: "${taskName}"` : `Created task: "${taskName}"`) : (t.createdTask || action);
+		if (taskName) {
+			return isPl
+				? `Utworzono zadanie: "${taskName}"`
+				: `Created task: "${taskName}"`;
+		}
+		return t.createdTask || action;
 	}
 
 	if (log.operation_type === "delete" && log.entity_type === "task") {
 		const taskName = log.task_title || log.changes_json?.title?.old || log.task?.title;
-		return taskName ? (isPl ? `Usunięto zadanie: "${taskName}"` : `Deleted task: "${taskName}"`) : (t.deletedTask || action);
+		if (taskName) {
+			return isPl
+				? `Usunięto zadanie: "${taskName}"`
+				: `Deleted task: "${taskName}"`;
+		}
+		return t.deletedTask || action;
 	}
 
 	if (log.operation_type === "update" && log.entity_type === "task") {
@@ -179,7 +253,7 @@ function formatLogAction(log, t, language) {
 	return action;
 }
 
-function getLogTitle(log, t) {
+function getLogTitle(log, t, buildingsMap, usersMap) {
 	if (log.operation_type === "login_success") {
 		return t.loginSuccess || "Logged in successfully";
 	}
@@ -187,11 +261,23 @@ function getLogTitle(log, t) {
 		return t.loginFailed || "Failed login";
 	}
 	if (log.entity_type === "user") {
+		const userName =
+			log.changes_json?.name?.new ||
+			log.changes_json?.name?.old ||
+			log.user_login ||
+			(usersMap && (usersMap[log.entity_id] || usersMap[String(log.entity_id)]));
+		if (userName) return userName;
 		if (log.operation_type === "create") return t.createdUser || "Created user";
 		if (log.operation_type === "delete") return t.deletedUser || "Deleted user";
 		return t.updatedUser || "Updated user";
 	}
 	if (log.entity_type === "building") {
+		const buildingName =
+			log.changes_json?.address?.new ||
+			log.changes_json?.address?.old ||
+			log.building_street_address ||
+			(buildingsMap && (buildingsMap[log.entity_id] || buildingsMap[String(log.entity_id)]));
+		if (buildingName) return buildingName;
 		if (log.operation_type === "create") return t.createdBuilding || "Created building";
 		if (log.operation_type === "delete") return t.deletedBuilding || "Deleted building";
 		return t.updatedBuilding || "Updated building";
@@ -206,42 +292,166 @@ function getLogTitle(log, t) {
 
 function translateFieldName(field, t) {
 	const map = {
-		title: t.title || "Title",
-		description: t.description || "Description",
+		title: t.title || "Tytuł",
+		description: t.description || "Opis",
 		status: t.status || "Status",
-		contractor_id: t.contractor || "Contractor",
-		contractor: t.contractor || "Contractor",
-		building_id: t.building || "Building",
-		building: t.building || "Building",
+		assigned_to: t.assignedTo || t.contractor || "Wykonawca",
+		contractor_id: t.contractor || "Wykonawca",
+		contractor: t.contractor || "Wykonawca",
+		building_id: t.building || "Budynek",
+		building: t.building || "Budynek",
+		user_id: t.user || "Użytkownik",
+		user: t.user || "Użytkownik",
+		created_by: t.createdBy || "Utworzone przez",
+		name: t.name || "Imię i nazwisko",
 		login: t.login || "Login",
-		role: t.role || "Role",
-		city: t.city || "City",
-		district: t.district || "District",
-		street_address: t.streetAddress || "Street address",
-		address: t.streetAddress || "Street address",
-		first_name: t.firstName || "First name",
-		last_name: t.lastName || "Last name",
+		role: t.role || "Rola",
+		city: t.city || "Miasto",
+		district: t.district || "Dzielnica",
+		street_address: t.streetAddress || "Adres",
+		address: t.streetAddress || "Adres",
+		first_name: t.firstName || "Imię",
+		last_name: t.lastName || "Nazwisko",
 	};
 	return map[field] || field;
 }
 
-function formatFieldValue(field, val, t) {
+function formatFieldValue(field, val, t, usersMap, buildingsMap) {
 	if (val === null || val === undefined || val === "") {
-		return "—";
+		return null;
+	}
+	if (typeof val === "object") {
+		return null;
 	}
 	if (field === "status") {
-		return val === "completed" ? t.completed : val === "pending" ? t.pending : String(val);
+		return val === "completed" ? (t.completed || "Ukończone") : val === "pending" ? (t.pending || "Oczekujące") : String(val);
 	}
 	if (field === "role") {
 		return t[val] || String(val);
 	}
+	if (
+		field === "assigned_to" ||
+		field === "contractor" ||
+		field === "contractor_id" ||
+		field === "user_id" ||
+		field === "created_by"
+	) {
+		if (usersMap && (usersMap[val] || usersMap[String(val)])) {
+			return usersMap[val] || usersMap[String(val)];
+		}
+	}
+	if (field === "building" || field === "building_id") {
+		if (buildingsMap && (buildingsMap[val] || buildingsMap[String(val)])) {
+			return buildingsMap[val] || buildingsMap[String(val)];
+		}
+	}
 	return String(val);
 }
 
-function renderChanges(changes, t) {
+function renderChanges(changes, t, usersMap, buildingsMap) {
 	if (!changes || typeof changes !== "object") return null;
 	const entries = Object.entries(changes);
 	if (entries.length === 0) return null;
+
+	const renderedItems = entries
+		.map(([field, change]) => {
+			const isObj = change && typeof change === "object";
+			const hasOld = Boolean(isObj && Object.prototype.hasOwnProperty.call(change, "old"));
+			const hasNew = Boolean(isObj && Object.prototype.hasOwnProperty.call(change, "new"));
+
+			const rawOld = hasOld ? change.old : null;
+			const rawNew = hasNew ? change.new : (!isObj ? change : null);
+
+			const oldVal = (hasOld && rawOld !== null && rawOld !== undefined && rawOld !== "")
+				? formatFieldValue(field, rawOld, t, usersMap, buildingsMap)
+				: null;
+			const newVal = (rawNew !== null && rawNew !== undefined && rawNew !== "")
+				? formatFieldValue(field, rawNew, t, usersMap, buildingsMap)
+				: null;
+
+			if (!oldVal && !newVal) return null;
+
+			return (
+				<div
+					key={field}
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: "6px",
+						fontSize: "11px",
+						lineHeight: 1.3,
+						flexWrap: "wrap",
+					}}
+				>
+					<span
+						style={{
+							fontWeight: font.weight.medium,
+							color: colors.textHeading,
+							minWidth: "70px",
+						}}
+					>
+						{translateFieldName(field, t)}:
+					</span>
+
+					{/* Case 1: Update (both old and new values exist) */}
+					{hasOld && hasNew && (
+						<>
+							{oldVal && (
+								<span
+									style={{
+										color: colors.danger,
+										textDecoration: "line-through",
+										opacity: 0.85,
+									}}
+								>
+									{oldVal}
+								</span>
+							)}
+							{oldVal && newVal && (
+								<span style={{ color: colors.textSecondary, fontSize: "10px" }}>→</span>
+							)}
+							{newVal && (
+								<span
+									style={{
+										color: colors.success,
+										fontWeight: font.weight.medium,
+									}}
+								>
+									{newVal}
+								</span>
+							)}
+						</>
+					)}
+
+					{/* Case 2: Only old value (deleted entity or removed attribute) */}
+					{hasOld && !hasNew && oldVal && (
+						<span
+							style={{
+								color: colors.textPrimary,
+								opacity: 0.9,
+							}}
+						>
+							{oldVal}
+						</span>
+					)}
+
+					{/* Case 3: Only new value (created entity or new attribute) */}
+					{!hasOld && newVal && (
+						<span
+							style={{
+								color: colors.success,
+								fontWeight: font.weight.medium,
+							}}
+						>
+							{newVal}
+						</span>
+					)}
+				</div>
+			);
+		})
+		.filter(Boolean);
+
+	if (renderedItems.length === 0) return null;
 
 	return (
 		<div
@@ -249,7 +459,6 @@ function renderChanges(changes, t) {
 				display: "flex",
 				flexDirection: "column",
 				gap: "4px",
-				marginTop: "4px",
 			}}
 		>
 			<div
@@ -274,58 +483,7 @@ function renderChanges(changes, t) {
 					border: `1px solid ${colors.borderSubtle}`,
 				}}
 			>
-				{entries.map(([field, change]) => {
-					const hasOld = change && Object.prototype.hasOwnProperty.call(change, "old");
-					const hasNew = change && Object.prototype.hasOwnProperty.call(change, "new");
-					const oldVal = hasOld ? formatFieldValue(field, change.old, t) : null;
-					const newVal = hasNew ? formatFieldValue(field, change.new, t) : formatFieldValue(field, change, t);
-
-					return (
-						<div
-							key={field}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: "6px",
-								fontSize: "11px",
-								lineHeight: 1.3,
-								flexWrap: "wrap",
-							}}
-						>
-							<span
-								style={{
-									fontWeight: font.weight.medium,
-									color: colors.textHeading,
-									minWidth: "70px",
-								}}
-							>
-								{translateFieldName(field, t)}:
-							</span>
-							{hasOld && oldVal !== null && (
-								<>
-									<span
-										style={{
-											color: colors.danger,
-											textDecoration: "line-through",
-											opacity: 0.85,
-										}}
-									>
-										{oldVal}
-									</span>
-									<span style={{ color: colors.textSecondary, fontSize: "10px" }}>→</span>
-								</>
-							)}
-							<span
-								style={{
-									color: colors.success,
-									fontWeight: font.weight.medium,
-								}}
-							>
-								{newVal}
-							</span>
-						</div>
-					);
-				})}
+				{renderedItems}
 			</div>
 		</div>
 	);
@@ -334,24 +492,27 @@ function renderChanges(changes, t) {
 export default function LogEntry({
 	initialData,
 	language = "pl",
-	users = [],
+	users = EMPTY_USERS,
+	buildings = EMPTY_BUILDINGS,
 	expanded = false,
 	onToggle,
 }) {
-	const t = translations[language];
+	const t = translations[language] || translations.pl;
 	const log = initialData;
 	const [hovered, setHovered] = useState(false);
 
+	const usersMap = useMemo(() => buildUsersMap(users), [users]);
+	const buildingsMap = useMemo(() => buildBuildingsMap(buildings), [buildings]);
+
 	const user = users.find((u) => u.id === log.user_id) || log.user;
-	const badgeKey = OPERATION_BADGE[log.operation_type] ?? "info";
-	const badge = badgeStyle(badgeKey);
+	const badgeStatus = OPERATION_STATUS[log.operation_type] || "info";
 	const operationColor = OPERATION_COLORS[log.operation_type] || colors.textSecondary;
 
-	const taskTitle = getLogTitle(log, t);
-	const actionText = formatLogAction(log, t, language);
+	const taskTitle = getLogTitle(log, t, buildingsMap, usersMap);
+	const actionText = formatLogAction(log, t, language, buildingsMap, usersMap);
 	const badgeLabel = t["op_" + log.operation_type] || log.operation_type;
 
-	const buildingAddress = log.building_street_address || log.task?.building?.street_address || null;
+	const buildingAddress = useMemo(() => getLogBuildingAddress(log, buildingsMap), [log, buildingsMap]);
 
 	return (
 		<div
@@ -369,9 +530,9 @@ export default function LogEntry({
 			style={{
 				width: "100%",
 				background: colors.cardBg,
-				borderRadius: radius.sm,
-				border: `1px solid ${hovered ? colors.primarySubtle : colors.borderSubtle}`,
-				boxShadow: hovered ? shadow.cardHover : shadow.card,
+				borderRadius: radius.md,
+				border: `1px solid ${hovered ? colors.primaryHover : colors.cardBorder}`,
+				boxShadow: hovered ? shadow.cardHover : shadow.sm,
 				overflow: "hidden",
 				padding: 0,
 				boxSizing: "border-box",
@@ -381,11 +542,11 @@ export default function LogEntry({
 		>
 			<div
 				style={{
-					padding: "6px 10px",
-					borderLeft: `3px solid ${operationColor}`,
+					padding: "8px 12px",
+					borderLeft: `4px solid ${operationColor}`,
 					display: "flex",
 					flexDirection: "column",
-					gap: "3px",
+					gap: "4px",
 				}}
 			>
 				<div
@@ -393,22 +554,22 @@ export default function LogEntry({
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "space-between",
-						gap: "6px",
+						gap: "8px",
 					}}
 				>
 					<div
 						style={{
 							display: "flex",
 							alignItems: "center",
-							gap: "6px",
+							gap: "8px",
 							minWidth: 0,
 							flex: 1,
 						}}
 					>
 						<span
 							style={{
-								fontSize: "12px",
-								fontWeight: font.weight.big,
+								fontSize: font.size.sm,
+								fontWeight: font.weight.semibold,
 								color: colors.textHeading,
 								whiteSpace: "nowrap",
 								overflow: "hidden",
@@ -417,51 +578,42 @@ export default function LogEntry({
 						>
 							{taskTitle}
 						</span>
-						<span
-							style={{
-								...badge,
-								padding: "1px 5px",
-								fontSize: "9px",
-								flexShrink: 0,
-								lineHeight: 1.2,
-							}}
+						<Badge
+							status={badgeStatus}
+							dot={true}
+							style={{ fontSize: "11px", padding: "1px 6px" }}
 						>
 							{badgeLabel}
-						</span>
+						</Badge>
 					</div>
 					<div
 						style={{
 							display: "flex",
 							alignItems: "center",
-							gap: "4px",
+							gap: "6px",
 							flexShrink: 0,
 						}}
 					>
 						<span
 							style={{
-								fontSize: "10px",
+								fontSize: font.size.xs,
 								color: colors.textSecondary,
 								whiteSpace: "nowrap",
 							}}
 						>
 							{formatTimestamp(log.timestamp, language)}
 						</span>
-						<svg
-							width="12"
-							height="12"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke={colors.textSecondary}
-							strokeWidth="2.5"
-							strokeLinecap="round"
-							strokeLinejoin="round"
+						<span
 							style={{
+								display: "inline-flex",
+								alignItems: "center",
 								transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-								transition: "transform 0.25s ease",
+								transition: "transform 0.2s ease",
+								color: colors.textSecondary,
 							}}
 						>
-							<polyline points="6 9 12 15 18 9" />
-						</svg>
+							<IconChevronDown size="xs" />
+						</span>
 					</div>
 				</div>
 
@@ -534,17 +686,11 @@ export default function LogEntry({
 						}}
 						onClick={(e) => e.stopPropagation()}
 					>
-						<div
-							style={{
-								fontSize: "11px",
-								color: colors.textHeading,
-								lineHeight: 1.4,
-								wordBreak: "break-word",
-							}}
-						>
-							{actionText}
-						</div>
-						{renderChanges(log.changes_json, t)}
+						{renderChanges(log.changes_json, t, usersMap, buildingsMap) || (
+							<div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic" }}>
+								{t.noDetails || "Brak szczegółów zmian"}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>

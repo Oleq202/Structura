@@ -5,7 +5,9 @@ import {
 	font,
 	spacing,
 	radius,
+	shadow,
 	components,
+	status as statusTokens,
 } from "../theme";
 import { translations } from "../i18n";
 import * as api from "../services/api";
@@ -13,105 +15,15 @@ import Task from "../components/Task";
 import TaskModal from "../components/TaskModal";
 import WorkspaceFilterModal from "../components/WorkspaceFilterModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
-
-const ICONS = {
-	plus: (
-		<svg
-			width="14"
-			height="14"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="12" y1="5" x2="12" y2="19" />
-			<line x1="5" y1="12" x2="19" y2="12" />
-		</svg>
-	),
-	filter: (
-		<svg
-			width="14"
-			height="14"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-		</svg>
-	),
-	building: (
-		<svg
-			width="13"
-			height="13"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-			<path d="M9 22v-4h6v4" />
-			<path d="M8 6h.01" />
-			<path d="M16 6h.01" />
-			<path d="M12 6h.01" />
-			<path d="M12 10h.01" />
-			<path d="M12 14h.01" />
-			<path d="M16 10h.01" />
-			<path d="M16 14h.01" />
-			<path d="M8 10h.01" />
-			<path d="M8 14h.01" />
-		</svg>
-	),
-	clock: (
-		<svg
-			width="13"
-			height="13"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<circle cx="12" cy="12" r="10" />
-			<polyline points="12 6 12 12 16 14" />
-		</svg>
-	),
-	chevronDown: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polyline points="6 9 12 15 18 9" />
-		</svg>
-	),
-	check: (
-		<svg
-			width="13"
-			height="13"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polyline points="20 6 9 17 4 12" />
-		</svg>
-	),
-};
+import Skeleton from "../components/ui/Skeleton";
+import useToast from "../hooks/useToast";
+import {
+	IconPlus,
+	IconBuilding,
+	IconClock,
+	IconChevronDown,
+	IconCheck,
+} from "../components/icons";
 
 const filterTabsContainerStyle = {
 	display: "flex",
@@ -123,7 +35,8 @@ const filterTabsContainerStyle = {
 	paddingBottom: spacing[1],
 	scrollbarWidth: "none",
 	msOverflowStyle: "none",
-	width: "100%",
+	flex: 1,
+	minWidth: 0,
 	boxSizing: "border-box",
 };
 
@@ -156,12 +69,15 @@ const initialState = {
 	activeFilter: "all",
 	editingTask: null,
 	expandedTaskId: null,
+	loadingTasks: true,
 };
 
 function reducer(state, action) {
 	switch (action.type) {
+		case "SET_LOADING_TASKS":
+			return { ...state, loadingTasks: action.payload };
 		case "SET_TASKS":
-			return { ...state, tasks: action.payload };
+			return { ...state, tasks: action.payload, loadingTasks: false };
 		case "SET_BUILDINGS":
 			return { ...state, buildings: action.payload };
 		case "SET_CONTRACTORS":
@@ -236,9 +152,15 @@ function useManagerData(currentUser) {
 	});
 
 	const loadTasks = useCallback((days = completedDays) => {
-		api.getTasks({ completed_days: days }).then((data) => {
-			dispatch({ type: "SET_TASKS", payload: [...data].sort(compareTasks) });
-		});
+		dispatch({ type: "SET_LOADING_TASKS", payload: true });
+		api.getTasks({ completed_days: days })
+			.then((data) => {
+				dispatch({ type: "SET_TASKS", payload: [...data].sort(compareTasks) });
+			})
+			.catch((err) => {
+				console.error("Failed to load tasks:", err);
+				dispatch({ type: "SET_LOADING_TASKS", payload: false });
+			});
 	}, [completedDays]);
 
 	const handleCompletedDaysChange = (days) => {
@@ -323,7 +245,7 @@ function WorkspaceFilterButton({
 				borderColor: isActive ? colors.primary : colors.borderSubtle,
 			}}
 		>
-			{ICONS.building}
+			<IconBuilding size="sm" />
 			<span>{label}</span>
 		</button>
 	);
@@ -346,8 +268,8 @@ function TimeRangeOptionItem({ option, isSelected, onSelect }) {
 				padding: "8px 12px",
 				borderRadius: radius.md,
 				fontSize: font.size.sm,
-				fontWeight: isSelected ? font.weight.big : font.weight.medium,
-				color: isSelected ? colors.primary : colors.textPrimary,
+				fontWeight: isSelected ? font.weight.semibold : font.weight.medium,
+				color: isSelected ? colors.primary : colors.textHeading,
 				backgroundColor: isSelected
 					? `${colors.primary}12`
 					: isHovered
@@ -363,7 +285,7 @@ function TimeRangeOptionItem({ option, isSelected, onSelect }) {
 			<span>{option.label}</span>
 			{isSelected && (
 				<span style={{ color: colors.primary, display: "flex", alignItems: "center" }}>
-					{ICONS.check}
+					<IconCheck size="sm" />
 				</span>
 			)}
 		</button>
@@ -473,12 +395,12 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 				}}
 			>
 				<span style={{ color: isOpen ? colors.primary : colors.textSecondary, display: "flex", alignItems: "center" }}>
-					{ICONS.clock}
+					<IconClock size="sm" />
 				</span>
 				<span style={{ fontSize: font.size.xs, fontWeight: font.weight.medium, color: colors.textSecondary }}>
 					{t.timeRange}:
 				</span>
-				<span style={{ fontSize: font.size.xs, fontWeight: font.weight.big, color: isOpen ? colors.primary : colors.textPrimary }}>
+				<span style={{ fontSize: font.size.xs, fontWeight: font.weight.semibold, color: isOpen ? colors.primary : colors.textHeading }}>
 					{currentOption.label}
 				</span>
 				<span
@@ -490,7 +412,7 @@ function TimeRangeSelector({ completedDays, onCompletedDaysChange, t }) {
 						transition: "transform 0.2s ease",
 					}}
 				>
-					{ICONS.chevronDown}
+					<IconChevronDown size="xs" />
 				</span>
 			</button>
 
@@ -548,59 +470,98 @@ function ManagerFilterBar({
 	totalBuildingCount,
 	showWorkspaceButton,
 	onOpenWorkspaceModal,
+	canCreateTask,
+	onOpenCreateTask,
 	t,
 }) {
-	return (
-		<div style={filterTabsContainerStyle}>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "all")}
-				onClick={() => onSelectFilter("all")}
-			>
-				{t.all} ({totalCount})
-			</button>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "pending")}
-				onClick={() => onSelectFilter("pending")}
-			>
-				{t.pending} ({pendingCount})
-			</button>
-			<button
-				type="button"
-				style={getFilterTabStyle(activeFilter === "completed")}
-				onClick={() => onSelectFilter("completed")}
-			>
-				{t.completed} ({completedCount})
-			</button>
-
-			{showWorkspaceButton && (
-				<WorkspaceFilterButton
-					isWorkspaceFiltered={isWorkspaceFiltered}
-					isNoBuildingsSelected={isNoBuildingsSelected}
-					selectedBuildingCount={selectedBuildingCount}
-					totalBuildingCount={totalBuildingCount}
-					onOpenWorkspaceModal={onOpenWorkspaceModal}
-					t={t}
-				/>
-			)}
-
-			<TimeRangeSelector
-				completedDays={completedDays}
-				onCompletedDaysChange={onCompletedDaysChange}
-				t={t}
-			/>
-		</div>
-	);
-}
-
-function TaskGroupHeader({ label, count, color, bg, border }) {
 	return (
 		<div
 			style={{
 				display: "flex",
 				alignItems: "center",
-				gap: "8px",
+				justifyContent: "space-between",
+				gap: spacing[3],
+				width: "100%",
+			}}
+		>
+			<div style={filterTabsContainerStyle}>
+				<button
+					type="button"
+					style={getFilterTabStyle(activeFilter === "all")}
+					onClick={() => onSelectFilter("all")}
+				>
+					{t.all} ({totalCount})
+				</button>
+				<button
+					type="button"
+					style={getFilterTabStyle(activeFilter === "pending")}
+					onClick={() => onSelectFilter("pending")}
+				>
+					{t.pending} ({pendingCount})
+				</button>
+				<button
+					type="button"
+					style={getFilterTabStyle(activeFilter === "completed")}
+					onClick={() => onSelectFilter("completed")}
+				>
+					{t.completed} ({completedCount})
+				</button>
+
+				{showWorkspaceButton && (
+					<WorkspaceFilterButton
+						isWorkspaceFiltered={isWorkspaceFiltered}
+						isNoBuildingsSelected={isNoBuildingsSelected}
+						selectedBuildingCount={selectedBuildingCount}
+						totalBuildingCount={totalBuildingCount}
+						onOpenWorkspaceModal={onOpenWorkspaceModal}
+						t={t}
+					/>
+				)}
+
+				<TimeRangeSelector
+					completedDays={completedDays}
+					onCompletedDaysChange={onCompletedDaysChange}
+					t={t}
+				/>
+			</div>
+
+			{canCreateTask && (
+				<button
+					type="button"
+					className="desktop-create-task-btn"
+					onClick={onOpenCreateTask}
+					style={{
+						...components.primaryButton,
+						padding: `${spacing[2]} ${spacing[4]}`,
+						borderRadius: radius.md,
+						fontSize: font.size.sm,
+						fontWeight: font.weight.semibold,
+						display: "inline-flex",
+						alignItems: "center",
+						gap: spacing[2],
+						minHeight: "40px",
+						whiteSpace: "nowrap",
+						flexShrink: 0,
+						cursor: "pointer",
+						boxShadow: shadow.sm,
+					}}
+				>
+					<IconPlus size="sm" style={{ strokeWidth: 2.5 }} />
+					<span>{t.createNewTask || "Nowe zadanie"}</span>
+				</button>
+			)}
+		</div>
+	);
+}
+
+function TaskGroupHeader({ label, count, groupStatus = "pending" }) {
+	const s = statusTokens[groupStatus] || statusTokens.pending;
+	return (
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: "10px",
 				padding: "4px 0",
 				marginTop: "4px",
 				marginBottom: "2px",
@@ -609,7 +570,7 @@ function TaskGroupHeader({ label, count, color, bg, border }) {
 			<span
 				style={{
 					fontSize: font.size.sm,
-					fontWeight: font.weight.big,
+					fontWeight: font.weight.semibold,
 					color: colors.textHeading,
 					letterSpacing: font.letterSpacing.wide,
 					textTransform: "uppercase",
@@ -621,14 +582,15 @@ function TaskGroupHeader({ label, count, color, bg, border }) {
 				style={{
 					padding: "2px 8px",
 					borderRadius: radius.full,
-					fontSize: "11px",
-					fontWeight: font.weight.big,
-					background: bg,
-					border: `1px solid ${border}`,
-					color: color,
+					fontSize: font.size.xs,
+					fontWeight: font.weight.semibold,
+					fontVariantNumeric: "tabular-nums",
+					background: s.bg,
+					border: `1px solid ${s.border}`,
+					color: s.text,
 					display: "inline-flex",
 					alignItems: "center",
-					gap: "4px",
+					gap: "5px",
 				}}
 			>
 				<span
@@ -636,7 +598,7 @@ function TaskGroupHeader({ label, count, color, bg, border }) {
 						width: "6px",
 						height: "6px",
 						borderRadius: radius.full,
-						background: color,
+						background: s.solid || s.text,
 					}}
 				/>
 				{count}
@@ -654,6 +616,7 @@ function TaskGroupHeader({ label, count, color, bg, border }) {
 
 function ManagerTaskList({
 	tasks,
+	loading,
 	expandedTaskId,
 	updatingTaskIds,
 	onToggleExpanded,
@@ -667,6 +630,26 @@ function ManagerTaskList({
 	userRole,
 	t,
 }) {
+	if (loading && tasks.length === 0) {
+		return (
+			<div
+				style={{
+					width: "100%",
+					boxSizing: "border-box",
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 360px), 1fr))",
+					gap: spacing[3],
+					paddingBottom: "110px",
+				}}
+			>
+				<Skeleton.Card height="130px" />
+				<Skeleton.Card height="130px" />
+				<Skeleton.Card height="130px" />
+				<Skeleton.Card height="130px" />
+			</div>
+		);
+	}
+
 	if (isNoBuildingsSelected) {
 		return (
 			<div
@@ -721,31 +704,47 @@ function ManagerTaskList({
 	const completedTasks = tasks.filter((t) => t.status === "completed");
 
 	return (
-		<div style={{ width: "100%", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: spacing[3] }}>
+		<div
+			style={{
+				width: "100%",
+				boxSizing: "border-box",
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[4],
+				paddingBottom: "110px",
+			}}
+		>
 			{pendingTasks.length > 0 && (
 				<div style={{ display: "flex", flexDirection: "column", gap: spacing[3] }}>
 					<TaskGroupHeader
 						label={t.pending || "Oczekujące"}
 						count={pendingTasks.length}
-						color="#92400e"
-						bg="#fef3c7"
-						border="#fde68a"
+						groupStatus="pending"
 					/>
-					{pendingTasks.map((task) => (
-						<Task
-							key={task.id}
-							initialData={task}
-							expanded={expandedTaskId === task.id}
-							onToggle={() => onToggleExpanded(task.id)}
-							onEdit={() => onEditTask(task)}
-							onMarkCompleted={() => onMarkCompleted(task.id)}
-							onRevertCompleted={() => onRevertCompleted(task.id)}
-							onDeleteTask={() => onDeleteTask(task)}
-							isUpdating={updatingTaskIds?.has(task.id)}
-							language={language}
-							userRole={userRole}
-						/>
-					))}
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 360px), 1fr))",
+							gap: spacing[3],
+							alignItems: "start",
+						}}
+					>
+						{pendingTasks.map((task) => (
+							<Task
+								key={task.id}
+								initialData={task}
+								expanded={expandedTaskId === task.id}
+								onToggle={() => onToggleExpanded(task.id)}
+								onEdit={() => onEditTask(task)}
+								onMarkCompleted={() => onMarkCompleted(task.id)}
+								onRevertCompleted={() => onRevertCompleted(task.id)}
+								onDeleteTask={() => onDeleteTask(task)}
+								isUpdating={updatingTaskIds?.has(task.id)}
+								language={language}
+								userRole={userRole}
+							/>
+						))}
+					</div>
 				</div>
 			)}
 
@@ -754,25 +753,32 @@ function ManagerTaskList({
 					<TaskGroupHeader
 						label={t.completed || "Ukończone"}
 						count={completedTasks.length}
-						color="#27500a"
-						bg="#eaf3de"
-						border="#97c459"
+						groupStatus="completed"
 					/>
-					{completedTasks.map((task) => (
-						<Task
-							key={task.id}
-							initialData={task}
-							expanded={expandedTaskId === task.id}
-							onToggle={() => onToggleExpanded(task.id)}
-							onEdit={() => onEditTask(task)}
-							onMarkCompleted={() => onMarkCompleted(task.id)}
-							onRevertCompleted={() => onRevertCompleted(task.id)}
-							onDeleteTask={() => onDeleteTask(task)}
-							isUpdating={updatingTaskIds?.has(task.id)}
-							language={language}
-							userRole={userRole}
-						/>
-					))}
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 360px), 1fr))",
+							gap: spacing[3],
+							alignItems: "start",
+						}}
+					>
+						{completedTasks.map((task) => (
+							<Task
+								key={task.id}
+								initialData={task}
+								expanded={expandedTaskId === task.id}
+								onToggle={() => onToggleExpanded(task.id)}
+								onEdit={() => onEditTask(task)}
+								onMarkCompleted={() => onMarkCompleted(task.id)}
+								onRevertCompleted={() => onRevertCompleted(task.id)}
+								onDeleteTask={() => onDeleteTask(task)}
+								isUpdating={updatingTaskIds?.has(task.id)}
+								language={language}
+								userRole={userRole}
+							/>
+						))}
+					</div>
 				</div>
 			)}
 		</div>
@@ -866,19 +872,20 @@ function CreateTaskButton({ onClick, t }) {
 	return (
 		<button
 			type="button"
+			className="mobile-fab-btn"
 			onClick={onClick}
 			style={{
 				...components.primaryButton,
 				position: "fixed",
 				bottom: "calc(96px + env(safe-area-inset-bottom, 0px))",
-				right: "max(24px, calc((100vw - 840px) / 2 + 20px))",
+				right: "max(24px, calc((100vw - 1200px) / 2 + 20px))",
 				width: "56px",
 				height: "56px",
 				borderRadius: radius.full,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				boxShadow: "0 6px 20px rgba(46, 141, 228, 0.45)",
+				boxShadow: "0 6px 20px rgba(29, 112, 184, 0.45)",
 				zIndex: 1000,
 				cursor: "pointer",
 				border: "none",
@@ -901,19 +908,7 @@ function CreateTaskButton({ onClick, t }) {
 			aria-label={t.createNewTask || t.createTask || "Utwórz zadanie"}
 			title={t.createNewTask || t.createTask || "Utwórz zadanie"}
 		>
-			<svg
-				width="26"
-				height="26"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				strokeWidth="2.5"
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			>
-				<line x1="12" y1="5" x2="12" y2="19" />
-				<line x1="5" y1="12" x2="19" y2="12" />
-			</svg>
+			<IconPlus size="lg" style={{ strokeWidth: 2.5 }} />
 		</button>
 	);
 }
@@ -923,6 +918,7 @@ export default function ManagerPage({
 	language = "pl",
 }) {
 	const t = translations[language] || translations.pl;
+	const { toast } = useToast();
 	const [isWorkspaceModalOpen, setWorkspaceModalOpen] = useState(false);
 	const [updatingTaskIds, setUpdatingTaskIds] = useState(() => new Set());
 
@@ -976,6 +972,7 @@ export default function ManagerPage({
 		});
 		try {
 			await api.updateTaskStatus(taskId, "completed");
+			toast.success(t.taskMarkedCompleted || "Zadanie oznaczone jako ukończone");
 			loadTasks();
 		} catch (err) {
 			console.error("Failed to mark task completed", err);
@@ -997,6 +994,7 @@ export default function ManagerPage({
 		});
 		try {
 			await api.updateTaskStatus(taskId, "pending");
+			toast.info(t.taskReverted || "Przywrócono status zadania");
 			loadTasks();
 		} catch (err) {
 			console.error("Failed to revert task", err);
@@ -1023,6 +1021,7 @@ export default function ManagerPage({
 			setIsDeletingTask(true);
 			await api.deleteTask(taskToDelete.id);
 			setTaskToDelete(null);
+			toast.success(t.taskDeletedSuccess || "Zadanie zostało usunięte");
 			loadTasks();
 		} catch (err) {
 			console.error("Failed to delete task", err);
@@ -1035,7 +1034,7 @@ export default function ManagerPage({
 		<div
 			style={{
 				padding: `${spacing[4]} ${spacing[4]}`,
-				maxWidth: "840px",
+				maxWidth: "1200px",
 				width: "100%",
 				margin: "0 auto",
 				display: "flex",
@@ -1060,11 +1059,16 @@ export default function ManagerPage({
 				totalBuildingCount={state.buildings.length}
 				showWorkspaceButton={currentUser?.role !== "contractor"}
 				onOpenWorkspaceModal={() => setWorkspaceModalOpen(true)}
+				canCreateTask={currentUser?.role !== "contractor"}
+				onOpenCreateTask={() =>
+					dispatch({ type: "SET_CREATE_TASK_OPEN", payload: true })
+				}
 				t={t}
 			/>
 
 			<ManagerTaskList
 				tasks={filteredTasks}
+				loading={state.loadingTasks}
 				expandedTaskId={state.expandedTaskId}
 				updatingTaskIds={updatingTaskIds}
 				onToggleExpanded={(id) =>
@@ -1093,7 +1097,10 @@ export default function ManagerPage({
 					onClose={() =>
 						dispatch({ type: "SET_CREATE_TASK_OPEN", payload: false })
 					}
-					onTaskCreated={loadTasks}
+					onTaskCreated={() => {
+						loadTasks();
+						toast.success(t.taskCreatedSuccess || "Zadanie zostało utworzone");
+					}}
 					language={language}
 				/>
 			)}
@@ -1109,7 +1116,10 @@ export default function ManagerPage({
 					onClose={() =>
 						dispatch({ type: "SET_EDITING_TASK", payload: null })
 					}
-					onTaskCreated={loadTasks}
+					onTaskCreated={() => {
+						loadTasks();
+						toast.success(t.taskUpdatedSuccess || "Zadanie zostało zaktualizowane");
+					}}
 					language={language}
 				/>
 			)}

@@ -4,68 +4,112 @@ import {
 	spacing,
 	radius,
 	shadow,
-	components,
 } from "../theme";
 import { translations } from "../i18n";
+import {
+	IconChevronDown,
+	IconMapPin,
+	IconClock,
+	IconCheck,
+	IconRefresh,
+	IconEdit,
+	IconTrash,
+	IconUser,
+} from "./icons";
+import { Button, Badge } from "./ui";
 
 const taskCardStyle = {
 	width: "100%",
 	boxSizing: "border-box",
 	background: colors.cardBg,
 	borderRadius: radius.xl,
-	border: `0.5px solid ${colors.cardBorder}`,
-	boxShadow: shadow.modal,
+	border: `1px solid ${colors.cardBorder}`,
+	boxShadow: shadow.card,
 	overflow: "hidden",
-	cursor: "pointer",
-	padding: 0,
 	textAlign: "left",
+	transition: "border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease",
 };
 
-const unassignedTextStyle = {
-	color: colors.textMuted,
-	fontStyle: "italic",
-};
+function ContractorAvatar({ firstName, lastName }) {
+	const initials = [firstName, lastName]
+		.filter(Boolean)
+		.map((n) => n[0].toUpperCase())
+		.join("") || "?";
 
-function Avatar({ first_name, last_name }) {
-	const initials =
-		[first_name, last_name]
-			.filter(Boolean)
-			.map((name) => name[0].toUpperCase())
-			.join("") || "?";
-	return <div style={components.avatar}>{initials}</div>;
+	return (
+		<div
+			style={{
+				width: "30px",
+				height: "30px",
+				borderRadius: radius.full,
+				background: colors.primaryLight,
+				border: `1px solid #bfdbfe`,
+				color: colors.primary,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				fontSize: font.size.xs,
+				fontWeight: font.weight.bold,
+				letterSpacing: "0.5px",
+				flexShrink: 0,
+			}}
+			aria-hidden="true"
+		>
+			{initials}
+		</div>
+	);
 }
 
 function UserCell({ user, t }) {
 	if (!user) {
-		return <span style={unassignedTextStyle}>{t.unassigned}</span>;
+		return (
+			<span style={{ color: colors.textMuted, fontStyle: "italic", fontSize: font.size.sm }}>
+				{t.unassigned || "Nieprzypisany"}
+			</span>
+		);
 	}
-	const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+	const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.login;
 	return (
-		<>
-			<span>{fullName}</span>
-			<Avatar first_name={user.first_name} last_name={user.last_name} />
-		</>
+		<div style={{ display: "flex", alignItems: "center", gap: spacing[2] }}>
+			<ContractorAvatar firstName={user.first_name} lastName={user.last_name} />
+			<span style={{ fontSize: font.size.sm, fontWeight: font.weight.medium, color: colors.textBody }}>
+				{fullName}
+			</span>
+		</div>
 	);
 }
 
-function MetaRow({ label, children }) {
+function MetaRow({ label, icon, children }) {
 	return (
 		<div
 			style={{
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "space-between",
+				gap: spacing[2],
+				padding: `${spacing[1]} 0`,
 			}}
 		>
-			<span style={components.sectionLabel}>{label}</span>
+			<span
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					fontSize: font.size.xs,
+					fontWeight: font.weight.semibold,
+					color: colors.textSecondary,
+					textTransform: "uppercase",
+					letterSpacing: font.letterSpacing.wide,
+				}}
+			>
+				{icon}
+				{label}
+			</span>
 			<div
 				style={{
 					display: "flex",
 					alignItems: "center",
 					gap: spacing[2],
-					fontSize: font.size.sm,
-					color: colors.textBody,
-					fontWeight: font.weight.medium,
 				}}
 			>
 				{children}
@@ -86,36 +130,49 @@ function formatTimestamp(iso, language) {
 	});
 }
 
-function TaskHeader({ task, buildingLabel, buildingAddress, isPending, isUpdating, t }) {
-	const statusBadgeStyle = isPending
-		? {
-				bg: "#fef3c7",
-				border: "#fde68a",
-				text: "#92400e",
-				label: t.pending || "Oczekujące",
-			}
-		: {
-				bg: "#eaf3de",
-				border: "#97c459",
-				text: "#27500a",
-				label: t.completed || "Ukończone",
-			};
-
+function TaskHeader({
+	task,
+	buildingLabel,
+	buildingAddress,
+	isPending,
+	isUpdating,
+	expanded,
+	onToggle,
+	t,
+}) {
 	return (
-		<div style={{ padding: `${spacing[4]} ${spacing[5]}` }}>
+		<div
+			role="button"
+			tabIndex={0}
+			aria-expanded={expanded}
+			onClick={onToggle}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onToggle();
+				}
+			}}
+			style={{
+				padding: `${spacing[4]} ${spacing[5]}`,
+				cursor: "pointer",
+				userSelect: "none",
+				WebkitTapHighlightColor: "transparent",
+			}}
+		>
+			{/* Top row: Title and Status Badge + Expand Toggle */}
 			<div
 				style={{
 					display: "flex",
 					alignItems: "flex-start",
 					justifyContent: "space-between",
-					gap: spacing[2],
-					marginBottom: buildingAddress ? spacing[3] : 0,
+					gap: spacing[3],
+					marginBottom: spacing[2],
 				}}
 			>
-				<h2
+				<h3
 					style={{
-						fontSize: font.size.lg,
-						fontWeight: font.weight.medium,
+						fontSize: font.size.md,
+						fontWeight: font.weight.semibold,
 						color: isPending ? colors.textHeading : colors.textSecondary,
 						letterSpacing: font.letterSpacing.tight,
 						lineHeight: font.lineHeight.tight,
@@ -126,253 +183,80 @@ function TaskHeader({ task, buildingLabel, buildingAddress, isPending, isUpdatin
 					}}
 				>
 					{task.title}
-				</h2>
+				</h3>
 
-				<span
-					style={{
-						padding: "2px 8px",
-						borderRadius: radius.full,
-						fontSize: "11px",
-						fontWeight: font.weight.big,
-						background: statusBadgeStyle.bg,
-						border: `1px solid ${statusBadgeStyle.border}`,
-						color: statusBadgeStyle.text,
-						whiteSpace: "nowrap",
-						flexShrink: 0,
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "5px",
-						transition: "background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease",
-					}}
-				>
-					{isUpdating ? (
-						<svg
-							width="10"
-							height="10"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="3"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							style={{ animation: "spin 0.8s linear infinite" }}
-						>
-							<path d="M21 12a9 9 0 1 1-6.219-8.56" />
-						</svg>
-					) : (
-						<span
-							style={{
-								width: "6px",
-								height: "6px",
-								borderRadius: radius.full,
-								background: statusBadgeStyle.text,
-							}}
-						/>
-					)}
-					{isUpdating ? (t.saving || "Zapisywanie...") : statusBadgeStyle.label}
-				</span>
+				<div style={{ display: "flex", alignItems: "center", gap: spacing[2], flexShrink: 0 }}>
+					<Badge status={isPending ? "pending" : "completed"} dot={!isUpdating}>
+						{isUpdating
+							? (t.saving || "Zapisywanie...")
+							: isPending
+								? (t.pending || "Oczekujące")
+								: (t.completed || "Ukończone")}
+					</Badge>
+
+					<div
+						style={{
+							width: "28px",
+							height: "28px",
+							borderRadius: radius.md,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							color: colors.textSecondary,
+							transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+							transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+						}}
+						aria-hidden="true"
+					>
+						<IconChevronDown size="sm" />
+					</div>
+				</div>
 			</div>
 
-			{buildingAddress && (
+			{/* Building Location Badge / Pill */}
+			{buildingAddress ? (
 				<div
 					style={{
-						borderTop: `0.5px solid ${colors.borderSubtle}`,
-						paddingTop: spacing[3],
+						display: "flex",
+						alignItems: "center",
+						gap: "6px",
+						marginTop: spacing[2],
+						color: colors.textBody,
+						fontSize: font.size.sm,
+						fontWeight: font.weight.medium,
 					}}
 				>
-					<MetaRow label={t.building}>
-						<div
+					<IconMapPin size="sm" style={{ color: colors.primary, flexShrink: 0 }} />
+					<span style={{ color: colors.textHeading }}>{buildingAddress}</span>
+					{buildingLabel && (
+						<span
 							style={{
-								display: "flex",
-								flexDirection: "column",
-								alignItems: "flex-end",
-								gap: "2px",
+								color: colors.textSecondary,
+								fontSize: font.size.xs,
+								fontWeight: font.weight.regular,
 							}}
 						>
-							<span>{buildingAddress}</span>
-							{buildingLabel && (
-								<span
-									style={{
-										fontSize: font.size.xs,
-										color: colors.textSecondary,
-										fontWeight: font.weight.regular,
-									}}
-								>
-									{buildingLabel}
-								</span>
-							)}
-						</div>
-					</MetaRow>
+							• {buildingLabel}
+						</span>
+					)}
+				</div>
+			) : (
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: "6px",
+						marginTop: spacing[2],
+						color: colors.textMuted,
+						fontSize: font.size.xs,
+						fontStyle: "italic",
+					}}
+				>
+					<IconMapPin size="xs" style={{ opacity: 0.6 }} />
+					<span>{t.noBuilding || "Brak przypisanego budynku"}</span>
 				</div>
 			)}
 		</div>
-	);
-}
-
-function UpdatingSpinner() {
-	return (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			style={{ animation: "spin 0.8s linear infinite" }}
-		>
-			<path d="M21 12a9 9 0 1 1-6.219-8.56" />
-		</svg>
-	);
-}
-
-function PendingTaskActions({ isUpdating, canEdit, t, onMarkCompleted, onEdit }) {
-	return (
-		<div style={{ display: "flex", gap: spacing[3] }}>
-			<button
-				type="button"
-				disabled={isUpdating}
-				style={{
-					...components.primaryButton,
-					flex: 1,
-					minHeight: "44px",
-					padding: `${spacing[3]} ${spacing[4]}`,
-					borderRadius: radius.lg,
-					fontFamily: font.family.sans,
-					boxSizing: "border-box",
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: "8px",
-					opacity: isUpdating ? 0.75 : 1,
-					cursor: isUpdating ? "not-allowed" : "pointer",
-					transition: "background-color 0.15s ease, opacity 0.15s ease",
-				}}
-				onClick={(e) => {
-					e.stopPropagation();
-					if (!isUpdating) onMarkCompleted?.();
-				}}
-				onMouseEnter={(e) => {
-					if (!isUpdating) e.currentTarget.style.background = colors.primaryHover;
-				}}
-				onMouseLeave={(e) => {
-					if (!isUpdating) e.currentTarget.style.background = colors.primary;
-				}}
-			>
-				{isUpdating && <UpdatingSpinner />}
-				{isUpdating ? (t.saving || "Zapisywanie...") : t.markCompleted}
-			</button>
-			{canEdit && (
-				<button
-					type="button"
-					disabled={isUpdating}
-					style={{
-						...components.ghostButton,
-						minHeight: "44px",
-						padding: `${spacing[3]} ${spacing[4]}`,
-						borderRadius: radius.lg,
-						fontFamily: font.family.sans,
-						opacity: isUpdating ? 0.5 : 1,
-						cursor: isUpdating ? "not-allowed" : "pointer",
-					}}
-					onClick={(e) => {
-						e.stopPropagation();
-						if (!isUpdating) onEdit?.();
-					}}
-				>
-					{t.edit}
-				</button>
-			)}
-		</div>
-	);
-}
-
-function CompletedTaskActions({ isUpdating, canDelete, t, onRevertCompleted, onDeleteTask }) {
-	return (
-		<div style={{ display: "flex", gap: spacing[3] }}>
-			<button
-				type="button"
-				disabled={isUpdating}
-				style={{
-					...components.ghostButton,
-					minHeight: "44px",
-					padding: `${spacing[3]} ${spacing[4]}`,
-					borderRadius: radius.lg,
-					fontFamily: font.family.sans,
-					flex: 1,
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: "8px",
-					opacity: isUpdating ? 0.75 : 1,
-					cursor: isUpdating ? "not-allowed" : "pointer",
-					transition: "background-color 0.15s ease, opacity 0.15s ease",
-				}}
-				onClick={(e) => {
-					e.stopPropagation();
-					if (!isUpdating) onRevertCompleted?.();
-				}}
-			>
-				{isUpdating && <UpdatingSpinner />}
-				{isUpdating ? (t.saving || "Zapisywanie...") : t.revertCompletion}
-			</button>
-			{canDelete && (
-				<button
-					type="button"
-					disabled={isUpdating}
-					style={{
-						...components.primaryButton,
-						minHeight: "44px",
-						padding: `${spacing[3]} ${spacing[4]}`,
-						borderRadius: radius.lg,
-						fontFamily: font.family.sans,
-						opacity: isUpdating ? 0.5 : 1,
-						cursor: isUpdating ? "not-allowed" : "pointer",
-					}}
-					onClick={(e) => {
-						e.stopPropagation();
-						if (!isUpdating) onDeleteTask?.();
-					}}
-				>
-					{t.delete}
-				</button>
-			)}
-		</div>
-	);
-}
-
-function TaskActions({
-	isPending,
-	isUpdating,
-	canEdit,
-	canDelete,
-	t,
-	onMarkCompleted,
-	onRevertCompleted,
-	onEdit,
-	onDeleteTask,
-}) {
-	if (isPending) {
-		return (
-			<PendingTaskActions
-				isUpdating={isUpdating}
-				canEdit={canEdit}
-				t={t}
-				onMarkCompleted={onMarkCompleted}
-				onEdit={onEdit}
-			/>
-		);
-	}
-
-	return (
-		<CompletedTaskActions
-			isUpdating={isUpdating}
-			canDelete={canDelete}
-			t={t}
-			onRevertCompleted={onRevertCompleted}
-			onDeleteTask={onDeleteTask}
-		/>
 	);
 }
 
@@ -392,62 +276,146 @@ function TaskDetails({
 	return (
 		<div
 			style={{
-				borderTop: `0.5px solid ${colors.borderSubtle}`,
+				borderTop: `1px solid ${colors.borderSubtle}`,
 				padding: `${spacing[4]} ${spacing[5]}`,
+				background: "#fafcff",
 				display: "flex",
 				flexDirection: "column",
 				gap: spacing[4],
 			}}
 			onClick={(e) => e.stopPropagation()}
 		>
+			{/* Description */}
 			{task.description && (
-				<p
+				<div
 					style={{
-						fontSize: font.size.base,
-						color: colors.textBody,
-						lineHeight: font.lineHeight.normal,
-						margin: 0,
+						padding: spacing[3],
+						borderRadius: radius.md,
+						background: colors.cardBg,
+						border: `1px solid ${colors.borderSubtle}`,
 					}}
 				>
-					{task.description}
-				</p>
+					<p
+						style={{
+							fontSize: font.size.base,
+							color: colors.textBody,
+							lineHeight: font.lineHeight.normal,
+							margin: 0,
+							whiteSpace: "pre-wrap",
+						}}
+					>
+						{task.description}
+					</p>
+				</div>
 			)}
 
-			<MetaRow label={t.createdBy}>
-				<UserCell user={task.created_by_user} t={t} />
-			</MetaRow>
-
-			<MetaRow label={t.assignedTo}>
-				<UserCell user={task.assigned_to_user} t={t} />
-			</MetaRow>
-
-			{task.created_at && (
-				<MetaRow label={t.created}>
-					<span style={{ color: colors.textSecondary }}>
-						{formatTimestamp(task.created_at, language)}
-					</span>
+			{/* Metadata List */}
+			<div
+				style={{
+					display: "flex",
+					flexDirection: "column",
+					gap: spacing[2],
+					padding: `${spacing[2]} 0`,
+				}}
+			>
+				<MetaRow label={t.assignedTo} icon={<IconUser size="xs" />}>
+					<UserCell user={task.assigned_to_user} t={t} />
 				</MetaRow>
-			)}
 
-			{task.updated_at && task.updated_at !== task.created_at && (
-				<MetaRow label={t.lastUpdated}>
-					<span style={{ color: colors.textSecondary }}>
-						{formatTimestamp(task.updated_at, language)}
-					</span>
+				<MetaRow label={t.createdBy} icon={<IconUser size="xs" />}>
+					<UserCell user={task.created_by_user} t={t} />
 				</MetaRow>
-			)}
 
-			<TaskActions
-				isPending={isPending}
-				isUpdating={isUpdating}
-				canEdit={canEdit}
-				canDelete={canDelete}
-				t={t}
-				onMarkCompleted={onMarkCompleted}
-				onRevertCompleted={onRevertCompleted}
-				onEdit={onEdit}
-				onDeleteTask={onDeleteTask}
-			/>
+				{task.created_at && (
+					<MetaRow label={t.created} icon={<IconClock size="xs" />}>
+						<span style={{ fontSize: font.size.xs, color: colors.textSecondary, fontWeight: font.weight.medium }}>
+							{formatTimestamp(task.created_at, language)}
+						</span>
+					</MetaRow>
+				)}
+
+				{task.updated_at && task.updated_at !== task.created_at && (
+					<MetaRow label={t.lastUpdated} icon={<IconClock size="xs" />}>
+						<span style={{ fontSize: font.size.xs, color: colors.textSecondary, fontWeight: font.weight.medium }}>
+							{formatTimestamp(task.updated_at, language)}
+						</span>
+					</MetaRow>
+				)}
+			</div>
+
+			{/* Action Buttons */}
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: spacing[3],
+					paddingTop: spacing[2],
+				}}
+			>
+				{isPending ? (
+					<>
+						<Button
+							variant="primary"
+							size="lg"
+							fullWidth
+							loading={isUpdating}
+							onClick={(e) => {
+								e.stopPropagation();
+								onMarkCompleted?.();
+							}}
+						>
+							<IconCheck size="sm" />
+							<span>{t.markCompleted || "Oznacz jako ukończone"}</span>
+						</Button>
+
+						{canEdit && (
+							<Button
+								variant="secondary"
+								size="lg"
+								disabled={isUpdating}
+								onClick={(e) => {
+									e.stopPropagation();
+									onEdit?.();
+								}}
+							>
+								<IconEdit size="sm" />
+								<span>{t.edit || "Edytuj"}</span>
+							</Button>
+						)}
+					</>
+				) : (
+					<>
+						<Button
+							variant="ghost"
+							size="lg"
+							fullWidth
+							loading={isUpdating}
+							onClick={(e) => {
+								e.stopPropagation();
+								onRevertCompleted?.();
+							}}
+						>
+							<IconRefresh size="sm" />
+							<span>{t.revertCompletion || "Przywróć"}</span>
+						</Button>
+
+						{canDelete && (
+							<Button
+								variant="danger"
+								size="lg"
+								disabled={isUpdating}
+								onClick={(e) => {
+									e.stopPropagation();
+									onDeleteTask?.();
+								}}
+							>
+								<IconTrash size="sm" />
+								<span>{t.delete || "Usuń"}</span>
+							</Button>
+						)}
+					</>
+				)}
+			</div>
 		</div>
 	);
 }
@@ -480,19 +448,11 @@ export default function Task({
 		<div
 			style={{
 				...taskCardStyle,
-				opacity: isUpdating ? 0.85 : 1,
+				opacity: isUpdating ? 0.8 : 1,
 				borderColor: isUpdating ? colors.primary : colors.cardBorder,
-				transition: "border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease",
 			}}
-			role="button"
-			tabIndex={0}
-			onClick={onToggle}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					onToggle?.(e);
-				}
-			}}
+			role="region"
+			aria-label={task.title}
 		>
 			<TaskHeader
 				task={task}
@@ -500,6 +460,8 @@ export default function Task({
 				buildingAddress={buildingAddress}
 				isPending={isPending}
 				isUpdating={isUpdating}
+				expanded={expanded}
+				onToggle={onToggle}
 				t={t}
 			/>
 
@@ -507,7 +469,7 @@ export default function Task({
 				style={{
 					display: "grid",
 					gridTemplateRows: expanded ? "1fr" : "0fr",
-					transition: "grid-template-rows 0.25s ease",
+					transition: "grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
 				}}
 			>
 				<div style={{ overflow: "hidden" }}>

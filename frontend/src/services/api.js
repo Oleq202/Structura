@@ -44,7 +44,7 @@ export async function doRefreshToken() {
 				inMemoryAccessToken = data.access_token;
 			}
 			return data.access_token;
-		} catch (err) {
+		} catch {
 			inMemoryAccessToken = null;
 			window.dispatchEvent(new CustomEvent("auth:unauthorized"));
 			return null;
@@ -126,7 +126,7 @@ export async function initSession() {
 		if (!token) return null;
 		const user = await getMe();
 		return user;
-	} catch (e) {
+	} catch {
 		inMemoryAccessToken = null;
 		return null;
 	}
@@ -150,7 +150,8 @@ export async function createUser(userData) {
 		body: JSON.stringify(userData),
 	});
 	if (!response.ok) {
-		throw new Error("Failed to create user");
+		const errData = await response.json().catch(() => null);
+		throw new Error(errData?.detail || "Failed to create user");
 	}
 	return response.json();
 }
@@ -161,7 +162,8 @@ export async function updateUser(userId, userData) {
 		body: JSON.stringify(userData),
 	});
 	if (!response.ok) {
-		throw new Error("Failed to update user");
+		const errData = await response.json().catch(() => null);
+		throw new Error(errData?.detail || "Failed to update user");
 	}
 	return response.json();
 }

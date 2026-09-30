@@ -5,215 +5,174 @@ import {
 	spacing,
 	radius,
 	shadow,
-	components,
-	status,
 } from "../theme";
 import { translations } from "../i18n";
-import LanguageSwitcher from "../components/LanguageSwitcher";
 import UsersManagementModal from "../components/UsersManagementModal";
 import BuildingsManagementModal from "../components/BuildingsManagementModal";
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import LogoutConfirmModal from "../components/LogoutConfirmModal";
+import { Button, Badge } from "../components/ui";
+import {
+	IconUsers,
+	IconBuilding,
+	IconKey,
+	IconLogout,
+	IconChevronRight,
+	IconGlobe,
+} from "../components/icons";
 import * as api from "../services/api";
 
-const unassignedTextStyle = {
-	color: colors.textMuted,
-	fontStyle: "italic",
-};
-
-const primaryButtonStyle = {
-	...components.primaryButton,
-	width: "100%",
-	minHeight: "44px",
-	padding: "10px 14px",
-	borderRadius: radius.md,
-	fontSize: "13px",
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	letterSpacing: font.letterSpacing.wide,
-	cursor: "pointer",
-	boxSizing: "border-box",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	gap: spacing[2],
-	transition: "background 0.15s, transform 0.1s",
-};
-
-const secondaryButtonStyle = {
-	width: "100%",
-	minHeight: "44px",
-	padding: "10px 14px",
-	borderRadius: radius.md,
-	fontSize: "13px",
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	letterSpacing: font.letterSpacing.wide,
-	cursor: "pointer",
-	boxSizing: "border-box",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	gap: spacing[2],
-	background: colors.cardBg,
-	color: colors.textHeading,
-	border: `1px solid ${colors.borderDefault}`,
-	transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-};
-
-const logoutButtonStyle = {
-	width: "100%",
-	minHeight: "44px",
-	padding: "10px 14px",
-	borderRadius: radius.md,
-	fontSize: "13px",
-	fontFamily: font.family.sans,
-	fontWeight: font.weight.medium,
-	letterSpacing: font.letterSpacing.wide,
-	cursor: "pointer",
-	boxSizing: "border-box",
-	display: "flex",
-	alignItems: "center",
-	justifyContent: "center",
-	gap: spacing[2],
-	background: status.danger.bg,
-	color: status.danger.text,
-	border: `1px solid ${status.danger.border}`,
-	transition: "background 0.15s, border-color 0.15s, transform 0.1s",
-};
-
-const ICONS = {
-	users: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-			<circle cx="9" cy="7" r="4" />
-			<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-			<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-		</svg>
-	),
-	building: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-			<path d="M9 22v-4h6v4" />
-			<path d="M8 6h.01" />
-			<path d="M16 6h.01" />
-			<path d="M12 6h.01" />
-			<path d="M12 10h.01" />
-			<path d="M12 14h.01" />
-			<path d="M16 10h.01" />
-			<path d="M16 14h.01" />
-			<path d="M8 10h.01" />
-			<path d="M8 14h.01" />
-		</svg>
-	),
-	key: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-			<path d="M7 11V7a5 5 0 0 1 10 0v4" />
-		</svg>
-	),
-	logout: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-			<polyline points="16 17 21 12 16 7" />
-			<line x1="21" y1="12" x2="9" y2="12" />
-		</svg>
-	),
-};
-
-function Avatar({ first_name, last_name }) {
-	const initials =
-		[first_name, last_name]
-			.filter(Boolean)
-			.map((name) => name[0].toUpperCase())
-			.join("") || "?";
+function SettingsSection({ title, children }) {
 	return (
-		<div style={components.avatar}>
-			{initials}
+		<div style={{ display: "flex", flexDirection: "column", gap: spacing[2] }}>
+			{title && (
+				<span
+					style={{
+						fontSize: font.size.xs,
+						fontWeight: font.weight.semibold,
+						color: colors.textSecondary,
+						textTransform: "uppercase",
+						letterSpacing: font.letterSpacing.caps,
+						paddingLeft: spacing[1],
+					}}
+				>
+					{title}
+				</span>
+			)}
+			<div
+				style={{
+					background: colors.cardBg,
+					borderRadius: radius.xl,
+					border: `1px solid ${colors.cardBorder}`,
+					boxShadow: shadow.sm,
+					overflow: "hidden",
+					display: "flex",
+					flexDirection: "column",
+				}}
+			>
+				{children}
+			</div>
 		</div>
 	);
 }
 
-function UserCell({ user, t }) {
-	if (!user) {
-		return (
-			<span style={unassignedTextStyle}>
-				{t.unassigned}
-			</span>
-		);
-	}
-	const full_name = [
-		user.first_name,
-		user.last_name,
-	]
-		.filter(Boolean)
-		.join(" ");
+function SettingsTile({
+	icon,
+	title,
+	description,
+	onClick,
+	trailing,
+	isDanger = false,
+	showBorder = true,
+}) {
 	return (
-		<>
-			<span>{full_name}</span>
-			<Avatar
-				first_name={user.first_name}
-				last_name={user.last_name}
-			/>
-		</>
+		<button
+			type="button"
+			onClick={onClick}
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: spacing[3],
+				padding: `${spacing[3]} ${spacing[4]}`,
+				background: "transparent",
+				border: "none",
+				borderBottom: showBorder ? `1px solid ${colors.borderSubtle}` : "none",
+				cursor: "pointer",
+				width: "100%",
+				textAlign: "left",
+				boxSizing: "border-box",
+				minHeight: "56px",
+				transition: "background-color 0.15s ease",
+			}}
+			onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.pageBg)}
+			onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+		>
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[3], flex: 1, minWidth: 0 }}>
+				<div
+					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: isDanger ? "#fee2e2" : colors.primaryLight,
+						color: isDanger ? "#dc2626" : colors.primary,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+					}}
+				>
+					{icon}
+				</div>
+
+				<div style={{ flex: 1, minWidth: 0 }}>
+					<div
+						style={{
+							fontSize: font.size.base,
+							fontWeight: font.weight.semibold,
+							color: isDanger ? "#dc2626" : colors.textHeading,
+						}}
+					>
+						{title}
+					</div>
+					{description && (
+						<div
+							style={{
+								fontSize: font.size.xs,
+								color: colors.textSecondary,
+								marginTop: "2px",
+							}}
+						>
+							{description}
+						</div>
+					)}
+				</div>
+			</div>
+
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[2], flexShrink: 0 }}>
+				{trailing}
+				{!trailing && (
+					<IconChevronRight
+						size="sm"
+						style={{ color: colors.textMuted }}
+					/>
+				)}
+			</div>
+		</button>
 	);
 }
 
-export default function SettingsPage({
-	currentUser,
-	language,
-	onLanguageChange,
-	onLogout,
-}) {
-	const t = translations[language] || translations.pl;
-	const [isUsersModalOpen, setUsersModalOpen] =
-		useState(false);
-	const [
-		isBuildingsModalOpen,
-		setBuildingsModalOpen,
-	] = useState(false);
-	const [isChangePasswordModalOpen, setChangePasswordModalOpen] =
-		useState(false);
-	const [isLogoutModalOpen, setLogoutModalOpen] =
-		useState(false);
+const ROLE_META = {
+	admin: { status: "danger", defaultLabel: "Administrator", key: "admin" },
+	manager: { status: "info", defaultLabel: "Zarządca", key: "manager" },
+	contractor: { status: "pending", defaultLabel: "Wykonawca", key: "contractor" },
+};
 
-	const isAdmin = currentUser?.role === "admin";
+function getRoleMeta(role, t) {
+	const config = ROLE_META[role] || ROLE_META.contractor;
+	return {
+		status: config.status,
+		label: t[config.key] || config.defaultLabel,
+	};
+}
+
+function getUserInitials(user) {
+	return (
+		[user?.first_name, user?.last_name]
+			.filter(Boolean)
+			.map((n) => n[0].toUpperCase())
+			.join("") || user?.login?.[0]?.toUpperCase() || "?"
+	);
+}
+
+function getUserFullName(user) {
+	return [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.login || "";
+}
+
+function ProfileOverviewCard({ currentUser, language, onLanguageChange, t }) {
+	const initials = getUserInitials(currentUser);
+	const fullName = getUserFullName(currentUser);
+	const { label: roleLabel, status: roleStatus } = getRoleMeta(currentUser?.role, t);
 
 	const handleLanguageToggle = async () => {
 		const nextLang = language === "pl" ? "en" : "pl";
@@ -228,187 +187,186 @@ export default function SettingsPage({
 	return (
 		<div
 			style={{
+				background: colors.cardBg,
+				borderRadius: radius.xl,
+				border: `1px solid ${colors.cardBorder}`,
+				boxShadow: shadow.sm,
+				padding: `${spacing[5]} ${spacing[5]}`,
 				display: "flex",
-				flexDirection: "column",
-				background: colors.pageBg,
-				fontFamily: font.family.sans,
-				boxSizing: "border-box",
-				maxWidth: "600px",
-				margin: "0 auto",
-				width: "100%",
-				paddingBottom: spacing[8],
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: spacing[4],
+				flexWrap: "wrap",
 			}}
 		>
-			<div
-				style={{
-					padding: `${spacing[6]} ${spacing[4]}`,
-					display: "flex",
-					justifyContent:
-						"space-between",
-					alignItems: "center",
-				}}
-			>
+			<div style={{ display: "flex", alignItems: "center", gap: spacing[3], flex: 1, minWidth: 0 }}>
 				<div
 					style={{
+						width: "52px",
+						height: "52px",
+						borderRadius: radius.full,
+						background: colors.primaryLight,
+						border: "2px solid #bfdbfe",
+						color: colors.primary,
 						display: "flex",
 						alignItems: "center",
-						gap: spacing[3],
+						justifyContent: "center",
+						fontSize: font.size.lg,
+						fontWeight: font.weight.bold,
+						flexShrink: 0,
 					}}
 				>
-					<UserCell
-						user={currentUser}
-						t={t}
-					/>
+					{initials}
 				</div>
-				<LanguageSwitcher
-					language={language}
-					onLanguageChange={
-						handleLanguageToggle
-					}
-				/>
+
+				<div style={{ flex: 1, minWidth: 0 }}>
+					<div
+						style={{
+							fontSize: font.size.lg,
+							fontWeight: font.weight.bold,
+							color: colors.textHeading,
+							whiteSpace: "nowrap",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+						}}
+					>
+						{fullName}
+					</div>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: spacing[2],
+							marginTop: "4px",
+							flexWrap: "wrap",
+						}}
+					>
+						<span style={{ fontSize: font.size.xs, color: colors.textSecondary }}>
+							@{currentUser?.login}
+						</span>
+						<Badge status={roleStatus} dot={false} style={{ fontSize: "11px", padding: "1px 6px" }}>
+							{roleLabel}
+						</Badge>
+					</div>
+				</div>
 			</div>
 
-			<div
+			<Button
+				variant="secondary"
+				size="sm"
+				onClick={handleLanguageToggle}
 				style={{
-					padding: `0 ${spacing[4]}`,
-					display: "flex",
-					flexDirection: "column",
-					gap: spacing[4],
+					display: "inline-flex",
+					alignItems: "center",
+					gap: spacing[2],
 				}}
 			>
-				{isAdmin && (
-					<>
-						<button
-							type="button"
-							onClick={() =>
-								setUsersModalOpen(
-									true
-								)
-							}
-							style={
-								primaryButtonStyle
-							}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.background =
-									colors.primaryHover)
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.background =
-									colors.primary)
-							}
-							onMouseDown={(e) =>
-								(e.currentTarget.style.transform =
-									"scale(0.98)")
-							}
-							onMouseUp={(e) =>
-								(e.currentTarget.style.transform =
-									"scale(1)")
-							}
-						>
-							{ICONS.users}
-							{t.addUser}
-						</button>
+				<IconGlobe size="xs" />
+				<span style={{ fontWeight: font.weight.bold }}>
+					{language.toUpperCase()}
+				</span>
+			</Button>
+		</div>
+	);
+}
 
-						<button
-							type="button"
-							onClick={() =>
-								setBuildingsModalOpen(
-									true
-								)
-							}
-							style={
-								primaryButtonStyle
-							}
-							onMouseEnter={(e) =>
-								(e.currentTarget.style.background =
-									colors.primaryHover)
-							}
-							onMouseLeave={(e) =>
-								(e.currentTarget.style.background =
-									colors.primary)
-							}
-							onMouseDown={(e) =>
-								(e.currentTarget.style.transform =
-									"scale(0.98)")
-							}
-							onMouseUp={(e) =>
-								(e.currentTarget.style.transform =
-									"scale(1)")
-							}
-						>
-							{ICONS.building}
-							{t.addBuilding}
-						</button>
-					</>
-				)}
+function AdministrationSection({ t, onManageUsers, onManageBuildings }) {
+	return (
+		<SettingsSection title={t.administration || "Zarządzanie aplikacją"}>
+			<SettingsTile
+				icon={<IconUsers size="md" />}
+				title={t.manageUsers || t.users || "Użytkownicy"}
+				description={t.manageUsersDesc || "Zarządzaj kontami, rolami i uprawnieniami"}
+				onClick={onManageUsers}
+				showBorder={true}
+			/>
+			<SettingsTile
+				icon={<IconBuilding size="md" />}
+				title={t.manageBuildings || t.buildings || "Budynki"}
+				description={t.manageBuildingsDesc || "Przeglądaj, dodawaj i edytuj nieruchomości"}
+				onClick={onManageBuildings}
+				showBorder={false}
+			/>
+		</SettingsSection>
+	);
+}
 
-				<button
-					type="button"
+export default function SettingsPage({
+	currentUser,
+	language,
+	onLanguageChange,
+	onLogout,
+}) {
+	const t = translations[language] || translations.pl;
+	const [isUsersModalOpen, setUsersModalOpen] = useState(false);
+	const [isBuildingsModalOpen, setBuildingsModalOpen] = useState(false);
+	const [isChangePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+	const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
+
+	const isAdmin = currentUser?.role === "admin";
+
+	return (
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[5],
+				padding: `${spacing[4]} ${spacing[4]} ${spacing[12]} ${spacing[4]}`,
+				maxWidth: "640px",
+				margin: "0 auto",
+				width: "100%",
+				boxSizing: "border-box",
+			}}
+		>
+			<ProfileOverviewCard
+				currentUser={currentUser}
+				language={language}
+				onLanguageChange={onLanguageChange}
+				t={t}
+			/>
+
+			{isAdmin && (
+				<AdministrationSection
+					t={t}
+					onManageUsers={() => setUsersModalOpen(true)}
+					onManageBuildings={() => setBuildingsModalOpen(true)}
+				/>
+			)}
+
+			<SettingsSection title={t.security || "Bezpieczeństwo"}>
+				<SettingsTile
+					icon={<IconKey size="md" />}
+					title={t.changePassword || "Zmień hasło"}
+					description={t.changePasswordDesc || "Zaktualizuj swoje hasło logowania"}
 					onClick={() => setChangePasswordModalOpen(true)}
-					style={secondaryButtonStyle}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.background = colors.pageBg;
-						e.currentTarget.style.borderColor = colors.borderStrong;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.background = colors.cardBg;
-						e.currentTarget.style.borderColor = colors.borderDefault;
-					}}
-					onMouseDown={(e) =>
-						(e.currentTarget.style.transform =
-							"scale(0.98)")
-					}
-					onMouseUp={(e) =>
-						(e.currentTarget.style.transform =
-							"scale(1)")
-					}
-				>
-					{ICONS.key}
-					{t.changePassword}
-				</button>
+					showBorder={false}
+				/>
+			</SettingsSection>
 
-				<button
-					type="button"
+			<SettingsSection title={t.session || "Sesja"}>
+				<SettingsTile
+					icon={<IconLogout size="md" />}
+					title={t.logout || "Wyloguj się"}
+					description={t.logoutDesc || "Zakończ sesję na tym urządzeniu"}
+					isDanger={true}
 					onClick={() => setLogoutModalOpen(true)}
-					style={logoutButtonStyle}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.background = "#fbdada";
-						e.currentTarget.style.borderColor = "#e57373";
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.background = status.danger.bg;
-						e.currentTarget.style.borderColor = status.danger.border;
-					}}
-					onMouseDown={(e) =>
-						(e.currentTarget.style.transform =
-							"scale(0.98)")
-					}
-					onMouseUp={(e) =>
-						(e.currentTarget.style.transform =
-							"scale(1)")
-					}
-				>
-					{ICONS.logout}
-					{t.logout}
-				</button>
-			</div>
+					showBorder={false}
+				/>
+			</SettingsSection>
 
 			{isUsersModalOpen && (
 				<UsersManagementModal
-					onClose={() =>
-						setUsersModalOpen(false)
-					}
+					isOpen={isUsersModalOpen}
+					onClose={() => setUsersModalOpen(false)}
+					currentUser={currentUser}
 					language={language}
 				/>
 			)}
 
 			{isBuildingsModalOpen && (
 				<BuildingsManagementModal
-					onClose={() =>
-						setBuildingsModalOpen(
-							false
-						)
-					}
+					isOpen={isBuildingsModalOpen}
+					onClose={() => setBuildingsModalOpen(false)}
 					language={language}
 				/>
 			)}
@@ -421,17 +379,18 @@ export default function SettingsPage({
 				/>
 			)}
 
-			<LogoutConfirmModal
-				isOpen={isLogoutModalOpen}
-				onClose={() => setLogoutModalOpen(false)}
-				onConfirm={() => {
-					setLogoutModalOpen(false);
-					onLogout?.();
-				}}
-				language={language}
-				currentUser={currentUser}
-			/>
+			{isLogoutModalOpen && (
+				<LogoutConfirmModal
+					isOpen={isLogoutModalOpen}
+					onClose={() => setLogoutModalOpen(false)}
+					onConfirm={() => {
+						setLogoutModalOpen(false);
+						onLogout?.();
+					}}
+					language={language}
+					currentUser={currentUser}
+				/>
+			)}
 		</div>
 	);
 }
-

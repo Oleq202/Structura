@@ -1,262 +1,36 @@
-import { useRef, useEffect, useReducer } from "react";
-import { createPortal } from "react-dom";
+import { useState, useRef, useEffect } from "react";
 import {
 	colors,
 	font,
 	spacing,
 	radius,
-	shadow,
-	components,
 	status,
 } from "../theme";
 import { translations } from "../i18n";
-
-const ICONS = {
-	user: (
-		<svg
-			width="18"
-			height="18"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-			<circle cx="12" cy="7" r="4" />
-		</svg>
-	),
-	close: (
-		<svg
-			width="18"
-			height="18"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="18" y1="6" x2="6" y2="18" />
-			<line x1="6" y1="6" x2="18" y2="18" />
-		</svg>
-	),
-	eye: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-			<circle cx="12" cy="12" r="3" />
-		</svg>
-	),
-	eyeOff: (
-		<svg
-			width="16"
-			height="16"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-			<line x1="1" y1="1" x2="23" y2="23" />
-		</svg>
-	),
-};
-
-const initialState = (user) => ({
-	formData: {
-		login: user?.login || "",
-		password: "",
-		first_name: user?.first_name || "",
-		last_name: user?.last_name || "",
-		role: user?.role || "contractor",
-	},
-	errors: {},
-	loading: false,
-	showPassword: false,
-	isChangingPassword: false,
-	passwordChange: {
-		currentPassword: "",
-		newPassword: "",
-		confirmPassword: "",
-	},
-});
-
-function reducer(state, action) {
-	switch (action.type) {
-		case "SET_FORM_DATA":
-			return {
-				...state,
-				formData: {
-					...state.formData,
-					...action.payload,
-				},
-				errors: {
-					...state.errors,
-					...Object.keys(action.payload).reduce((acc, key) => {
-						acc[key] = "";
-						return acc;
-					}, {}),
-				},
-			};
-		case "SET_ERRORS":
-			return {
-				...state,
-				errors: action.payload,
-			};
-		case "SET_LOADING":
-			return {
-				...state,
-				loading: action.payload,
-			};
-		case "TOGGLE_SHOW_PASSWORD":
-			return {
-				...state,
-				showPassword: !state.showPassword,
-			};
-		case "TOGGLE_CHANGING_PASSWORD":
-			return {
-				...state,
-				isChangingPassword: !state.isChangingPassword,
-				passwordChange: {
-					currentPassword: "",
-					newPassword: "",
-					confirmPassword: "",
-				},
-			};
-		case "SET_PASSWORD_CHANGE":
-			return {
-				...state,
-				passwordChange: {
-					...state.passwordChange,
-					...action.payload,
-				},
-			};
-		default:
-			return state;
-	}
-}
-
-function UserModalHeader({ isEdit, user, t, onClose }) {
-	return (
-		<div
-			style={{
-				padding: `${spacing[4]} ${spacing[5]}`,
-				background: colors.shellDeep,
-				color: colors.shellText,
-				display: "flex",
-				justifyContent: "space-between",
-				alignItems: "center",
-				flexShrink: 0,
-			}}
-		>
-			<div style={{ display: "flex", alignItems: "center", gap: spacing[3] }}>
-				<div
-					style={{
-						width: "36px",
-						height: "36px",
-						borderRadius: radius.md,
-						background: "rgba(255,255,255,0.12)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						color: colors.primary,
-					}}
-				>
-					{ICONS.user}
-				</div>
-				<div>
-					<h3
-						style={{
-							margin: 0,
-							fontSize: font.size.md,
-							fontWeight: font.weight.big,
-							color: "#ffffff",
-						}}
-					>
-						{isEdit ? t.editUser : t.createUser}
-					</h3>
-					<p
-						style={{
-							margin: "2px 0 0 0",
-							fontSize: font.size.xs,
-							color: colors.shellTextMuted,
-						}}
-					>
-						{isEdit
-							? user.login || t.settings
-							: t.addUser || "Fill in account details"}
-					</p>
-				</div>
-			</div>
-			<button
-				type="button"
-				onClick={onClose}
-				style={{
-					background: "rgba(255,255,255,0.08)",
-					border: "none",
-					borderRadius: radius.full,
-					width: "44px",
-					height: "44px",
-					minWidth: "44px",
-					minHeight: "44px",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					cursor: "pointer",
-					color: colors.shellTextMuted,
-					transition: "background 0.15s, color 0.15s",
-					boxSizing: "border-box",
-				}}
-				onMouseEnter={(e) => {
-					e.currentTarget.style.background = "rgba(255,255,255,0.2)";
-					e.currentTarget.style.color = "#ffffff";
-				}}
-				onMouseLeave={(e) => {
-					e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-					e.currentTarget.style.color = colors.shellTextMuted;
-				}}
-				aria-label={t.close || "Close"}
-			>
-				{ICONS.close}
-			</button>
-		</div>
-	);
-}
+import { Modal, Button, Input } from "./ui";
+import { IconUser, IconEye, IconEyeOff } from "./icons";
 
 function RoleSelector({ currentRole, onChange, t }) {
 	const roles = [
-		{ id: "manager", label: t.manager || "Manager" },
-		{ id: "contractor", label: t.contractor || "Contractor" },
-		{ id: "admin", label: t.admin || "Admin" },
+		{ id: "manager", label: t.manager || "Zarządca" },
+		{ id: "contractor", label: t.contractor || "Wykonawca" },
+		{ id: "admin", label: t.admin || "Administrator" },
 	];
 
 	return (
-		<div>
+		<div style={{ display: "flex", flexDirection: "column", gap: spacing[1] }}>
 			<span
 				style={{
-					fontSize: font.size.xs,
-					fontWeight: font.weight.big,
+					fontSize: font.size.sm,
+					fontWeight: font.weight.semibold,
 					color: colors.textSecondary,
-					marginBottom: spacing[1],
-					display: "block",
 					textTransform: "uppercase",
-					letterSpacing: font.letterSpacing.wide,
+					letterSpacing: font.letterSpacing.caps,
 				}}
 			>
-				{t.role}
+				{t.role || "Rola"} *
 			</span>
+
 			<div
 				style={{
 					display: "grid",
@@ -272,7 +46,7 @@ function RoleSelector({ currentRole, onChange, t }) {
 							type="button"
 							onClick={() => onChange(r.id)}
 							style={{
-								padding: `${spacing[2]} ${spacing[3]}`,
+								padding: `${spacing[2]} ${spacing[2]}`,
 								minHeight: "44px",
 								minWidth: "44px",
 								display: "inline-flex",
@@ -283,8 +57,8 @@ function RoleSelector({ currentRole, onChange, t }) {
 								border: `1.5px solid ${isSelected ? colors.primary : colors.borderDefault}`,
 								background: isSelected ? `${colors.primary}12` : colors.pageBg,
 								color: isSelected ? colors.primary : colors.textBody,
-								fontWeight: isSelected ? font.weight.big : font.weight.medium,
-								fontSize: font.size.xs,
+								fontWeight: isSelected ? font.weight.semibold : font.weight.medium,
+								fontSize: font.size.sm,
 								cursor: "pointer",
 								transition: "background-color 0.15s ease, border-color 0.15s ease",
 								textAlign: "center",
@@ -299,87 +73,107 @@ function RoleSelector({ currentRole, onChange, t }) {
 	);
 }
 
-function PasswordSection({
-	isEdit,
-	state,
-	dispatch,
-	t,
-}) {
-	if (!isEdit) {
-		return (
-			<div>
-				<label
-					htmlFor="user-password"
-					style={{
-						fontSize: font.size.xs,
-						fontWeight: font.weight.big,
-						color: colors.textSecondary,
-						marginBottom: spacing[1],
-						display: "block",
-						textTransform: "uppercase",
-						letterSpacing: font.letterSpacing.wide,
-					}}
-				>
-					{t.password}
-				</label>
-				<div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-					<input
-						id="user-password"
-						type={state.showPassword ? "text" : "password"}
-						value={state.formData.password}
-						onChange={(e) =>
-							dispatch({
-								type: "SET_FORM_DATA",
-								payload: { password: e.target.value },
-							})
-						}
-						placeholder={t.enterPassword}
-						style={{
-							...components.input,
-							width: "100%",
-							boxSizing: "border-box",
-							paddingRight: spacing[12],
-							fontSize: font.size.sm,
-							borderRadius: radius.md,
-							border: state.errors.password
-								? `1px solid ${status.danger.border}`
-								: `1px solid ${colors.borderDefault}`,
-							background: state.errors.password
-								? status.danger.bg
-								: colors.cardBg,
-						}}
-					/>
-					<button
-						type="button"
-						onClick={() => dispatch({ type: "TOGGLE_SHOW_PASSWORD" })}
-						style={{
-							position: "absolute",
-							right: spacing[1],
-							background: "none",
-							border: "none",
-							color: colors.textSecondary,
-							cursor: "pointer",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minWidth: "44px",
-							minHeight: "44px",
-							boxSizing: "border-box",
-							padding: 0,
-						}}
-					>
-						{state.showPassword ? ICONS.eyeOff : ICONS.eye}
-					</button>
-				</div>
-				{state.errors.password && (
-					<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-						{state.errors.password}
-					</p>
-				)}
-			</div>
-		);
+function validateUserFields({ formData, isEdit, isChangingPassword, passwordChange, t }) {
+	const newErrors = {};
+
+	if (!formData.login.trim()) {
+		newErrors.login = t.required || "Pole wymagane";
+	}
+	if (!formData.first_name.trim()) {
+		newErrors.first_name = t.required || "Pole wymagane";
+	}
+	if (!formData.last_name.trim()) {
+		newErrors.last_name = t.required || "Pole wymagane";
 	}
 
+	if (!isEdit) {
+		if (!formData.password) {
+			newErrors.password = t.required || "Pole wymagane";
+		} else if (formData.password.length < 5) {
+			newErrors.password = t.passwordMinLength || "Hasło musi mieć co najmniej 5 znaków";
+		}
+	}
+
+	if (isEdit && isChangingPassword) {
+		if (!passwordChange.currentPassword) {
+			newErrors.currentPassword = t.currentPasswordRequired || t.required || "Pole wymagane";
+		}
+		if (!passwordChange.newPassword) {
+			newErrors.newPassword = t.newPasswordRequired || t.required || "Pole wymagane";
+		} else if (passwordChange.newPassword.length < 5) {
+			newErrors.newPassword = t.passwordMinLength || "Hasło musi mieć co najmniej 5 znaków";
+		} else if (passwordChange.newPassword === passwordChange.currentPassword) {
+			newErrors.newPassword = t.passwordSameAsCurrent || "Nowe hasło musi różnić się od aktualnego";
+		}
+		if (passwordChange.newPassword !== passwordChange.confirmPassword) {
+			newErrors.confirmPassword = t.passwordsDoNotMatch || "Hasła nie są identyczne";
+		}
+	}
+
+	return newErrors;
+}
+
+function PasswordToggleInput({
+	id,
+	label,
+	value,
+	onChange,
+	error,
+	placeholder,
+	autoComplete,
+	required = false,
+	t,
+}) {
+	const [show, setShow] = useState(false);
+
+	return (
+		<div style={{ position: "relative" }}>
+			<Input
+				id={id}
+				label={label}
+				type={show ? "text" : "password"}
+				placeholder={placeholder}
+				value={value}
+				onChange={onChange}
+				error={error}
+				autoComplete={autoComplete}
+				required={required}
+			/>
+			<button
+				type="button"
+				onClick={() => setShow((prev) => !prev)}
+				aria-label={show ? (t.hidePassword || "Ukryj hasło") : (t.showPassword || "Pokaż hasło")}
+				style={{
+					position: "absolute",
+					right: spacing[2],
+					top: "28px",
+					background: "none",
+					border: "none",
+					color: colors.textSecondary,
+					cursor: "pointer",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: "44px",
+					height: "44px",
+					boxSizing: "border-box",
+					padding: 0,
+				}}
+			>
+				{show ? <IconEyeOff size="sm" /> : <IconEye size="sm" />}
+			</button>
+		</div>
+	);
+}
+
+function PasswordChangeSection({
+	isChangingPassword,
+	onToggle,
+	passwordChange,
+	onChangeField,
+	errors,
+	t,
+}) {
 	return (
 		<div
 			style={{
@@ -391,340 +185,387 @@ function PasswordSection({
 		>
 			<button
 				type="button"
-				onClick={() => dispatch({ type: "TOGGLE_CHANGING_PASSWORD" })}
+				onClick={onToggle}
 				style={{
 					background: "none",
 					border: "none",
 					color: colors.primary,
-					fontWeight: font.weight.big,
-					fontSize: font.size.xs,
+					fontWeight: font.weight.semibold,
+					fontSize: font.size.sm,
 					cursor: "pointer",
-					padding: "0",
+					padding: 0,
 					minHeight: "44px",
 					display: "inline-flex",
 					alignItems: "center",
 					boxSizing: "border-box",
 				}}
 			>
-				{state.isChangingPassword
-					? "✕ Anuluj zmianę hasła"
-					: "+ Zmień hasło"}
+				{isChangingPassword
+					? (t.cancelPasswordChange || "✕ Anuluj zmianę hasła")
+					: (t.changeUserPassword || "+ Zmień hasło użytkownika")}
 			</button>
 
-			{state.isChangingPassword && (
+			{isChangingPassword && (
 				<div style={{ marginTop: spacing[3], display: "flex", flexDirection: "column", gap: spacing[3] }}>
-					<div>
-						<input
-							id="user-current-pw"
-							type="password"
-							placeholder="Aktualne hasło"
-							aria-label="Aktualne hasło"
-							value={state.passwordChange.currentPassword}
-							onChange={(e) =>
-								dispatch({
-									type: "SET_PASSWORD_CHANGE",
-									payload: { currentPassword: e.target.value },
-								})
-							}
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: font.size.sm,
-								borderRadius: radius.md,
-							}}
-						/>
-					</div>
-					<div>
-						<input
-							id="user-new-pw"
-							type="password"
-							placeholder="Nowe hasło"
-							aria-label="Nowe hasło"
-							value={state.passwordChange.newPassword}
-							onChange={(e) =>
-								dispatch({
-									type: "SET_PASSWORD_CHANGE",
-									payload: { newPassword: e.target.value },
-								})
-							}
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: font.size.sm,
-								borderRadius: radius.md,
-							}}
-						/>
-					</div>
-					<div>
-						<input
-							id="user-confirm-pw"
-							type="password"
-							placeholder="Powtórz nowe hasło"
-							aria-label="Powtórz nowe hasło"
-							value={state.passwordChange.confirmPassword}
-							onChange={(e) =>
-								dispatch({
-									type: "SET_PASSWORD_CHANGE",
-									payload: { confirmPassword: e.target.value },
-								})
-							}
-							style={{
-								...components.input,
-								width: "100%",
-								boxSizing: "border-box",
-								fontSize: font.size.sm,
-								borderRadius: radius.md,
-							}}
-						/>
-					</div>
+					<PasswordToggleInput
+						id="user-current-password"
+						label={t.currentPassword || "Aktualne hasło"}
+						placeholder={t.enterCurrentPassword || "Wprowadź aktualne hasło"}
+						value={passwordChange.currentPassword}
+						onChange={(e) => onChangeField("currentPassword", e.target.value)}
+						error={errors.currentPassword}
+						autoComplete="current-password"
+						t={t}
+					/>
+					<PasswordToggleInput
+						id="user-new-password"
+						label={t.newPassword || "Nowe hasło"}
+						placeholder={t.enterNewPassword || "Nowe hasło (min. 5 znaków)"}
+						value={passwordChange.newPassword}
+						onChange={(e) => onChangeField("newPassword", e.target.value)}
+						error={errors.newPassword}
+						autoComplete="new-password"
+						t={t}
+					/>
+					<PasswordToggleInput
+						id="user-confirm-password"
+						label={t.confirmNewPassword || "Powtórz nowe hasło"}
+						placeholder={t.confirmNewPasswordPlaceholder || "Powtórz nowe hasło"}
+						value={passwordChange.confirmPassword}
+						onChange={(e) => onChangeField("confirmPassword", e.target.value)}
+						error={errors.confirmPassword}
+						autoComplete="new-password"
+						t={t}
+					/>
 				</div>
 			)}
 		</div>
 	);
 }
 
-function UserFormFields({
-	state,
-	dispatch,
-	bodyRef,
-	loginRef,
+function useUserForm({
+	user,
 	isEdit,
+	onClose,
+	onSave,
+	setLoadingState,
+	t,
+}) {
+	const loginInputRef = useRef(null);
+	const [formData, setFormData] = useState({
+		login: user?.login || "",
+		password: "",
+		first_name: user?.first_name || "",
+		last_name: user?.last_name || "",
+		role: user?.role || "contractor",
+	});
+	const [showPassword, setShowPassword] = useState(false);
+	const [isChangingPassword, setIsChangingPassword] = useState(false);
+	const [passwordChange, setPasswordChange] = useState({
+		currentPassword: "",
+		newPassword: "",
+		confirmPassword: "",
+	});
+	const [errors, setErrors] = useState({});
+	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		const timer = setTimeout(() => loginInputRef.current?.focus(), 50);
+		return () => clearTimeout(timer);
+	}, []);
+
+	const handleFieldChange = (field, value) => {
+		setFormData((prev) => ({ ...prev, [field]: value }));
+		if (errors[field]) {
+			setErrors((prev) => ({ ...prev, [field]: "" }));
+		}
+	};
+
+	const handlePasswordChangeField = (field, value) => {
+		setPasswordChange((prev) => ({ ...prev, [field]: value }));
+		if (errors[field] || errors.form) {
+			setErrors((prev) => ({ ...prev, [field]: "", form: "" }));
+		}
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		const validationErrors = validateUserFields({
+			formData,
+			isEdit,
+			isChangingPassword,
+			passwordChange,
+			t,
+		});
+
+		if (Object.keys(validationErrors).length > 0) {
+			setErrors(validationErrors);
+			return;
+		}
+
+		setLoading(true);
+		setLoadingState?.(true);
+
+		try {
+			const savedUser = {
+				login: formData.login.trim(),
+				first_name: formData.first_name.trim(),
+				last_name: formData.last_name.trim(),
+				role: formData.role,
+			};
+
+			if (!isEdit) {
+				savedUser.password = formData.password;
+			} else {
+				savedUser.id = user.id;
+				if (isChangingPassword) {
+					savedUser.current_password = passwordChange.currentPassword;
+					savedUser.currentPassword = passwordChange.currentPassword;
+					savedUser.password = passwordChange.newPassword;
+				}
+			}
+
+			if (onSave) await onSave(savedUser);
+			if (onClose) onClose();
+		} catch (err) {
+			console.error("Error saving user", err);
+			const errMsg = err?.message || (t.failedToSaveUser || "Błąd zapisu użytkownika");
+			const lower = errMsg.toLowerCase();
+			if (lower.includes("aktualne") || lower.includes("current password")) {
+				setErrors({ currentPassword: t.invalidCurrentPassword || errMsg });
+			} else if (lower.includes("różnić") || lower.includes("different") || lower.includes("same")) {
+				setErrors({ newPassword: t.passwordSameAsCurrent || errMsg });
+			} else {
+				setErrors({ form: errMsg });
+			}
+		} finally {
+			setLoading(false);
+			setLoadingState?.(false);
+		}
+	};
+
+	return {
+		loginInputRef,
+		formData,
+		showPassword,
+		setShowPassword,
+		isChangingPassword,
+		setIsChangingPassword,
+		passwordChange,
+		errors,
+		loading,
+		handleFieldChange,
+		handlePasswordChangeField,
+		handleSubmit,
+	};
+}
+
+function NewPasswordInput({
+	password,
+	onChange,
+	error,
+	showPassword,
+	onToggleShowPassword,
 	t,
 }) {
 	return (
-		<div
-			ref={bodyRef}
-			style={{
-				padding: `${spacing[4]} ${spacing[5]}`,
-				overflowY: "auto",
-				flex: 1,
-				display: "flex",
-				flexDirection: "column",
-				gap: spacing[4],
-				background: colors.cardBg,
-			}}
-		>
-			<RoleSelector
-				currentRole={state.formData.role}
-				onChange={(role) =>
-					dispatch({
-						type: "SET_FORM_DATA",
-						payload: { role },
-					})
-				}
-				t={t}
+		<div style={{ position: "relative" }}>
+			<Input
+				label={t.password || "Hasło"}
+				type={showPassword ? "text" : "password"}
+				placeholder={t.enterPassword || "Wprowadź hasło (min. 5 znaków)"}
+				value={password}
+				onChange={onChange}
+				error={error}
+				autoComplete="new-password"
+				required
 			/>
-
-			<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing[3] }}>
-				<div>
-					<label
-						htmlFor="user-first-name"
-						style={{
-							fontSize: font.size.xs,
-							fontWeight: font.weight.big,
-							color: colors.textSecondary,
-							marginBottom: spacing[1],
-							display: "block",
-							textTransform: "uppercase",
-							letterSpacing: font.letterSpacing.wide,
-						}}
-					>
-						{t.firstName}
-					</label>
-					<input
-						id="user-first-name"
-						type="text"
-						value={state.formData.first_name}
-						onChange={(e) =>
-							dispatch({
-								type: "SET_FORM_DATA",
-								payload: { first_name: e.target.value },
-							})
-						}
-						placeholder={t.enterFirstName}
-						style={{
-							...components.input,
-							width: "100%",
-							boxSizing: "border-box",
-							fontSize: font.size.sm,
-							borderRadius: radius.md,
-							border: state.errors.first_name
-								? `1px solid ${status.danger.border}`
-								: `1px solid ${colors.borderDefault}`,
-							background: state.errors.first_name
-								? status.danger.bg
-								: colors.cardBg,
-						}}
-					/>
-					{state.errors.first_name && (
-						<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-							{state.errors.first_name}
-						</p>
-					)}
-				</div>
-
-				<div>
-					<label
-						htmlFor="user-last-name"
-						style={{
-							fontSize: font.size.xs,
-							fontWeight: font.weight.big,
-							color: colors.textSecondary,
-							marginBottom: spacing[1],
-							display: "block",
-							textTransform: "uppercase",
-							letterSpacing: font.letterSpacing.wide,
-						}}
-					>
-						{t.lastName}
-					</label>
-					<input
-						id="user-last-name"
-						type="text"
-						value={state.formData.last_name}
-						onChange={(e) =>
-							dispatch({
-								type: "SET_FORM_DATA",
-								payload: { last_name: e.target.value },
-							})
-						}
-						placeholder={t.enterLastName}
-						style={{
-							...components.input,
-							width: "100%",
-							boxSizing: "border-box",
-							fontSize: font.size.sm,
-							borderRadius: radius.md,
-							border: state.errors.last_name
-								? `1px solid ${status.danger.border}`
-								: `1px solid ${colors.borderDefault}`,
-							background: state.errors.last_name
-								? status.danger.bg
-								: colors.cardBg,
-						}}
-					/>
-					{state.errors.last_name && (
-						<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-							{state.errors.last_name}
-						</p>
-					)}
-				</div>
-			</div>
-
-			<div>
-				<label
-					htmlFor="user-login"
-					style={{
-						fontSize: font.size.xs,
-						fontWeight: font.weight.big,
-						color: colors.textSecondary,
-						marginBottom: spacing[1],
-						display: "block",
-						textTransform: "uppercase",
-						letterSpacing: font.letterSpacing.wide,
-					}}
-				>
-					{t.login}
-				</label>
-				<input
-					id="user-login"
-					ref={loginRef}
-					type="text"
-					value={state.formData.login}
-					onChange={(e) =>
-						dispatch({
-							type: "SET_FORM_DATA",
-							payload: { login: e.target.value },
-						})
-					}
-					placeholder={t.enterLogin}
-					style={{
-						...components.input,
-						width: "100%",
-						boxSizing: "border-box",
-						fontSize: font.size.sm,
-						borderRadius: radius.md,
-						border: state.errors.login
-							? `1px solid ${status.danger.border}`
-							: `1px solid ${colors.borderDefault}`,
-						background: state.errors.login
-							? status.danger.bg
-							: colors.cardBg,
-					}}
-				/>
-				{state.errors.login && (
-					<p style={{ fontSize: font.size.xs, color: status.danger.text, margin: `${spacing[1]} 0 0 0` }}>
-						{state.errors.login}
-					</p>
-				)}
-			</div>
-
-			<PasswordSection
-				isEdit={isEdit}
-				state={state}
-				dispatch={dispatch}
-				t={t}
-			/>
+			<button
+				type="button"
+				onClick={onToggleShowPassword}
+				aria-label={showPassword ? (t.hidePassword || "Ukryj hasło") : (t.showPassword || "Pokaż hasło")}
+				style={{
+					position: "absolute",
+					right: spacing[2],
+					top: "28px",
+					background: "none",
+					border: "none",
+					color: colors.textSecondary,
+					cursor: "pointer",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: "44px",
+					height: "44px",
+					boxSizing: "border-box",
+					padding: 0,
+				}}
+			>
+				{showPassword ? <IconEyeOff size="sm" /> : <IconEye size="sm" />}
+			</button>
 		</div>
 	);
 }
 
-function UserModalFooter({ isEdit, loading, onClose, t }) {
+function UserFormFooter({ loading, isEdit, onClose, t }) {
+	const submitLabel = loading
+		? (t.saving || "Zapisywanie...")
+		: isEdit
+			? (t.update || "Zaktualizuj")
+			: (t.create || "Utwórz");
+
 	return (
 		<div
 			style={{
-				padding: `${spacing[3]} ${spacing[5]}`,
-				background: colors.pageBg,
-				borderTop: `1px solid ${colors.borderSubtle}`,
 				display: "flex",
 				justifyContent: "flex-end",
 				gap: spacing[2],
-				flexShrink: 0,
+				paddingTop: spacing[3],
+				borderTop: `1px solid ${colors.borderSubtle}`,
 			}}
 		>
-			<button
-				type="button"
-				onClick={onClose}
-				style={{
-					...components.ghostButton,
-					minHeight: "44px",
-					minWidth: "44px",
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					boxSizing: "border-box",
-					padding: `${spacing[2]} ${spacing[4]}`,
-					fontSize: font.size.sm,
-				}}
-			>
-				{t.cancel}
-			</button>
-			<button
-				type="submit"
+			<Button
+				variant="secondary"
+				size="md"
 				disabled={loading}
-				style={{
-					...components.primaryButton,
-					minHeight: "44px",
-					minWidth: "44px",
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					boxSizing: "border-box",
-					padding: `${spacing[2]} ${spacing[5]}`,
-					fontSize: font.size.sm,
-					opacity: loading ? 0.6 : 1,
-					cursor: loading ? "not-allowed" : "pointer",
-				}}
+				onClick={onClose}
 			>
-				{loading
-					? t.saving
-					: isEdit
-						? t.update
-						: t.create}
-			</button>
+				{t.cancel || "Anuluj"}
+			</Button>
+			<Button
+				variant="primary"
+				size="md"
+				type="submit"
+				loading={loading}
+			>
+				{submitLabel}
+			</Button>
 		</div>
+	);
+}
+
+function UserFormContent({
+	user,
+	isEdit,
+	onClose,
+	onSave,
+	setLoadingState,
+	t,
+}) {
+	const {
+		loginInputRef,
+		formData,
+		showPassword,
+		setShowPassword,
+		isChangingPassword,
+		setIsChangingPassword,
+		passwordChange,
+		errors,
+		loading,
+		handleFieldChange,
+		handlePasswordChangeField,
+		handleSubmit,
+	} = useUserForm({
+		user,
+		isEdit,
+		onClose,
+		onSave,
+		setLoadingState,
+		t,
+	});
+
+	return (
+		<form
+			id="user-form"
+			onSubmit={handleSubmit}
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				gap: spacing[4],
+				margin: 0,
+			}}
+		>
+			{errors.form && (
+				<div
+					style={{
+						padding: `${spacing[2]} ${spacing[3]}`,
+						borderRadius: "6px",
+						background: status.danger.bg,
+						border: `1px solid ${status.danger.border}`,
+						color: status.danger.text,
+						fontSize: font.size.xs,
+					}}
+				>
+					{errors.form}
+				</div>
+			)}
+
+			<RoleSelector
+				currentRole={formData.role}
+				onChange={(role) => handleFieldChange("role", role)}
+				t={t}
+			/>
+
+			<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: spacing[3] }}>
+				<Input
+					label={t.firstName || "Imię"}
+					placeholder={t.enterFirstName || "Wprowadź imię"}
+					value={formData.first_name}
+					onChange={(e) => handleFieldChange("first_name", e.target.value)}
+					error={errors.first_name}
+					autoComplete="given-name"
+					required
+				/>
+
+				<Input
+					label={t.lastName || "Nazwisko"}
+					placeholder={t.enterLastName || "Wprowadź nazwisko"}
+					value={formData.last_name}
+					onChange={(e) => handleFieldChange("last_name", e.target.value)}
+					error={errors.last_name}
+					autoComplete="family-name"
+					required
+				/>
+			</div>
+
+			<Input
+				ref={loginInputRef}
+				label={t.login || "Login"}
+				placeholder={t.enterLogin || "Wprowadź login"}
+				value={formData.login}
+				onChange={(e) => handleFieldChange("login", e.target.value)}
+				error={errors.login}
+				autoComplete="username"
+				required
+			/>
+
+			{!isEdit ? (
+				<NewPasswordInput
+					password={formData.password}
+					onChange={(e) => handleFieldChange("password", e.target.value)}
+					error={errors.password}
+					showPassword={showPassword}
+					onToggleShowPassword={() => setShowPassword((prev) => !prev)}
+					t={t}
+				/>
+			) : (
+				<PasswordChangeSection
+					isChangingPassword={isChangingPassword}
+					onToggle={() => setIsChangingPassword((prev) => !prev)}
+					passwordChange={passwordChange}
+					onChangeField={handlePasswordChangeField}
+					errors={errors}
+					t={t}
+				/>
+			)}
+
+			<UserFormFooter
+				loading={loading}
+				isEdit={isEdit}
+				onClose={onClose}
+				t={t}
+			/>
+		</form>
 	);
 }
 
@@ -734,214 +575,58 @@ export default function UserModal({
 	onSave,
 	language = "pl",
 }) {
-	const t = translations[language];
-	const isEdit = !!user;
-	const bodyRef = useRef(null);
-	const loginRef = useRef(null);
-	const [state, dispatch] = useReducer(reducer, user, initialState);
+	const t = translations[language] || translations.pl;
+	const isEdit = !!user?.id;
+	const [loading, setLoading] = useState(false);
 
-	useEffect(() => {
-		if (bodyRef.current) {
-			bodyRef.current.scrollTop = 0;
-		}
-		if (loginRef.current) {
-			loginRef.current.focus();
-		}
-	}, [user]);
+	if (!onClose) return null;
 
-	useEffect(() => {
-		const handleKeyDown = (e) => {
-			if (e.key === "Escape") {
-				onClose?.();
-			}
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [onClose]);
+	const modalTitle = (
+		<div>
+			<div style={{ fontSize: font.size.lg, fontWeight: font.weight.semibold }}>
+				{isEdit ? t.editUser || "Edytuj użytkownika" : t.createUser || "Dodaj użytkownika"}
+			</div>
+			{isEdit && user?.login && (
+				<div style={{ fontSize: font.size.xs, color: colors.textSecondary, marginTop: "2px" }}>
+					@{user.login}
+				</div>
+			)}
+		</div>
+	);
 
-	const validate = () => {
-		const newErrors = {};
-		let valid = true;
-
-		if (!state.formData.login.trim()) {
-			newErrors.login = t.required;
-			valid = false;
-		}
-
-		if (!isEdit && !state.formData.password) {
-			newErrors.password = t.required;
-			valid = false;
-		} else if (!isEdit && state.formData.password && state.formData.password.length < 5) {
-			newErrors.password = t.passwordMinLength;
-			valid = false;
-		}
-
-		if (isEdit && state.isChangingPassword) {
-			if (!state.passwordChange.currentPassword) {
-				newErrors.currentPassword = t.required;
-				valid = false;
-			}
-			if (!state.passwordChange.newPassword) {
-				newErrors.newPassword = t.required;
-				valid = false;
-			} else if (state.passwordChange.newPassword.length < 5) {
-				newErrors.newPassword = t.passwordMinLength;
-				valid = false;
-			}
-			if (state.passwordChange.newPassword !== state.passwordChange.confirmPassword) {
-				newErrors.confirmPassword = "Passwords do not match";
-				valid = false;
-			}
-		}
-
-		if (!state.formData.first_name.trim()) {
-			newErrors.first_name = t.required;
-			valid = false;
-		}
-
-		if (!state.formData.last_name.trim()) {
-			newErrors.last_name = t.required;
-			valid = false;
-		}
-
-		dispatch({
-			type: "SET_ERRORS",
-			payload: newErrors,
-		});
-		return valid;
-	};
-
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		if (!validate()) return;
-
-		dispatch({
-			type: "SET_LOADING",
-			payload: true,
-		});
-
-		try {
-			const savedUser = {
-				login: state.formData.login.trim(),
-				first_name: state.formData.first_name.trim(),
-				last_name: state.formData.last_name.trim(),
-				role: state.formData.role,
-			};
-			if (!isEdit) {
-				savedUser.password = state.formData.password;
-			} else {
-				savedUser.id = user.id;
-				if (state.isChangingPassword) {
-					savedUser.currentPassword = state.passwordChange.currentPassword;
-					savedUser.password = state.passwordChange.newPassword;
-				}
-			}
-			if (onSave) await onSave(savedUser);
-			if (onClose) onClose();
-		} catch (err) {
-			console.error("Error saving user", err);
-		} finally {
-			dispatch({
-				type: "SET_LOADING",
-				payload: false,
-			});
-		}
-	};
-
-	return createPortal(
-		<div
-			style={{
-				position: "fixed",
-				top: 0,
-				left: 0,
-				right: 0,
-				bottom: 0,
-				height: "100%",
-				minHeight: "100dvh",
-				maxHeight: "100dvh",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				zIndex: 99999,
-				padding: "calc(12px + env(safe-area-inset-top, 0px)) 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px",
-				boxSizing: "border-box",
-			}}
-		>
-			<button
-				type="button"
-				aria-label={t.close || "Zamknij"}
-				tabIndex={-1}
-				onClick={() => onClose?.()}
-				style={{
-					position: "fixed",
-					top: 0,
-					left: 0,
-					right: 0,
-					bottom: 0,
-					background: "rgba(9, 21, 42, 0.65)",
-					backdropFilter: "blur(6px)",
-					WebkitBackdropFilter: "blur(6px)",
-					border: "none",
-					padding: 0,
-					margin: 0,
-					cursor: "default",
-					width: "100%",
-					height: "100%",
-				}}
-			/>
-			<div
-				style={{
-					position: "relative",
-					zIndex: 1,
-					background: colors.cardBg,
-					borderRadius: radius.xl,
-					boxShadow: shadow.modal,
-					border: `1px solid ${colors.borderSubtle}`,
-					width: "100%",
-					maxWidth: "500px",
-					maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					boxSizing: "border-box",
-					fontFamily: font.family.sans,
-				}}
-			>
-				<UserModalHeader
-					isEdit={isEdit}
-					user={user}
-					t={t}
-					onClose={onClose}
-				/>
-
-				<form
-					onSubmit={handleSubmit}
+	return (
+		<Modal
+			isOpen={true}
+			onClose={loading ? undefined : onClose}
+			title={modalTitle}
+			icon={
+				<div
 					style={{
+						width: "36px",
+						height: "36px",
+						borderRadius: radius.md,
+						background: colors.primaryLight,
+						color: colors.primary,
 						display: "flex",
-						flexDirection: "column",
-						flex: 1,
-						overflow: "hidden",
-						margin: 0,
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
 					}}
 				>
-					<UserFormFields
-						state={state}
-						dispatch={dispatch}
-						bodyRef={bodyRef}
-						loginRef={loginRef}
-						isEdit={isEdit}
-						t={t}
-					/>
-
-					<UserModalFooter
-						isEdit={isEdit}
-						loading={state.loading}
-						onClose={onClose}
-						t={t}
-					/>
-				</form>
-			</div>
-		</div>,
-		document.body
+					<IconUser size="md" />
+				</div>
+			}
+			maxWidth="480px"
+		>
+			<UserFormContent
+				key={user?.id || "new"}
+				user={user}
+				isEdit={isEdit}
+				onClose={onClose}
+				onSave={onSave}
+				setLoadingState={setLoading}
+				t={t}
+			/>
+		</Modal>
 	);
 }

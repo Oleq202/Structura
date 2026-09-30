@@ -9,121 +9,20 @@ import {
 import { translations } from "../i18n";
 import * as api from "../services/api";
 import LogEntry from "../components/LogEntry";
+import DateRangePicker from "../components/DateRangePicker";
 
-const ICONS = {
-	search: (
-		<svg
-			width="13"
-			height="13"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<circle cx="11" cy="11" r="8" />
-			<line x1="21" y1="21" x2="16.65" y2="16.65" />
-		</svg>
-	),
-	filter: (
-		<svg
-			width="13"
-			height="13"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-		</svg>
-	),
-	task: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<polyline points="9 11 12 14 22 4" />
-			<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-		</svg>
-	),
-	building: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-			<path d="M9 22v-4h6v4" />
-			<path d="M8 6h.01" />
-			<path d="M16 6h.01" />
-			<path d="M12 6h.01" />
-			<path d="M12 10h.01" />
-			<path d="M12 14h.01" />
-			<path d="M16 10h.01" />
-			<path d="M16 14h.01" />
-			<path d="M8 10h.01" />
-			<path d="M8 14h.01" />
-		</svg>
-	),
-	user: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-			<circle cx="12" cy="7" r="4" />
-		</svg>
-	),
-	key: (
-		<svg
-			width="12"
-			height="12"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<path d="M21 2l-2 2m-1.5 1.5L14 9a5 5 0 1 0-4 4l9.5-9.5z" />
-		</svg>
-	),
-	x: (
-		<svg
-			width="11"
-			height="11"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<line x1="18" y1="6" x2="6" y2="18" />
-			<line x1="6" y1="6" x2="18" y2="18" />
-		</svg>
-	),
-};
+import {
+	IconSearch,
+	IconFilter,
+	IconTasks,
+	IconBuilding,
+	IconUser,
+	IconKey,
+	IconClose,
+} from "../components/icons";
+
+const EMPTY_USERS = [];
+const EMPTY_BUILDINGS = [];
 
 const ROLE_ORDER = { admin: 1, manager: 2, contractor: 3 };
 
@@ -142,6 +41,7 @@ function useActivityLogs(currentUser, filters) {
 	const [logs, setLogs] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [users, setUsers] = useState([]);
+	const [buildings, setBuildings] = useState([]);
 
 	useEffect(() => {
 		if (currentUser?.role !== "admin") return;
@@ -149,6 +49,10 @@ function useActivityLogs(currentUser, filters) {
 		api.getUsers()
 			.then((data) => setUsers([...data].sort(compareUsers)))
 			.catch((err) => console.error("Failed to fetch users:", err));
+
+		api.getBuildings()
+			.then((data) => setBuildings(data))
+			.catch((err) => console.error("Failed to fetch buildings:", err));
 	}, [currentUser]);
 
 	useEffect(() => {
@@ -183,70 +87,7 @@ function useActivityLogs(currentUser, filters) {
 		};
 	}, [currentUser, filters]);
 
-	return { logs, loading, users };
-}
-
-function LogsHeader({ count, hasFilters, onReset, t }) {
-	return (
-		<div
-			style={{
-				display: "flex",
-				justifyContent: "space-between",
-				alignItems: "center",
-				padding: "2px 0",
-			}}
-		>
-			<div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-				<h1
-					style={{
-						fontSize: "15px",
-						fontWeight: font.weight.big,
-						color: colors.textHeading,
-						margin: 0,
-					}}
-				>
-					{t.logs || "Dziennik Aktywności"}
-				</h1>
-				<span style={{ fontSize: "11px", color: colors.textSecondary }}>
-					({count})
-				</span>
-			</div>
-			{hasFilters && (
-				<button
-					type="button"
-					onClick={onReset}
-					style={{
-						background: "transparent",
-						border: "none",
-						color: colors.primary,
-						fontSize: "12px",
-						cursor: "pointer",
-						padding: "4px 8px",
-						minHeight: "44px",
-						minWidth: "44px",
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						boxSizing: "border-box",
-						gap: "4px",
-						transition: "color 0.15s ease, transform 0.1s ease",
-					}}
-					onMouseDown={(e) => {
-						e.currentTarget.style.transform = "scale(0.95)";
-					}}
-					onMouseUp={(e) => {
-						e.currentTarget.style.transform = "scale(1)";
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.transform = "scale(1)";
-					}}
-				>
-					{ICONS.x}
-					<span>{t.clearFilters || "Wyczyść filtry"}</span>
-				</button>
-			)}
-		</div>
-	);
+	return { logs, loading, users, buildings };
 }
 
 function LogsCategoryBar({
@@ -255,19 +96,26 @@ function LogsCategoryBar({
 	onSelectCategory,
 	searchQuery,
 	onSearchChange,
+	startDate,
+	endDate,
+	onDateRangeChange,
 	showAdvanced,
 	onToggleAdvanced,
+	hasFilters,
+	onReset,
+	language,
 	t,
 }) {
 	return (
-		<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+		<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
 			<div
 				style={{
 					display: "flex",
 					alignItems: "center",
-					gap: "6px",
+					gap: "8px",
 					overflowX: "auto",
 					paddingBottom: "4px",
+					scrollbarWidth: "none",
 				}}
 			>
 				{categories.map((cat) => {
@@ -278,13 +126,12 @@ function LogsCategoryBar({
 							type="button"
 							onClick={() => onSelectCategory(cat.id)}
 							style={{
-								padding: "6px 12px",
-								fontSize: "12px",
-								minHeight: "44px",
-								minWidth: "44px",
+								padding: "8px 16px",
+								fontSize: "13px",
+								minHeight: "40px",
 								boxSizing: "border-box",
 								borderRadius: radius.full,
-								border: `1px solid ${isSelected ? colors.primary : colors.borderSubtle}`,
+								border: `1.5px solid ${isSelected ? colors.primary : colors.borderSubtle}`,
 								background: isSelected ? colors.primary : colors.cardBg,
 								color: isSelected ? "#ffffff" : colors.textSecondary,
 								display: "inline-flex",
@@ -294,10 +141,10 @@ function LogsCategoryBar({
 								cursor: "pointer",
 								whiteSpace: "nowrap",
 								fontWeight: isSelected ? font.weight.big : font.weight.medium,
-								transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+								transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease",
 							}}
 							onMouseDown={(e) => {
-								e.currentTarget.style.transform = "scale(0.95)";
+								e.currentTarget.style.transform = "scale(0.96)";
 							}}
 							onMouseUp={(e) => {
 								e.currentTarget.style.transform = "scale(1)";
@@ -313,13 +160,14 @@ function LogsCategoryBar({
 				})}
 			</div>
 
-			<div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+			<div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
 				<div
 					style={{
 						position: "relative",
 						display: "flex",
 						alignItems: "center",
 						flex: 1,
+						minWidth: "180px",
 					}}
 				>
 					<span
@@ -331,7 +179,7 @@ function LogsCategoryBar({
 							alignItems: "center",
 						}}
 					>
-						{ICONS.search}
+						<IconSearch size="xs" />
 					</span>
 					<input
 						type="text"
@@ -340,17 +188,49 @@ function LogsCategoryBar({
 						onChange={(e) => onSearchChange(e.target.value)}
 						style={{
 							...components.input,
-							paddingLeft: "26px",
-							paddingTop: "4px",
-							paddingBottom: "4px",
-							fontSize: "12px",
-							borderRadius: radius.sm,
+							paddingLeft: "30px",
+							fontSize: "13px",
+							borderRadius: radius.md,
 							width: "100%",
 							boxSizing: "border-box",
-							height: "44px",
+							height: "42px",
 						}}
 					/>
 				</div>
+
+				<DateRangePicker
+					startDate={startDate}
+					endDate={endDate}
+					onChange={onDateRangeChange}
+					language={language}
+					height="42px"
+				/>
+
+				{hasFilters && (
+					<button
+						type="button"
+						onClick={onReset}
+						style={{
+							...components.ghostButton,
+							padding: "6px 12px",
+							fontSize: "12px",
+							minHeight: "42px",
+							boxSizing: "border-box",
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							gap: "4px",
+							borderRadius: radius.md,
+							color: colors.primary,
+							border: `1px solid ${colors.borderSubtle}`,
+							cursor: "pointer",
+							whiteSpace: "nowrap",
+						}}
+					>
+						<IconClose size="xs" />
+						<span>{t.clearFilters || "Wyczyść"}</span>
+					</button>
+				)}
 				<button
 					type="button"
 					onClick={onToggleAdvanced}
@@ -358,18 +238,18 @@ function LogsCategoryBar({
 						...components.ghostButton,
 						padding: "6px 12px",
 						fontSize: "12px",
-						minHeight: "44px",
+						minHeight: "42px",
 						minWidth: "44px",
 						boxSizing: "border-box",
 						display: "inline-flex",
 						alignItems: "center",
 						justifyContent: "center",
 						gap: "6px",
-						borderRadius: radius.sm,
+						borderRadius: radius.md,
 						background: showAdvanced ? `${colors.primary}12` : "transparent",
 						color: showAdvanced ? colors.primary : colors.textSecondary,
 						border: `1px solid ${showAdvanced ? colors.primary : colors.borderSubtle}`,
-						transition: "background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease",
+						transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease",
 					}}
 					onMouseDown={(e) => {
 						e.currentTarget.style.transform = "scale(0.95)";
@@ -389,7 +269,7 @@ function LogsCategoryBar({
 							transition: "transform 0.2s ease",
 						}}
 					>
-						{ICONS.filter}
+						<IconFilter size="xs" />
 					</span>
 					<span>{t.filters || "Więcej"}</span>
 				</button>
@@ -403,18 +283,18 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 		<div
 			style={{
 				background: colors.cardBg,
-				borderRadius: radius.sm,
-				padding: "8px 10px",
+				borderRadius: radius.md,
+				padding: "10px 12px",
 				border: `1px solid ${colors.borderSubtle}`,
 				display: "grid",
 				gridTemplateColumns: "1fr 1fr",
-				gap: "6px",
+				gap: "10px",
 			}}
 		>
 			<div>
 				<label
 					htmlFor="logs-filter-user"
-					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+					style={{ fontSize: "11px", fontWeight: font.weight.medium, color: colors.textSecondary, display: "block", marginBottom: "4px" }}
 				>
 					{t.user || "Użytkownik"}
 				</label>
@@ -424,9 +304,9 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 					onChange={(e) => onFilterChange("userId", e.target.value)}
 					style={{
 						...components.input,
-						fontSize: "11px",
-						padding: "2px 4px",
-						height: "24px",
+						fontSize: "12px",
+						padding: "4px 8px",
+						height: "34px",
 						borderRadius: radius.sm,
 						width: "100%",
 						boxSizing: "border-box",
@@ -444,7 +324,7 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 			<div>
 				<label
 					htmlFor="logs-filter-operation"
-					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
+					style={{ fontSize: "11px", fontWeight: font.weight.medium, color: colors.textSecondary, display: "block", marginBottom: "4px" }}
 				>
 					{t.operationType || "Typ operacji"}
 				</label>
@@ -454,9 +334,9 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 					onChange={(e) => onFilterChange("operationType", e.target.value)}
 					style={{
 						...components.input,
-						fontSize: "11px",
-						padding: "2px 4px",
-						height: "24px",
+						fontSize: "12px",
+						padding: "4px 8px",
+						height: "34px",
 						borderRadius: radius.sm,
 						width: "100%",
 						boxSizing: "border-box",
@@ -471,54 +351,6 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 					<option value="login_failed">{t.op_login_failed || "Logowanie nieudane"}</option>
 				</select>
 			</div>
-
-			<div>
-				<label
-					htmlFor="logs-filter-start-date"
-					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
-				>
-					{t.startDate || "Od daty"}
-				</label>
-				<input
-					id="logs-filter-start-date"
-					type="date"
-					value={filters.startDate}
-					onChange={(e) => onFilterChange("startDate", e.target.value)}
-					style={{
-						...components.input,
-						fontSize: "11px",
-						padding: "2px 4px",
-						height: "24px",
-						borderRadius: radius.sm,
-						width: "100%",
-						boxSizing: "border-box",
-					}}
-				/>
-			</div>
-
-			<div>
-				<label
-					htmlFor="logs-filter-end-date"
-					style={{ fontSize: "10px", color: colors.textSecondary, display: "block", marginBottom: "2px" }}
-				>
-					{t.endDate || "Do daty"}
-				</label>
-				<input
-					id="logs-filter-end-date"
-					type="date"
-					value={filters.endDate}
-					onChange={(e) => onFilterChange("endDate", e.target.value)}
-					style={{
-						...components.input,
-						fontSize: "11px",
-						padding: "2px 4px",
-						height: "24px",
-						borderRadius: radius.sm,
-						width: "100%",
-						boxSizing: "border-box",
-					}}
-				/>
-			</div>
 		</div>
 	);
 }
@@ -526,7 +358,8 @@ function LogsAdvancedPanel({ filters, onFilterChange, users, t }) {
 function LogsList({
 	logs,
 	loading,
-	users,
+	users = EMPTY_USERS,
+	buildings = EMPTY_BUILDINGS,
 	expandedLogId,
 	onToggleLog,
 	language,
@@ -556,6 +389,7 @@ function LogsList({
 					initialData={log}
 					language={language}
 					users={users}
+					buildings={buildings}
 					expanded={expandedLogId === log.id}
 					onToggle={() => onToggleLog(log.id)}
 				/>
@@ -580,13 +414,20 @@ export default function LogsPage({
 	const [expandedLogId, setExpandedLogId] = useState(null);
 	const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-	const { logs, loading, users } = useActivityLogs(currentUser, filters);
+	const { logs, loading, users, buildings } = useActivityLogs(currentUser, filters);
 
 	const handleFilterChange = (field, value) => {
-		setFilters((prev) => ({
-			...prev,
-			[field]: value,
-		}));
+		if (typeof field === "object") {
+			setFilters((prev) => ({
+				...prev,
+				...field,
+			}));
+		} else {
+			setFilters((prev) => ({
+				...prev,
+				[field]: value,
+			}));
+		}
 	};
 
 	const handleCategorySelect = (entityType) => {
@@ -627,10 +468,10 @@ export default function LogsPage({
 
 	const CATEGORIES = useMemo(() => [
 		{ id: "", label: t.allTypes || "Wszystkie", icon: null },
-		{ id: "task", label: t.tasksOnly || "Zadania", icon: ICONS.task },
-		{ id: "building", label: t.buildingsOnly || "Budynki", icon: ICONS.building },
-		{ id: "user", label: t.usersOnly || "Użytkownicy", icon: ICONS.user },
-		{ id: "auth", label: t.authOnly || "Logowania", icon: ICONS.key },
+		{ id: "task", label: t.tasksOnly || "Zadania", icon: <IconTasks size="xs" /> },
+		{ id: "building", label: t.buildingsOnly || "Budynki", icon: <IconBuilding size="xs" /> },
+		{ id: "user", label: t.usersOnly || "Użytkownicy", icon: <IconUser size="xs" /> },
+		{ id: "auth", label: t.authOnly || "Logowania", icon: <IconKey size="xs" /> },
 	], [t]);
 
 	const currentCategory = filters.operationType === "login_success" ? "auth" : filters.entityType;
@@ -642,30 +483,29 @@ export default function LogsPage({
 	return (
 		<div
 			style={{
-				padding: "12px 16px",
-				maxWidth: "840px",
+				padding: "16px 16px",
+				maxWidth: "1200px",
 				margin: "0 auto",
 				display: "flex",
 				flexDirection: "column",
-				gap: "8px",
+				gap: "12px",
 				boxSizing: "border-box",
 			}}
 		>
-			<LogsHeader
-				count={logs.length}
-				hasFilters={hasActiveFilters}
-				onReset={handleResetFilters}
-				t={t}
-			/>
-
 			<LogsCategoryBar
 				categories={CATEGORIES}
 				currentCategory={currentCategory}
 				onSelectCategory={handleCategorySelect}
 				searchQuery={filters.search}
 				onSearchChange={(search) => handleFilterChange("search", search)}
+				startDate={filters.startDate}
+				endDate={filters.endDate}
+				onDateRangeChange={(startDate, endDate) => handleFilterChange({ startDate, endDate })}
 				showAdvanced={showAdvancedFilters}
 				onToggleAdvanced={() => setShowAdvancedFilters(!showAdvancedFilters)}
+				hasFilters={hasActiveFilters}
+				onReset={handleResetFilters}
+				language={language}
 				t={t}
 			/>
 
@@ -690,6 +530,7 @@ export default function LogsPage({
 				logs={logs}
 				loading={loading}
 				users={users}
+				buildings={buildings}
 				expandedLogId={expandedLogId}
 				onToggleLog={(id) => setExpandedLogId(expandedLogId === id ? null : id)}
 				language={language}
