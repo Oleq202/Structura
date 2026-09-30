@@ -521,12 +521,13 @@ async def create_user_endpoint(
         if not user_id:
             raise HTTPException(status_code=400, detail="Failed to create user")
 
+        u_name = f"{user.first_name} {user.last_name}".strip() or user.login
         await add_activity_log(
             task_id=None,
             user_id=current_user.get("id"),
             operation_type="create",
-            action=f"Created user '{sanitize_log_value(user.login)}' with role '{sanitize_log_value(user.role)}'",
-            changes_json={"login": {"new": user.login}, "role": {"new": user.role}},
+            action=f"Created user '{sanitize_log_value(user.login)}' ({sanitize_log_value(u_name)}) with role '{sanitize_log_value(user.role)}'",
+            changes_json={"name": {"new": u_name}, "login": {"new": user.login}, "role": {"new": user.role}},
             entity_type="user",
             entity_id=user_id,
             ip_address=ip,
@@ -546,10 +547,17 @@ async def update_user_endpoint(
 ):
     ip, ua = get_client_info(request)
     existing = await get_user(user_id)
-    if not existing:
-        raise HTTPException(status_code=404, detail="User not found")
+    hashed_password = None
+    if user.password:
+        curr_pwd = user.current_password or user.currentPassword
+        if not curr_pwd:
+            raise HTTPException(status_code=400, detail="Current password is required")
+        if not verify_password(curr_pwd, existing["password_hash"]):
+            raise HTTPException(status_code=400, detail="Invalid current password")
+        if curr_pwd == user.password:
+            raise HTTPException(status_code=400, detail="New password must be different from current password")
+        hashed_password = hash_password(user.password)
 
-    hashed_password = hash_password(user.password) if user.password else None
     await update_user(
         user_id,
         user.login,
@@ -559,12 +567,18 @@ async def update_user_endpoint(
         user.role,
     )
 
+    old_name = f"{existing.get('first_name') or ''} {existing.get('last_name') or ''}".strip() or existing["login"]
+    new_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.login
     await add_activity_log(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="update",
-        action=f"Updated user '{sanitize_log_value(existing['login'])}'",
-        changes_json={"login": {"old": existing["login"], "new": user.login}, "role": {"old": existing["role"], "new": user.role}},
+        action=f"Updated user '{sanitize_log_value(user.login)}' ({sanitize_log_value(new_name)})",
+        changes_json={
+            "name": {"old": old_name, "new": new_name},
+            "login": {"old": existing["login"], "new": user.login},
+            "role": {"old": existing["role"], "new": user.role},
+        },
         entity_type="user",
         entity_id=user_id,
         ip_address=ip,
@@ -583,13 +597,15 @@ async def delete_user_endpoint(
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
 
+    user_name = f"{existing.get('first_name') or ''} {existing.get('last_name') or ''}".strip() or existing["login"]
     await delete_user(user_id)
 
     await add_activity_log(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="delete",
-        action=f"Deleted user '{sanitize_log_value(existing['login'])}'",
+        action=f"Deleted user '{sanitize_log_value(existing['login'])}' ({sanitize_log_value(user_name)})",
+        changes_json={"user": {"old": f"{user_name} (@{existing['login']})"}, "role": {"old": existing.get("role")}},
         entity_type="user",
         entity_id=user_id,
         ip_address=ip,
@@ -642,13 +658,19 @@ async def update_building_endpoint(
     if not existing:
         raise HTTPException(status_code=404, detail="Building not found")
 
+    old_addr = f"{existing['street_address']}, {existing['city']}"
+    new_addr = f"{building.street_address}, {building.city}"
     await update_building(building_id, building.city, building.district, building.street_address)
 
     await add_activity_log(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="update",
-        action=f"Updated building #{building_id} ({sanitize_log_value(building.city)})",
+        action=f"Updated building at {sanitize_log_value(new_addr)} (#{building_id})",
+        changes_json={
+            "address": {"old": old_addr, "new": new_addr},
+            "district": {"old": existing.get("district") or "—", "new": building.district or "—"},
+        },
         entity_type="building",
         entity_id=building_id,
         ip_address=ip,
@@ -667,13 +689,15 @@ async def delete_building_endpoint(
     if not existing:
         raise HTTPException(status_code=404, detail="Building not found")
 
+    addr = f"{existing['street_address']}, {existing['city']}"
     await delete_building(building_id)
 
     await add_activity_log(
         task_id=None,
         user_id=current_user.get("id"),
         operation_type="delete",
-        action=f"Deleted building #{building_id} ({sanitize_log_value(existing['street_address'])}, {sanitize_log_value(existing['city'])})",
+        action=f"Deleted building at {sanitize_log_value(addr)} (#{building_id})",
+        changes_json={"address": {"old": addr}},
         entity_type="building",
         entity_id=building_id,
         ip_address=ip,
@@ -784,16 +808,24 @@ async def create_task_endpoint(
         raise HTTPException(status_code=400, detail="Failed to create task")
 
     try:
+        building = await get_building(task.building_id)
+        building_name = f"{building['street_address']}, {building['city']}" if building else f"#{task.building_id}"
+        contractor = await get_user(task.assigned_to) if task.assigned_to else None
+        contractor_name = (
+            f"{contractor.get('first_name') or ''} {contractor.get('last_name') or ''}".strip()
+            or contractor.get("login")
+        ) if contractor else "Nieprzypisany"
+
         await add_activity_log(
             task_id=task_id,
             user_id=current_user.get("id"),
             operation_type="create",
-            action="Created task",
+            action=f"Created task: \"{sanitize_log_value(task.title)}\" at {sanitize_log_value(building_name)}",
             changes_json={
                 "title": {"new": task.title},
-                "description": {"new": task.description},
-                "building_id": {"new": task.building_id},
-                "assigned_to": {"new": task.assigned_to},
+                "description": {"new": task.description or "—"},
+                "building": {"new": building_name},
+                "assigned_to": {"new": contractor_name},
             },
             entity_type="task",
             entity_id=task_id,
@@ -864,17 +896,26 @@ async def update_task_endpoint(
         if task.description is not None and task.description != old_task["description"]:
             changes["description"] = {"old": old_task["description"], "new": task.description}
         if task.building_id and task.building_id != old_task["building_id"]:
-            changes["building_id"] = {"old": old_task["building_id"], "new": task.building_id}
+            old_b = await get_building(old_task["building_id"])
+            new_b = await get_building(task.building_id)
+            old_b_str = f"{old_b['street_address']}, {old_b['city']}" if old_b else f"#{old_task['building_id']}"
+            new_b_str = f"{new_b['street_address']}, {new_b['city']}" if new_b else f"#{task.building_id}"
+            changes["building"] = {"old": old_b_str, "new": new_b_str}
         if task.assigned_to and task.assigned_to != old_task["assigned_to"]:
-            changes["assigned_to"] = {"old": old_task["assigned_to"], "new": task.assigned_to}
+            old_u = await get_user(old_task["assigned_to"]) if old_task.get("assigned_to") else None
+            new_u = await get_user(task.assigned_to) if task.assigned_to else None
+            old_u_str = (f"{old_u.get('first_name') or ''} {old_u.get('last_name') or ''}".strip() or old_u.get("login")) if old_u else "—"
+            new_u_str = (f"{new_u.get('first_name') or ''} {new_u.get('last_name') or ''}".strip() or new_u.get("login")) if new_u else "—"
+            changes["assigned_to"] = {"old": old_u_str, "new": new_u_str}
 
+        current_title = updated_task.get("title") or old_task.get("title")
         if task.status:
             op_type = "status_change"
-            action = f"Changed status to {task.status}"
+            action = f"Changed status of '{sanitize_log_value(current_title)}' to {task.status}"
             changes["status"] = {"old": old_task["status"], "new": task.status}
         else:
             op_type = "update"
-            action = "Updated task details"
+            action = f"Updated task '{sanitize_log_value(current_title)}'"
 
         await add_activity_log(
             task_id=task_id,
@@ -914,15 +955,25 @@ async def delete_task_endpoint(
     await delete_task(task_id)
 
     try:
+        b = await get_building(task_to_delete.get("building_id")) if task_to_delete.get("building_id") else None
+        b_name = f"{b['street_address']}, {b['city']}" if b else ""
+        action_msg = f"Deleted task '{sanitize_log_value(task_to_delete.get('title'))}'"
+        if b_name:
+            action_msg += f" at {sanitize_log_value(b_name)}"
+
+        changes_data = {
+            "title": {"old": task_to_delete.get("title")},
+            "status": {"old": task_to_delete.get("status")},
+        }
+        if b_name:
+            changes_data["building"] = {"old": b_name}
+
         await add_activity_log(
             task_id=task_id,
             user_id=current_user.get("id"),
             operation_type="delete",
-            action="Deleted task",
-            changes_json={
-                "title": {"old": task_to_delete.get("title")},
-                "status": {"old": task_to_delete.get("status")},
-            },
+            action=action_msg,
+            changes_json=changes_data,
             entity_type="task",
             entity_id=task_id,
             ip_address=ip,

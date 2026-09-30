@@ -230,3 +230,97 @@ def test_jwt_algorithm_configured():
     assert ALGORITHM in ["HS256", "RS256", "ES256"]
 
 
+@pytest.mark.asyncio
+async def test_update_user_password_verification(monkeypatch):
+    from app.main import update_user_endpoint
+    from app.models import UserUpdate
+    from fastapi import HTTPException
+    from unittest.mock import MagicMock, AsyncMock
+
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers.get.return_value = "pytest"
+
+    current_admin = {"id": 1, "login": "admin", "role": "admin"}
+    target_user_id = 42
+
+    stored_user = {
+        "id": target_user_id,
+        "login": "target_contractor",
+        "first_name": "Target",
+        "last_name": "User",
+        "role": "contractor",
+        "password_hash": hash_password("ValidOldPassword123"),
+        "created_at": datetime.now(timezone.utc),
+    }
+
+    async def mock_get_user(uid):
+        if uid == target_user_id:
+            return stored_user
+        return None
+
+    mock_update_user = AsyncMock()
+    mock_add_log = AsyncMock()
+
+    monkeypatch.setattr("app.main.get_user", mock_get_user)
+    monkeypatch.setattr("app.main.update_user", mock_update_user)
+    monkeypatch.setattr("app.main.add_activity_log", mock_add_log)
+
+    # 1. Missing current password
+    req_missing_curr = UserUpdate(
+        login="target_contractor",
+        first_name="Target",
+        last_name="User",
+        role="contractor",
+        password="BrandNewPassword123",
+    )
+    with pytest.raises(HTTPException) as exc1:
+        await update_user_endpoint(target_user_id, req_missing_curr, mock_request, current_user=current_admin)
+    assert exc1.value.status_code == 400
+    assert "Current password is required" in exc1.value.detail
+
+    # 2. Invalid current password
+    req_invalid_curr = UserUpdate(
+        login="target_contractor",
+        first_name="Target",
+        last_name="User",
+        role="contractor",
+        password="BrandNewPassword123",
+        current_password="WrongPassword999",
+    )
+    with pytest.raises(HTTPException) as exc2:
+        await update_user_endpoint(target_user_id, req_invalid_curr, mock_request, current_user=current_admin)
+    assert exc2.value.status_code == 400
+    assert "Invalid current password" in exc2.value.detail
+
+    # 3. New password identical to current password
+    req_same_pwd = UserUpdate(
+        login="target_contractor",
+        first_name="Target",
+        last_name="User",
+        role="contractor",
+        password="ValidOldPassword123",
+        currentPassword="ValidOldPassword123",
+    )
+    with pytest.raises(HTTPException) as exc3:
+        await update_user_endpoint(target_user_id, req_same_pwd, mock_request, current_user=current_admin)
+    assert exc3.value.status_code == 400
+    assert "New password must be different from current password" in exc3.value.detail
+
+    # 4. Success when correct current password provided
+    req_success = UserUpdate(
+        login="target_contractor",
+        first_name="Target",
+        last_name="User",
+        role="contractor",
+        password="BrandNewPassword123",
+        currentPassword="ValidOldPassword123",
+    )
+    res = await update_user_endpoint(target_user_id, req_success, mock_request, current_user=current_admin)
+    assert res.id == target_user_id
+    mock_update_user.assert_awaited_once()
+    args = mock_update_user.await_args[0]
+    hashed_arg = args[2]
+    assert verify_password("BrandNewPassword123", hashed_arg)
+
+

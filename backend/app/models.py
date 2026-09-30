@@ -16,6 +16,8 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
+    current_password: Optional[str] = None
+    currentPassword: Optional[str] = None
 
 class User(UserBase):
     id: int
