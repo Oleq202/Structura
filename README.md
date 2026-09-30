@@ -1,17 +1,18 @@
 # Structura
 
-**Enterprise Field Service Management (FSM) & Property Maintenance Platform** — A modern, high-performance web application designed for property managers, administrators, and field contractors to orchestrate work orders, track building assets, and monitor operations in real time.
+**System Obsługi Technicznej Nieruchomości / Property & Facility Maintenance Platform** — A modern, high-performance web application designed for property managers, administrators, and field contractors to orchestrate maintenance work orders, track building assets, and monitor operations in real time.
 
 [![Backend](https://img.shields.io/badge/Backend-FastAPI_0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Frontend](https://img.shields.io/badge/Frontend-React_19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Styling](https://img.shields.io/badge/Styling-TailwindCSS_v4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Build Tool](https://img.shields.io/badge/Build-Vite_8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Auth](https://img.shields.io/badge/Auth-JWT_&_HTTP--Only_Cookies-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 
 ---
 
 ## 📑 Table of Contents
 
+- [Demo Access & Credentials](#-demo-access--credentials)
 - [Key Highlights](#-key-highlights)
 - [Core Features](#-core-features)
 - [Architecture & Tech Stack](#-architecture--tech-stack)
@@ -29,14 +30,29 @@
 
 ---
 
+## 🔑 Demo Access & Credentials
+
+For quick testing or reviewing the app locally:
+
+| Role | Username | Password | Permissions |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin` | `password123!` | Full system control, user & building management, audit log access |
+| **Manager** | `akaminska` | `password123!` | Building view, task creation, dispatching, and tracking |
+| **Contractor** | `jkowalski` | `password123!` | View assigned tasks and update status |
+
+> [!TIP]
+> After launching both backend and frontend servers, navigate to `http://localhost:5173` and log in with the `admin` credentials above.
+
+---
+
 ## 🌟 Key Highlights
 
-- **Fine-Grained Role-Based Access Control (RBAC)**: Clear permission boundaries across Admin (system-wide administration & audit logs), Property Manager (all-building task creation, editing & dispatch), and Field Contractor (self-assigned task execution).
-- **Comprehensive Building & Workspace Filtering**: Managers can access all buildings and customize their active workspace view with persistent building filters.
-- **Admin-Only Audit Trail & Activity Logging**: Secure audit logging tracking task lifecycle events, IP addresses, user agents, and granular state diffs — accessible exclusively to Administrators.
+- **Fine-Grained Role-Based Access Control (RBAC)**: Clear permission boundaries across Admin (system-wide administration & audit logs), Property Manager (building-wide task creation, editing & dispatch), and Field Contractor (self-assigned task execution).
+- **Design System & Theme Engine**: Sleek, modern interface with native Dark and Light mode support, responsive desktop sidebar, mobile bottom navigation, and polished micro-interactions.
+- **Comprehensive Building & Workspace Filtering**: Managers and Admins can access all properties and tailor their active workspace with persistent multi-building filters.
+- **Admin-Only Audit Trail & Activity Logging**: Secure audit logging tracking task lifecycle events, IP addresses, user agents, and before/after humanized change diffs with log-injection protection.
 - **Dual-Language Internationalization (i18n)**: Instant runtime switching between English (`en`) and Polish (`pl`).
-- **Security-First Architecture**: 
-Short-lived in-memory JWT access tokens, secure HTTP-only refresh token rotation with replay attack protection, and distributed sliding-window rate limiting (in-memory + Redis fallback).
+- **Security-First Architecture**: Short-lived in-memory JWT access tokens, secure HTTP-only refresh token rotation with replay attack protection, BCrypt password hashing, and rate limiting.
 
 ---
 
@@ -45,7 +61,7 @@ Short-lived in-memory JWT access tokens, secure HTTP-only refresh token rotation
 ### 📋 Work Order & Task Management
 - Create, edit, assign, prioritize, and track maintenance tasks across all properties.
 - Dynamic task states: `pending` and `completed` with full lifecycle tracking.
-- Filter tasks by status, contractor, building, city, district, or keyword search.
+- Filter tasks by status, contractor, building, city, district, date range, or keyword search with debouncing.
 - Automatic timestamp maintenance via database triggers.
 
 ### 🏢 Property & Building Operations
@@ -55,13 +71,13 @@ Short-lived in-memory JWT access tokens, secure HTTP-only refresh token rotation
 
 ### 🛡️ System Audit Trail (Admin Exclusive)
 - Comprehensive timeline ledger capturing entity operations (`create`, `update`, `delete`, `status_change`).
-- Filter logs by operation type, author, target entity, or timestamp range.
+- Filter logs by operation type, author, target entity, or date range.
 - Full accountability tracking with client IP address, user agent, and before/after JSON diffs.
 
 ### 📱 Responsive & Mobile-Ready UI
-- Glassmorphism design elements and fluid animations.
-- Dedicated mobile bottom navigation bar and desktop header for seamless cross-device workflows.
-- Accessible modal dialogs for rapid task creation, building updates, and user management.
+- Custom design system with glassmorphism touches, semantic tokens, and high-contrast accessibility.
+- Dedicated mobile bottom navigation bar and desktop collapsible sidebar for seamless cross-device workflows.
+- Accessible modal dialogs for rapid task creation, building updates, user management, and password changes.
 
 ---
 
@@ -74,12 +90,11 @@ Short-lived in-memory JWT access tokens, secure HTTP-only refresh token rotation
 - **Validation**: [Pydantic v2](https://docs.pydantic.dev/) — Strict schema validation and settings parsing
 - **Authentication**: `python-jose` (JWT) + `bcrypt` (secure password hashing)
 - **Rate Limiting**: Custom sliding-window token bucket with optional Redis distributed backend
-- **Real-Time / Async**: WebSocket channels & background worker tasks
 
 ### Frontend
 - **Framework**: [React 19](https://react.dev/) — Latest React architecture with concurrent rendering
 - **Build Tool**: [Vite 8](https://vitejs.dev/) — Lightning-fast HMR and bundle optimization
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) — Next-generation utility-first styling engine
+- **Styling**: Modern CSS Design System with theme tokens, CSS custom properties, and dark/light mode
 - **Routing**: [React Router v7](https://reactrouter.com/) — Declarative client-side navigation
 - **Internationalization**: Custom lightweight i18n engine with complete English & Polish dictionaries
 - **Quality Tools**: ESLint, React Doctor, Prettier
@@ -98,25 +113,28 @@ Structura/
 │   │   ├── models.py           # Pydantic request/response schemas & domain models
 │   │   ├── rate_limiter.py     # Sliding window rate limiting (In-memory / Redis)
 │   │   └── worker.py           # Background processing & scheduled workers
-│   ├── tests/                  # Pytest test suite
+│   ├── tests/                  # Pytest test suite (auth, rbac, queries, security)
 │   ├── .env.example            # Backend environment template
 │   ├── pytest.ini             # Pytest configuration
 │   └── requirements.txt        # Python backend dependencies
 ├── frontend/
 │   ├── public/                 # Static public assets
 │   ├── src/
-│   │   ├── assets/             # Images, logos, and icons
-│   │   ├── components/         # Reusable UI components (Modals, Task, Header, etc.)
-│   │   ├── hooks/              # Custom React hooks
+│   │   ├── components/         # Modals, Task cards, DateRangePicker, Navigation
+│   │   │   ├── ui/             # Design system primitives (Button, Card, Badge, Modal, Input, etc.)
+│   │   │   └── icons/          # Centralized SVG icon library
+│   │   ├── context/            # ThemeContext & global providers
+│   │   ├── hooks/              # Custom React hooks (responsive, debounce, toast)
 │   │   ├── pages/              # Application views (LoginPage, ManagerPage, LogsPage, SettingsPage)
-│   │   ├── services/           # API client and authentication services
+│   │   ├── services/           # API client, interceptors, and auth state
 │   │   ├── App.jsx             # Main routing and layout orchestrator
 │   │   ├── i18n.js             # Translation dictionaries & language state
-│   │   ├── theme.js            # Theme switching and storage logic
-│   │   └── index.css           # Global stylesheet & Tailwind directives
+│   │   ├── theme.js            # Theme tokens, dark/light palette, and storage
+│   │   └── index.css           # Global stylesheet & design system variables
 │   ├── package.json            # Frontend dependencies and npm scripts
 │   └── vite.config.js          # Vite configuration
 ├── database.md                 # Full database schema and entity relationship documentation
+├── docs/                       # Project documentation & UI/UX plan
 └── README.md                   # Project documentation
 ```
 
@@ -233,7 +251,13 @@ For full table schemas, column data types, constraints, partial indexes, and dat
    ```
    *Edit `.env` and fill in your database credentials and secret key.*
 
-5. **Start the development server**:
+5. **Initialize database schema & demo seed data** *(if creating a fresh database)*:
+   ```bash
+   psql -d <your_database_name> -f app/db/schema.sql
+   psql -d <your_database_name> -f app/db/seed.sql
+   ```
+
+6. **Start the development server**:
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
