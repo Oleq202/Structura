@@ -376,7 +376,7 @@ export default function LoginPage({
 							fontWeight: font.weight.normal,
 						}}
 					>
-						{t.appSubtitle || "System Zarządzania Usługami Terenowymi"}
+						{t.appSubtitle || "System Obsługi Technicznej Nieruchomości"}
 					</p>
 				</div>
 
