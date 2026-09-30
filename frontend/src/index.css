@@ -1,5 +1,55 @@
 @import "tailwindcss";
 
+:root {
+	/* Design System Tokens as CSS Variables */
+	--font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	--font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+	--color-shell-bg: #0f1f38;
+	--color-shell-surface: #162d4e;
+	--color-shell-border: #203e68;
+	--color-shell-text: #ffffff;
+	--color-shell-muted: #94b8db;
+	--color-shell-accent: #2e8de4;
+
+	--color-page-bg: #f1f5f9;
+	--color-card-bg: #ffffff;
+	--color-card-border: #cbd5e1;
+	--color-card-border-hover: #94a3b8;
+
+	--color-primary: #1d70b8;
+	--color-primary-hover: #155894;
+	--color-primary-active: #0e4373;
+	--color-primary-light: #e8f2fc;
+
+	--color-text-heading: #0f172a;
+	--color-text-body: #1e293b;
+	--color-text-secondary: #475569;
+	--color-text-muted: #64748b;
+
+	--color-status-pending-bg: #fffbeb;
+	--color-status-pending-border: #fcd34d;
+	--color-status-pending-text: #92400e;
+	--color-status-pending-solid: #d97706;
+
+	--color-status-completed-bg: #f0fdf4;
+	--color-status-completed-border: #86efac;
+	--color-status-completed-text: #166534;
+	--color-status-completed-solid: #16a34a;
+
+	--shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+	--shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+	--shadow-card-hover: 0 6px 16px -2px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(15, 23, 42, 0.06);
+	--shadow-modal: 0 20px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.15);
+	--shadow-focus: 0 0 0 3px rgba(29, 112, 184, 0.35);
+
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-full: 9999px;
+}
+
 html,
 body,
 #root {
@@ -8,14 +58,42 @@ body,
 	margin: 0;
 	padding: 0;
 	overflow: hidden;
-	background-color: #09152a;
+	background-color: var(--color-shell-bg);
+	color: var(--color-text-body);
+	font-family: var(--font-sans);
+	font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
 }
 
-* {
+*,
+*::before,
+*::after {
 	box-sizing: border-box;
+}
+
+/* Accessible focus styling */
+:focus-visible {
+	outline: none;
+	box-shadow: var(--shadow-focus) !important;
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: rgba(148, 163, 184, 0.4);
+	border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: rgba(100, 116, 139, 0.6);
 }
 
 @media (max-width: 480px) {
@@ -25,6 +103,26 @@ body,
 	}
 }
 
+/* Responsive visibility for Create Task button: desktop toolbar vs mobile FAB */
+@media (min-width: 1024px) {
+	.mobile-fab-btn {
+		display: none !important;
+	}
+	.desktop-create-task-btn {
+		display: inline-flex !important;
+	}
+}
+
+@media (max-width: 1023px) {
+	.desktop-create-task-btn {
+		display: none !important;
+	}
+	.mobile-fab-btn {
+		display: flex !important;
+	}
+}
+
+/* Core Keyframe Animations */
 @keyframes spin {
 	from {
 		transform: rotate(0deg);
@@ -57,5 +155,49 @@ body,
 	}
 }
 
+@keyframes slideUp {
+	0% {
+		opacity: 0;
+		transform: translateY(16px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
 
+@keyframes fadeIn {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
 
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+.skeleton-shimmer {
+	background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Reduced Motion Override for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

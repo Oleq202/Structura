@@ -17,116 +17,178 @@ const blue = {
 	200: "#7bbef5",
 	300: "#4db3ff",
 	400: "#2e8de4",
-	500: "#1a6ec0",
-	600: "#1560a8",
-	700: "#0e4d8a",
+	500: "#1d70b8",
+	600: "#155894",
+	700: "#0e4373",
 	800: "#0a3a6b",
 	900: "#062849",
 };
 
-const neutral = {
-	0: "#ffffff",
-	50: "#f8fafc",
-	100: "#f0f4f8",
-	200: "#dce6f2",
-	300: "#b0c4d8",
-	400: "#7a96b0",
-	500: "#5a7a9a",
-	600: "#3a5068",
-	700: "#213545",
-	800: "#0f2030",
-	900: "#080f18",
+export const palette = {
+	navy,
+	blue,
+	slate: {
+		50: "#f8fafc",
+		100: "#f1f5f9",
+		200: "#e2e8f0",
+		300: "#cbd5e1",
+		400: "#94a3b8",
+		500: "#64748b",
+		600: "#475569",
+		700: "#334155",
+		800: "#1e293b",
+		900: "#0f172a",
+	},
+	neutral: {
+		0: "#ffffff",
+		50: "#f8fafc",
+		100: "#f1f5f9",
+		200: "#e2e8f0",
+		300: "#cbd5e1",
+		400: "#94a3b8",
+		500: "#64748b",
+		600: "#475569",
+		700: "#334155",
+		800: "#1e293b",
+		900: "#0f172a",
+	},
 };
 
 export const status = {
+	pending: {
+		bg: "#fffbeb",
+		border: "#fcd34d",
+		text: "#92400e",
+		solid: "#d97706",
+		dot: "#d97706",
+	},
+	completed: {
+		bg: "#f0fdf4",
+		border: "#86efac",
+		text: "#166534",
+		solid: "#16a34a",
+		dot: "#16a34a",
+	},
 	urgent: {
-		bg: "#fff0e6",
-		border: "#f0a06a",
-		text: "#a34200",
+		bg: "#fff7ed",
+		border: "#fdba74",
+		text: "#9a3412",
+		solid: "#ea580c",
+		dot: "#ea580c",
 	},
 	inProgress: {
-		bg: "#e0ecfa",
-		border: "#85b7eb",
-		text: "#0e4d8a",
+		bg: "#eff6ff",
+		border: "#93c5fd",
+		text: "#1e40af",
+		solid: "#2563eb",
+		dot: "#2563eb",
 	},
 	done: {
-		bg: "#eaf3de",
-		border: "#97c459",
-		text: "#2d5e10",
+		bg: "#f0fdf4",
+		border: "#86efac",
+		text: "#166534",
+		solid: "#16a34a",
+		dot: "#16a34a",
 	},
 	new: {
-		bg: "#f4f7fb",
-		border: "#b0c4d8",
-		text: "#3a5068",
+		bg: "#f8fafc",
+		border: "#cbd5e1",
+		text: "#334155",
+		solid: "#64748b",
+		dot: "#64748b",
 	},
 	danger: {
-		bg: "#fcebeb",
-		border: "#f09595",
-		text: "#791f1f",
+		bg: "#fef2f2",
+		border: "#fca5a5",
+		text: "#991b1b",
+		solid: "#dc2626",
+		dot: "#dc2626",
 	},
 	warning: {
-		bg: "#faeeda",
-		border: "#ef9f27",
-		text: "#633806",
+		bg: "#fffbeb",
+		border: "#fcd34d",
+		text: "#92400e",
+		solid: "#d97706",
+		dot: "#d97706",
 	},
 	success: {
-		bg: "#eaf3de",
-		border: "#97c459",
-		text: "#27500a",
+		bg: "#f0fdf4",
+		border: "#86efac",
+		text: "#166534",
+		solid: "#16a34a",
+		dot: "#16a34a",
 	},
 	info: {
-		bg: "#e0ecfa",
-		border: "#85b7eb",
-		text: "#0c447c",
+		bg: "#eff6ff",
+		border: "#93c5fd",
+		text: "#1e40af",
+		solid: "#2563eb",
+		dot: "#2563eb",
 	},
 };
 
 export const colors = {
+	// Shell & Brand
 	shellLight: navy[400],
 	shell: navy[500],
 	shellDeep: navy[600],
 	deepNavy: navy[700],
+	shellBg: "#0f1f38",
+	shellSurface: "#162d4e",
+	shellBorder: "#203e68",
 	shellText: "#ffffff",
-	shellTextMuted: "#a8d4f5",
+	shellTextMuted: "#94b8db",
+	shellAccent: "#2e8de4",
 
-	pageBg: neutral[50],
-	cardBg: neutral[0],
-	cardBorder: neutral[200],
+	// Core App Surfaces
+	pageBg: "#f1f5f9",
+	cardBg: "#ffffff",
+	cardBorder: "#cbd5e1",
+	cardBorderHover: "#94a3b8",
 
-	primary: blue[400],
-	primaryHover: blue[500],
+	// Interactive & Primary Brand
+	primary: "#1d70b8",
+	primaryHover: "#155894",
+	primaryActive: "#0e4373",
+	primaryLight: "#e8f2fc",
 	primaryText: "#ffffff",
 
-	textHeading: neutral[800],
-	textBody: neutral[700],
-	textSecondary: neutral[500],
-	textMuted: neutral[300],
-	textDisabled: neutral[300],
+	// Typography & Content
+	textPrimary: "#0f172a",
+	textHeading: "#0f172a",
+	textBody: "#1e293b",
+	textSecondary: "#475569",
+	textMuted: "#64748b",
+	textDisabled: "#94a3b8",
 
-	borderSubtle: neutral[200],
-	borderDefault: neutral[300],
-	borderStrong: neutral[400],
+	// Borders
+	borderSubtle: "#e2e8f0",
+	borderDefault: "#cbd5e1",
+	borderStrong: "#94a3b8",
 
+	// Avatars
 	avatarBg: navy[500],
 	avatarText: blue[200],
 
-	success: "#97c459",
-	warning: "#ef9f27",
-	danger: "#f09595",
-	info: "#85b7eb",
+	// Legacy status aliases
+	success: "#16a34a",
+	warning: "#d97706",
+	danger: "#dc2626",
+	info: "#2563eb",
 };
 
 export const font = {
 	family: {
-		sans: "'DM Sans', 'Helvetica Neue', Arial, sans-serif",
+		sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
 		mono: "'JetBrains Mono', 'Fira Code', monospace",
 	},
 	size: {
-		xs: "11px",
-		sm: "12px",
-		base: "14px",
-		md: "15px",
-		lg: "17px",
+		xs: "12px",
+		s: "13px", // Alias to prevent undefined token bugs
+		sm: "13px",
+		base: "15px",
+		md: "16px",
+		lg: "18px",
 		xl: "20px",
 		"2xl": "24px",
 		"3xl": "30px",
@@ -134,19 +196,20 @@ export const font = {
 	weight: {
 		regular: 400,
 		medium: 500,
-		big: 600,
+		big: 600, // Kept for full backward compatibility
+		semibold: 600,
 		bold: 700,
 	},
 	lineHeight: {
-		tight: 1.3,
-		normal: 1.6,
-		loose: 1.8,
+		tight: 1.25,
+		normal: 1.5,
+		loose: 1.75,
 	},
 	letterSpacing: {
-		tight: "-0.01em",
+		tight: "-0.015em",
 		normal: "0em",
-		wide: "0.04em",
-		caps: "0.08em",
+		wide: "0.025em",
+		caps: "0.06em",
 	},
 };
 
@@ -167,28 +230,33 @@ export const spacing = {
 };
 
 export const radius = {
-	sm: "4px",
+	xs: "4px",
+	sm: "6px",
 	md: "8px",
 	lg: "12px",
 	xl: "16px",
+	"2xl": "20px",
 	full: "9999px",
 };
 
 export const shadow = {
 	none: "none",
-	card: "0 1px 3px rgba(9, 21, 42, 0.08)",
-	modal: "0 8px 32px rgba(9, 21, 42, 0.16)",
-	focus: `0 0 0 3px ${blue[200]}`,
+	sm: "0 1px 2px 0 rgba(15, 23, 42, 0.05)",
+	card: "0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08)",
+	cardHover: "0 6px 16px -2px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(15, 23, 42, 0.06)",
+	modal: "0 20px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.15)",
+	popover: "0 10px 15px -3px rgba(15, 23, 42, 0.12), 0 4px 6px -4px rgba(15, 23, 42, 0.08)",
+	focus: "0 0 0 3px rgba(29, 112, 184, 0.35)",
+	focusError: "0 0 0 3px rgba(220, 38, 38, 0.3)",
 };
 
 export const components = {
 	topBar: {
-		background: colors.shellLight,
-		borderBottom: `1px solid ${colors.shellDeep}`,
-		padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
-
+		background: colors.shellBg,
+		borderBottom: `1px solid ${colors.shellBorder}`,
+		padding: `${spacing[2]} ${spacing[4]}`,
 		display: "flex",
-		justifyContent: "space-around",
+		justifyContent: "space-between",
 		alignItems: "center",
 		flexShrink: 0,
 		position: "sticky",
@@ -197,17 +265,19 @@ export const components = {
 	},
 
 	filterStrip: {
-		background: colors.shellDeep,
+		background: colors.shellSurface,
 		padding: `${spacing[2]} ${spacing[4]}`,
 		display: "flex",
 		gap: spacing[2],
 	},
 
 	bottomNav: {
-		background: colors.shell,
-		borderTop: `1px solid ${colors.shellDeep}`,
-		padding: `${spacing[2]} ${spacing[1]} ${spacing[3]}`,
-
+		background: colors.shellBg,
+		borderTop: `1px solid ${colors.shellBorder}`,
+		paddingTop: spacing[2],
+		paddingBottom: `calc(${spacing[2]} + env(safe-area-inset-bottom, 0px))`,
+		paddingLeft: `max(${spacing[4]}, env(safe-area-inset-left, 0px))`,
+		paddingRight: `max(${spacing[4]}, env(safe-area-inset-right, 0px))`,
 		display: "flex",
 		justifyContent: "space-around",
 		alignItems: "center",
@@ -216,10 +286,11 @@ export const components = {
 
 	card: {
 		background: colors.cardBg,
-		border: `0.5px solid ${colors.cardBorder}`,
+		border: `1px solid ${colors.cardBorder}`,
 		borderRadius: radius.lg,
-		padding: `${spacing[3]}`,
+		padding: spacing[4],
 		boxShadow: shadow.card,
+		transition: "border-color 0.15s ease, box-shadow 0.15s ease",
 	},
 
 	primaryButton: {
@@ -228,9 +299,16 @@ export const components = {
 		borderRadius: radius.md,
 		padding: `${spacing[2]} ${spacing[4]}`,
 		fontSize: font.size.base,
-		fontWeight: font.weight.medium,
+		fontWeight: font.weight.semibold,
 		border: "none",
 		cursor: "pointer",
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: spacing[2],
+		minHeight: "44px",
+		boxSizing: "border-box",
+		transition: "background-color 0.15s ease, transform 0.1s ease",
 	},
 
 	ghostButton: {
@@ -242,53 +320,83 @@ export const components = {
 		fontSize: font.size.base,
 		fontWeight: font.weight.medium,
 		cursor: "pointer",
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: spacing[2],
+		minHeight: "44px",
+		boxSizing: "border-box",
+		transition: "background-color 0.15s ease, color 0.15s ease",
 	},
 
 	input: {
 		background: colors.cardBg,
-		border: `0.5px solid ${colors.borderDefault}`,
+		border: `1px solid ${colors.borderDefault}`,
 		borderRadius: radius.md,
 		padding: `${spacing[2]} ${spacing[3]}`,
-		fontSize: font.size.base,
+		fontSize: font.size.md, // 16px to prevent iOS Safari auto-zoom
 		color: colors.textBody,
 		outline: "none",
 		width: "100%",
+		minHeight: "44px",
+		boxSizing: "border-box",
+		fontFamily: font.family.sans,
+		transition: "border-color 0.15s ease, box-shadow 0.15s ease",
 	},
 
 	sectionLabel: {
 		fontSize: font.size.xs,
-		fontWeight: font.weight.medium,
+		fontWeight: font.weight.semibold,
 		color: colors.textSecondary,
 		textTransform: "uppercase",
 		letterSpacing: font.letterSpacing.caps,
 	},
 
 	avatar: {
-		width: "32px",
-		height: "32px",
+		width: "36px",
+		height: "36px",
 		borderRadius: radius.full,
-		background: colors.avatarBg,
-		color: colors.avatarText,
+		background: colors.shellSurface,
+		color: colors.shellText,
+		border: `1px solid ${colors.shellBorder}`,
 		fontSize: font.size.xs,
-		fontWeight: font.weight.medium,
+		fontWeight: font.weight.semibold,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
+		flexShrink: 0,
+	},
+
+	tab: {
+		minHeight: "44px",
+		minWidth: "44px",
+		padding: `${spacing[2]} ${spacing[4]}`,
+		borderRadius: radius.full,
+		fontSize: font.size.sm,
+		fontFamily: font.family.sans,
+		fontWeight: font.weight.medium,
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		cursor: "pointer",
+		border: `1px solid ${colors.borderSubtle}`,
+		boxSizing: "border-box",
+		transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease",
 	},
 };
 
 export function badgeStyle(key) {
-	const s = status[key];
+	const s = status[key] || status.info;
 	return {
 		background: s.bg,
 		color: s.text,
-		border: `0.5px solid ${s.border}`,
-		borderRadius: radius.sm,
+		border: `1px solid ${s.border}`,
+		borderRadius: radius.full,
 		fontSize: font.size.xs,
-		fontWeight: font.weight.medium,
-		padding: `2px ${spacing[2]}`,
+		fontWeight: font.weight.semibold,
+		padding: `3px ${spacing[2]}`,
 		display: "inline-flex",
 		alignItems: "center",
-		gap: "4px",
+		gap: "6px",
 	};
 }

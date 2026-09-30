@@ -17,11 +17,19 @@ export default defineConfig([
 			reactRefresh.configs.vite,
 		],
 		languageOptions: {
+			ecmaVersion: "latest",
 			globals: globals.browser,
+			parserOptions: {
+				ecmaVersion: "latest",
+				ecmaFeatures: {
+					jsx: true,
+				},
+				sourceType: "module",
+			},
 		},
 		rules: {
-			indent: ["error", "tab"],
 			"no-tabs": "off",
+			"no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
 		},
 	},
 ]);
